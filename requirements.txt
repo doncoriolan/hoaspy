@@ -1,0 +1,9 @@
+requests>=2.31
+pycryptodome>=3.20
+PyYAML>=6.0
+boto3>=1.34
+python-dotenv>=1.0
+paramiko>=3.4
+openpyxl>=3.1        # xlsx registries (SC complaints, MS/OH corp reports, gov_layers csv kind)
+pdfplumber>=0.11     # HI AOUO contact-list PDF
+websocket-client>=1.8   # fl_broward court portal (BrowserOS CDP)

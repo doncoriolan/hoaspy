@@ -1,0 +1,25 @@
+# West Virginia — no HOA registry. The WV GIS Technical Center's statewide
+# WV_Parcels layer (WV Tax Division surface maps, all 55 counties) carries the
+# assessor's owner name and mailing address, so every HOA / POA / condominium
+# association that owns common land is listed. COUNTY is a 2-digit code with no
+# name field, so county is left blank. Skipped: Morgantown and Huntington
+# neighborhood layers (voluntary neighborhood associations, not HOA-typed;
+# Huntington's rows carry presidents' names and phones).
+
+- kind: arcgis
+  source: "WV GIS Technical Center statewide parcels (WV_Parcels) — association-owned parcels, owner name + mailing address"
+  page: "https://wvgis.wvu.edu/data/dataset.php?ID=371"
+  url: "https://services.wvgis.wvu.edu/arcgis/rest/services/Planning_Cadastre/WV_Parcels/MapServer/0"
+  where: >-
+    UPPER(OWNER1) LIKE '%HOMEOWNER%' OR UPPER(OWNER1) LIKE '%HOME OWNER%' OR UPPER(OWNER1) LIKE '%CONDO%'
+    OR UPPER(OWNER1) LIKE '%PROPERTY OWNER%' OR UPPER(OWNER1) LIKE '%OWNERS ASSOC%'
+    OR UPPER(OWNER1) LIKE '%COMMUNITY ASSOC%' OR UPPER(OWNER1) LIKE '%MASTER ASSOC%'
+    OR UPPER(OWNER1) LIKE '%TOWNHOME%' OR UPPER(OWNER1) LIKE '%TOWNHOUSE%' OR UPPER(OWNER1) LIKE '%HOA%'
+  out_fields: "OBJECTID,CleanParcelID,FullOwnerName,FullOwnerAddress,FullPhysicalAddress"
+  page_size: 1000
+  fields: {name: FullOwnerName, address: FullOwnerAddress, record_id: CleanParcelID}
+  constants: {status: "parcel owner", status_detail: "association-named owner on the county tax roll"}
+  name_regex: '^(.*?)(?:\s*\bC/O.*|\s+ATTN?(?::|\s).*)?$'
+  name_filter: true
+  exclude_name: '^(?!.*ASSOC|.*ASSN|.*\bHOA\b|.*\bPOA\b|.*OWNERS\b)(?=.*(\bLLC\b|\bL\.?L\.?C\.?\b|\bLP\b|\bLTD\b|\bINC\b|\bCORP|DEVELOPMENT|RENTAL|PARTNERS|REALTY|BUILDERS|CONSTRUCTION))|\bBANK\b|MORTGAGE|CREDIT UNION|LIFE ESTATE|EDUCATION|CHURCH|SCHOOL|HOSPITAL|CEMETERY'
+  group_by_name: true

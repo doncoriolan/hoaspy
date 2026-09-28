@@ -1,0 +1,133 @@
+[
+ {
+  "BusinessID": 1775997,
+  "BusinessName": " MEADOWVIEW COMMUNITY HOMEOWNERS ASSOCIATION",
+  "UBINumber": "605 545 143",
+  "BusinessType": "WA NONPROFIT CORPORATION",
+  "BusinessStatus": "Active",
+  "AgentName": "THUNDERBOLT-LIGHTFOOT LLC",
+  "DateOfIncorporation": "2024-05-20T00:00:00",
+  "JurisdictionState": 0,
+  "TotalRowCount": 7918,
+  "PrincipalStreetAddress": {
+   "StreetAddress1": "8531 NE CORNELL RD STE 700",
+   "StreetAddress2": "",
+   "City": "HILLSBORO",
+   "State": "OR",
+   "Zip5": "97124",
+   "County": null
+  },
+  "PrincipalMailingAddress": {
+   "StreetAddress1": null,
+   "StreetAddress2": null,
+   "City": null,
+   "State": null,
+   "Zip5": null,
+   "County": null
+  }
+ },
+ {
+  "BusinessID": 3042,
+  "BusinessName": "\"THE LAKES\" HOMEOWNERS ASSOCIATION",
+  "UBINumber": "602 197 789",
+  "BusinessType": "WA NONPROFIT CORPORATION",
+  "BusinessStatus": "Active",
+  "AgentName": "JOHN SCHAEDLER",
+  "DateOfIncorporation": "2002-04-12T00:00:00",
+  "JurisdictionState": 0,
+  "PrincipalStreetAddress": {
+   "StreetAddress1": "1510 166TH PL SE",
+   "StreetAddress2": "",
+   "City": "MILL CREEK",
+   "State": "WA",
+   "Zip5": "98012",
+   "County": null
+  },
+  "PrincipalMailingAddress": {
+   "StreetAddress1": null,
+   "StreetAddress2": null,
+   "City": null,
+   "State": null,
+   "Zip5": null,
+   "County": null
+  }
+ },
+ {
+  "BusinessID": 1040,
+  "BusinessName": "105TH STREET HOMES CONDOMINIUM HOMEOWNERS ASSOCIATION",
+  "UBINumber": "602 717 002",
+  "BusinessType": "WA NONPROFIT CORPORATION",
+  "BusinessStatus": "Inactive",
+  "AgentName": "GERALD POTTER",
+  "DateOfIncorporation": "2007-04-16T00:00:00",
+  "JurisdictionState": 0,
+  "PrincipalStreetAddress": {
+   "StreetAddress1": "10612 5TH AVE W",
+   "StreetAddress2": "",
+   "City": "EVERETT",
+   "State": "WA",
+   "Zip5": "98204",
+   "County": null
+  },
+  "PrincipalMailingAddress": {
+   "StreetAddress1": null,
+   "StreetAddress2": null,
+   "City": null,
+   "State": null,
+   "Zip5": null,
+   "County": null
+  }
+ },
+ {
+  "BusinessID": 1829904,
+  "BusinessName": "10TH AVE HOMEOWNERS' ASSOCIATION",
+  "UBINumber": "605 644 452",
+  "BusinessType": "WA MISCELLANEOUS AND MUTUAL CORPORATION",
+  "BusinessStatus": "Active",
+  "AgentName": "WILSON LAW GROUP OF WASHINGTON",
+  "DateOfIncorporation": "2024-12-04T00:00:00",
+  "JurisdictionState": 0,
+  "PrincipalStreetAddress": {
+   "StreetAddress1": "8217 44TH AVE W",
+   "StreetAddress2": "",
+   "City": "MUKILTEO",
+   "State": "WA",
+   "Zip5": "98275",
+   "County": null
+  },
+  "PrincipalMailingAddress": {
+   "StreetAddress1": null,
+   "StreetAddress2": null,
+   "City": null,
+   "State": null,
+   "Zip5": null,
+   "County": null
+  }
+ },
+ {
+  "BusinessID": 1753,
+  "BusinessName": "1111 EAST JOHN HOMEOWNERS ASSOCIATION",
+  "UBINumber": "601 797 393",
+  "BusinessType": "WA NONPROFIT CORPORATION",
+  "BusinessStatus": "Administratively Dissolved",
+  "AgentName": "TREASURER",
+  "DateOfIncorporation": "1981-06-09T00:00:00",
+  "JurisdictionState": 0,
+  "PrincipalStreetAddress": {
+   "StreetAddress1": "1111 E JOHN ST APT 5",
+   "StreetAddress2": "",
+   "City": "SEATTLE",
+   "State": "WA",
+   "Zip5": "98102",
+   "County": null
+  },
+  "PrincipalMailingAddress": {
+   "StreetAddress1": null,
+   "StreetAddress2": null,
+   "City": null,
+   "State": null,
+   "Zip5": null,
+   "County": null
+  }
+ }
+]

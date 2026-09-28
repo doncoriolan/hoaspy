@@ -1,0 +1,2077 @@
+{
+  "updated_at": "2026-09-28T23:16:56.402340+00:00",
+  "_schema": {
+    "collected": "sources actually collected, with record counts",
+    "available": "sources that exist and are free but not yet collected",
+    "unavailable": "sources that exist but are paid/restricted, with why",
+    "status": "pending | researching | collected | done"
+  },
+  "states": {
+    "AL": {
+      "name": "Alabama",
+      "status": "collected",
+      "collected": {
+        "courts_federal": {
+          "source": "CourtListener RECAP",
+          "dockets": 66
+        },
+        "courts_appellate": {
+          "source": "CourtListener state opinions",
+          "opinions": 27
+        },
+        "irs_exempt": {
+          "source": "IRS Exempt Organizations Business Master File",
+          "records": 56,
+          "url": "https://www.irs.gov/charities-non-profits/exempt-organizations-business-master-file-extract-eo-bmf",
+          "note": "501(c) HOAs/condos only (NTEE L50 or association name); 1120-H filers absent"
+        },
+        "local_inventory": {
+          "source": "Birmingham AL \u2014 official neighborhood associations (city GIS, Citizen Participation Program) (99)",
+          "records": 99,
+          "url": "https://www.birminghamal.gov/live/about-birmingham/23-communities-99-neighborhoods",
+          "coverage": "partial",
+          "note": "county/city inventories, not a statewide registry \u2014 absence means nothing"
+        }
+      },
+      "available": [
+        {
+          "source": "SOS Domestic HOA database (post-2016 HOAs, statutory registry)",
+          "access": "none",
+          "url": "https://arc-sos.state.al.us/cgi/corpname.mbr/output",
+          "note": "robots.txt disallows automated access \u2014 respect; manual use free"
+        }
+      ],
+      "unavailable": [
+        {
+          "source": "SOS bulk",
+          "why": "paid Government Records arrangement"
+        }
+      ],
+      "counties": {},
+      "notes": []
+    },
+    "AK": {
+      "name": "Alaska",
+      "status": "collected",
+      "collected": {
+        "courts_federal": {
+          "source": "CourtListener RECAP",
+          "dockets": 7
+        },
+        "courts_appellate": {
+          "source": "CourtListener state opinions",
+          "opinions": 3
+        },
+        "corporate": {
+          "source": "Alaska DCCED \u2014 Corporations database download",
+          "records": 1338,
+          "url": "https://www.commerce.alaska.gov/cbp/main/",
+          "coverage": "active_only",
+          "officers": "DCCED officials CSV joined (current officers/directors per entity)"
+        },
+        "irs_exempt": {
+          "source": "IRS Exempt Organizations Business Master File",
+          "records": 22,
+          "url": "https://www.irs.gov/charities-non-profits/exempt-organizations-business-master-file-extract-eo-bmf",
+          "note": "501(c) HOAs/condos only (NTEE L50 or association name); 1120-H filers absent"
+        }
+      },
+      "available": [],
+      "unavailable": [],
+      "counties": {},
+      "notes": [
+        "DNR Recorder's Office has free statewide index search (no bulk)",
+        "Corporations CSV browser-downloaded by user 2026-08-17; active-entity roster (Good Standing / Non-Compliant only)",
+        "Officials CSV browser-downloaded 2026-09-02 (BrowserOS) and joined: every association row now carries its current officers"
+      ]
+    },
+    "AZ": {
+      "name": "Arizona",
+      "status": "collected",
+      "collected": {
+        "courts_federal": {
+          "source": "CourtListener RECAP",
+          "dockets": 104
+        },
+        "courts_appellate": {
+          "source": "CourtListener state opinions",
+          "opinions": 7
+        },
+        "irs_exempt": {
+          "source": "IRS Exempt Organizations Business Master File",
+          "records": 127,
+          "url": "https://www.irs.gov/charities-non-profits/exempt-organizations-business-master-file-extract-eo-bmf",
+          "note": "501(c) HOAs/condos only (NTEE L50 or association name); 1120-H filers absent"
+        },
+        "hoa_registry": {
+          "source": "Arizona Department of Real Estate \u2014 subdivision Public Reports",
+          "url": "https://services.azre.gov/PdbWeb/Development/SearchDevelopments",
+          "records": 7,
+          "reports": 11,
+          "reports_naming_an_association": 5,
+          "years": "2005-2026",
+          "coverage": "partial",
+          "note": "Associations named in developer subdivision Public Reports (A.R.S. 32-2183), not a registry: only subdivisions registered since the cut-off year, and only where the report names the HOA. City/ZIP are the subdivision's town, from the report's location and local-services addresses (town-level placement).",
+          "retrieved_at": "2026-09-28T23:01:19.221531+00:00",
+          "duration_seconds": 10.6
+        }
+      },
+      "available": [],
+      "unavailable": [
+        {
+          "source": "ACC eCorp bulk",
+          "why": "paid extracts"
+        },
+        {
+          "source": "Maricopa recorder bulk",
+          "why": "paid subscription"
+        },
+        {
+          "source": "ADRE 'HOA public database'",
+          "why": "no longer exists (2026-09-02): ADRE's Public Database was rebuilt as MVC with no HOA module; ADRE does not regulate HOAs and A.R.S. 33-1256/33-1807 create no registry"
+        }
+      ],
+      "counties": {},
+      "notes": [
+        "ACC eCorp moved to an Angular SPA (arizonabusinesscenter.azcc.gov) whose search API is captcha-gated \u2014 not scripted"
+      ]
+    },
+    "AR": {
+      "name": "Arkansas",
+      "status": "collected",
+      "collected": {
+        "courts_federal": {
+          "source": "CourtListener RECAP",
+          "dockets": 14
+        },
+        "courts_appellate": {
+          "source": "CourtListener state opinions",
+          "opinions": 6
+        },
+        "irs_exempt": {
+          "source": "IRS Exempt Organizations Business Master File",
+          "records": 36,
+          "url": "https://www.irs.gov/charities-non-profits/exempt-organizations-business-master-file-extract-eo-bmf",
+          "note": "501(c) HOAs/condos only (NTEE L50 or association name); 1120-H filers absent"
+        },
+        "local_inventory": {
+          "source": "Little Rock AR \u2014 registered neighborhood associations (city GIS) (216); Little Rock AR \u2014 neighborhood associations contact list 2018 (city XLSX) (175)",
+          "records": 357,
+          "url": "https://maps.littlerock.gov/server/rest/services/Neighborhood_Associations/MapServer/0",
+          "coverage": "partial",
+          "note": "county/city inventories, not a statewide registry \u2014 absence means nothing"
+        }
+      },
+      "available": [],
+      "unavailable": [
+        {
+          "source": "SOS bulk via INA",
+          "why": "paid ($10+ per download)"
+        }
+      ],
+      "counties": {},
+      "notes": []
+    },
+    "CA": {
+      "name": "California",
+      "status": "collected",
+      "collected": {
+        "courts_federal": {
+          "source": "CourtListener RECAP",
+          "dockets": 370
+        },
+        "courts_appellate": {
+          "source": "CourtListener state opinions",
+          "opinions": 3
+        },
+        "irs_exempt": {
+          "source": "IRS Exempt Organizations Business Master File",
+          "records": 741,
+          "url": "https://www.irs.gov/charities-non-profits/exempt-organizations-business-master-file-extract-eo-bmf",
+          "note": "501(c) HOAs/condos only (NTEE L50 or association name); 1120-H filers absent"
+        },
+        "local_inventory": {
+          "source": "City of Irvine CA \u2014 Homeowners' Associations (sub-associations with management company) (214); City of Irvine CA \u2014 Homeowners' Associations (master associations) (123); City of Sacramento CA \u2014 Neighborhood Associations (112); City of San Jose CA \u2014 Neighborhood, Homeowner & Mobile Home Associations (200); City of Pasadena CA \u2014 Neighborhood Associations (87); City of San Clemente CA \u2014 HOA_Residential (HOAs, master HOAs & condominiums) (163); City of Rancho Santa Margarita CA \u2014 HOA_Master (7); City of Aliso Viejo CA \u2014 HOAs (with management company) (101); City of San Juan Capistrano CA \u2014 Homeowner Associations (with management company) (100); City of San Ramon CA \u2014 HOAs (with management company) (92); City of Dana Point CA \u2014 DP_HOA (63); City of Indian Wells CA \u2014 HOAs (58); City of Menifee CA \u2014 HOAs (with management company) (42); City of Temecula CA \u2014 HOAs / CC&R areas (with management company) (75); City of Cupertino CA \u2014 Home Owners Association designations (with management company) (55); City of Cupertino CA \u2014 Neighborhood designations (non-HOA neighborhoods) (36); City of Torrance CA \u2014 Homeowner Associations (26); City of Elk Grove CA \u2014 Homeowners Associations (26); City of Elk Grove CA \u2014 Neighborhood Associations (11); City of Glendale CA \u2014 HOA areas (27); City of Agoura Hills CA \u2014 HOAs (with management mailing address) (30); City of Calabasas CA \u2014 Homeowners Associations (CWPP layer) (49); City of Brisbane CA \u2014 Home Owners Association parcels (grouped by HOA) (12); City of La Habra CA \u2014 Home Owners Associations (with management company & unit count) (44); City of Rolling Hills Estates CA \u2014 HOA layer (32); City of Oakley CA \u2014 HOA locations (with management company) (14); City of South Lake Tahoe CA \u2014 Homeowners Associations (7); City of Roseville CA \u2014 registered Neighborhood Associations (45); City of San Bernardino CA \u2014 Neighborhood Associations (57); City of Vacaville CA \u2014 Neighborhood Associations (23); Rancho California Water District CA \u2014 HOAs in the district (Temecula / Murrieta, with management company) (89); LA County GIS (City of Arcadia) \u2014 Homeowners Association areas (architectural-review HOAs) (5)",
+          "records": 1954,
+          "url": "https://www.cityofirvine.org/community-development/homeowners-associations",
+          "coverage": "partial",
+          "note": "county/city inventories, not a statewide registry \u2014 absence means nothing"
+        },
+        "corporate": {
+          "source": "SOS bizfile business search (get_ca_sos.py keyword x entity-type x filing-date sweep, 2026-09-01)",
+          "records": 53372,
+          "url": "https://bizfileonline.sos.ca.gov/search/business",
+          "cid_by_entity_type": 42166,
+          "api_calls": 2360,
+          "note": "CID types 62/69/72 kept regardless of name; other types name-gated. Word search only, so a small unnamed tail is possible."
+        },
+        "judgment_liens": {
+          "source": "SOS bizfile UCC search, judgment liens (get_ca_ucc.py keyword sweep, 2026-09-01)",
+          "records": 616,
+          "associations": 287,
+          "held_by_association": 590,
+          "against_association": 26,
+          "years": "2011-2026",
+          "url": "https://bizfileonline.sos.ca.gov/search/ucc",
+          "note": "Personal-property judgment liens filed with the SOS; county-recorder abstracts of judgment are not covered."
+        }
+      },
+      "available": [],
+      "unavailable": [
+        {
+          "source": "SOS corporate bulk data",
+          "why": "paid media request"
+        },
+        {
+          "source": "LA County recorder index",
+          "why": "bulk sold under fee agreement"
+        },
+        {
+          "source": "County recorder judgment/assessment lien indexes",
+          "why": "no free bulk index; LA sells under fee agreement"
+        }
+      ],
+      "counties": {},
+      "notes": [
+        "San Diego ARCC has free per-doc index search (no bulk)"
+      ]
+    },
+    "CO": {
+      "name": "Colorado",
+      "status": "collected",
+      "collected": {
+        "corporate": {
+          "source": "Colorado Secretary of State \u2014 Business Entities (Colorado Information Marketplace)",
+          "records": 20776,
+          "url": "https://data.colorado.gov/Business/Business-Entities-in-Colorado/4ykn-tg5h",
+          "coverage": "all"
+        },
+        "courts_federal": {
+          "source": "CourtListener RECAP",
+          "dockets": 368
+        },
+        "courts_appellate": {
+          "source": "CourtListener state opinions",
+          "opinions": 11
+        },
+        "irs_exempt": {
+          "source": "IRS Exempt Organizations Business Master File",
+          "records": 115,
+          "url": "https://www.irs.gov/charities-non-profits/exempt-organizations-business-master-file-extract-eo-bmf",
+          "note": "501(c) HOAs/condos only (NTEE L50 or association name); 1120-H filers absent"
+        }
+      },
+      "available": [],
+      "unavailable": [
+        {
+          "source": "DORA HOA registration lookup",
+          "why": "app is bot-protected; no dataset on data.colorado.gov"
+        },
+        {
+          "source": "Denver recorder bulk",
+          "why": "paid"
+        }
+      ],
+      "counties": {},
+      "notes": []
+    },
+    "CT": {
+      "name": "Connecticut",
+      "status": "collected",
+      "collected": {
+        "corporate": {
+          "source": "Connecticut Secretary of the State \u2014 Business Registry Master (data.ct.gov)",
+          "records": 6084,
+          "url": "https://data.ct.gov/d/n7gp-d28j",
+          "coverage": "all"
+        },
+        "courts_federal": {
+          "source": "CourtListener RECAP",
+          "dockets": 44
+        },
+        "courts_appellate": {
+          "source": "CourtListener state opinions",
+          "opinions": 7
+        },
+        "irs_exempt": {
+          "source": "IRS Exempt Organizations Business Master File",
+          "records": 59,
+          "url": "https://www.irs.gov/charities-non-profits/exempt-organizations-business-master-file-extract-eo-bmf",
+          "note": "501(c) HOAs/condos only (NTEE L50 or association name); 1120-H filers absent"
+        }
+      },
+      "available": [],
+      "unavailable": [],
+      "counties": {},
+      "notes": [
+        "common-interest communities appear in the collected SOS business registry"
+      ]
+    },
+    "DE": {
+      "name": "Delaware",
+      "status": "collected",
+      "collected": {
+        "courts_federal": {
+          "source": "CourtListener RECAP",
+          "dockets": 13
+        },
+        "courts_appellate": {
+          "source": "CourtListener state opinions",
+          "opinions": 84
+        },
+        "irs_exempt": {
+          "source": "IRS Exempt Organizations Business Master File",
+          "records": 43,
+          "url": "https://www.irs.gov/charities-non-profits/exempt-organizations-business-master-file-extract-eo-bmf",
+          "note": "501(c) HOAs/condos only (NTEE L50 or association name); 1120-H filers absent"
+        },
+        "local_inventory": {
+          "source": "New Castle County DE GIS \u2014 Maintenance Corporations (mandatory-dues HOAs) (608); New Castle County DE GIS \u2014 Civic Associations (1749)",
+          "records": 1795,
+          "url": "https://gis.nccde.org/agsserver/rest/services/BaseMaps/Civic/MapServer/1",
+          "coverage": "partial",
+          "note": "county/city inventories, not a statewide registry \u2014 absence means nothing"
+        }
+      },
+      "available": [],
+      "unavailable": [
+        {
+          "source": "Division of Corporations bulk",
+          "why": "strictly paid"
+        },
+        {
+          "source": "county recorders",
+          "why": "search-only"
+        }
+      ],
+      "counties": {},
+      "notes": [
+        "DOJ CIC ombudsperson annual reports (PDF) summarize complaints; no registry"
+      ]
+    },
+    "FL": {
+      "name": "Florida",
+      "status": "done",
+      "collected": {
+        "hoa_registry": {
+          "source": "FL DBPR condo extracts",
+          "records": 27955,
+          "url": "https://www2.myfloridalicense.com/condos-timeshares-mobile-homes/public-records/"
+        },
+        "corporate": {
+          "source": "Sunbiz quarterly non-profit extract (SFTP)",
+          "records": 210713,
+          "url": "https://dos.fl.gov/sunbiz/other-services/data-downloads/quarterly-data/"
+        },
+        "courts_federal": {
+          "source": "CourtListener RECAP",
+          "dockets": 2320
+        },
+        "courts_appellate": {
+          "source": "CourtListener state opinions",
+          "opinions": 617
+        },
+        "irs_exempt": {
+          "source": "IRS Exempt Organizations Business Master File",
+          "records": 285,
+          "url": "https://www.irs.gov/charities-non-profits/exempt-organizations-business-master-file-extract-eo-bmf",
+          "note": "501(c) HOAs/condos only (NTEE L50 or association name); 1120-H filers absent"
+        }
+      },
+      "available": [],
+      "unavailable": [
+        {
+          "source": "Palm Beach County lien index",
+          "why": "subscription $600/yr"
+        },
+        {
+          "source": "DBPR arbitration final orders",
+          "why": "search form broken; published indexes stop ~2008"
+        }
+      ],
+      "counties": {
+        "Broward": {
+          "liens": {
+            "source": "Official Records yearly index exports, public SFTP",
+            "records": 553668,
+            "years": "1978-2025"
+          }
+        },
+        "Miami-Dade": {
+          "liens": {
+            "source": "Miami-Dade Clerk Official Records public search API (per-association name queries)",
+            "collector": "get_miamidade_liens.py",
+            "coverage": "best-effort (partial): 53% name-match hit rate; 59 mass filers truncated at the API's 500-row cap",
+            "records": 225403,
+            "associations": 2876,
+            "names_queried": 5418,
+            "years": "1978-2026",
+            "document_types": {
+              "claim_of_lien": 129584,
+              "lis_pendens": 95424,
+              "notice_of_contest_of_lien": 395
+            },
+            "complete_source": "paid Official Records FTP folder, $110/mo (see NEEDS.md)"
+          },
+          "courts": {
+            "source": "Miami-Dade Clerk Commercial Data Services Civil FTP feed (daily civil tables + weekly indebtedness dump)",
+            "collector": "records_miamidade_civil.py",
+            "records": 8025,
+            "associations": 5661,
+            "with_public_link": 8025,
+            "with_property_zip": 3329,
+            "association_plaintiff": 4301,
+            "association_defendant": 4173,
+            "years": "1958-2026 (county contract/foreclosure backfile) + every circuit case active since 2026-08-25",
+            "coverage": "complete for cases with docket activity since the feed started plus the county backfile; idle circuit cases missing until they move",
+            "public_link": "https://www2.miamidadeclerk.gov/ocs/searchResults?qs=<encrypted case number>"
+          }
+        }
+      },
+      "notes": [
+        "Miami-Dade liens collected best-effort 2026-08-28 via the Clerk's public search API: 225,403 records for 2,876 associations, 1978-2026. Partial by construction (name-match recall, 500-row cap); complete index still requires the paid FTP folder.",
+        "Miami-Dade trial courts added 2026-09-24 from the Clerk's Civil FTP feed: 8025 association cases (4301 with the association as plaintiff), every one with a public Online Case Search link; 3,329 carry the sued property's ZIP, which places registry-less communities on the map."
+      ]
+    },
+    "GA": {
+      "name": "Georgia",
+      "status": "collected",
+      "collected": {
+        "courts_federal": {
+          "source": "CourtListener RECAP",
+          "dockets": 211
+        },
+        "courts_appellate": {
+          "source": "CourtListener state opinions",
+          "opinions": 294
+        },
+        "irs_exempt": {
+          "source": "IRS Exempt Organizations Business Master File",
+          "records": 132,
+          "url": "https://www.irs.gov/charities-non-profits/exempt-organizations-business-master-file-extract-eo-bmf",
+          "note": "501(c) HOAs/condos only (NTEE L50 or association name); 1120-H filers absent"
+        },
+        "local_inventory": {
+          "source": "DeKalb County GA GIS \u2014 HOA and Neighborhoods (homeowner, condo, townhome, neighborhood & civic associations) (422); City of Sandy Springs GA \u2014 Neighborhoods (HOAs, condos, neighborhood & civic associations) (277); City of Milton GA \u2014 Milton_HOA neighborhoods (subdivisions, townhomes & condominiums with management company) (220); City of Johns Creek GA \u2014 Neighborhoods (subdivisions, townhomes, senior & mixed communities) (290); City of Brookhaven GA \u2014 Neighborhoods & Subdivisions (165); City of Atlanta GA (Dept. of City Planning) \u2014 Neighborhood Associations & HOAs by NPU (166); City of Savannah GA / SAGIS \u2014 Neighborhood Associations (84); Fulton County GA GIS \u2014 LandBase Subdivisions (condominium & townhome plats) (342); Gwinnett County GA GIS \u2014 Subdivisions (condominium & townhome plats) (108); City of Duluth GA \u2014 Neighborhoods (condominium & townhome communities) (30); City of Peachtree Corners GA \u2014 Subdivisions (condominium & townhome plats) (11); DeKalb County GA GIS \u2014 Subdivisions (condominium & townhome plats) (467); City of Kennesaw GA \u2014 Major subdivisions (condominium & attached-home plats) (37); City of Canton GA \u2014 Subdivision HOA lookup (HOA name & management company) (7)",
+          "records": 2587,
+          "url": "https://dcgis-dekalbgis.hub.arcgis.com/datasets/hoa-and-neighborhoods",
+          "coverage": "partial",
+          "note": "county/city inventories, not a statewide registry \u2014 absence means nothing"
+        }
+      },
+      "available": [],
+      "unavailable": [
+        {
+          "source": "SOS corporate bulk",
+          "why": "$500 one-time / $5,000-yr"
+        },
+        {
+          "source": "GSCCCA statewide deed/lien index",
+          "why": "paid subscription"
+        }
+      ],
+      "counties": {},
+      "notes": []
+    },
+    "HI": {
+      "name": "Hawaii",
+      "status": "collected",
+      "collected": {
+        "courts_federal": {
+          "source": "CourtListener RECAP",
+          "dockets": 40
+        },
+        "courts_appellate": {
+          "source": "CourtListener state opinions",
+          "opinions": 47
+        },
+        "hoa_registry": {
+          "source": "DCCA Real Estate Branch AOUO contact list (PDF)",
+          "records": 1869,
+          "url": "https://cca.hawaii.gov/reb/condo_ed/"
+        },
+        "irs_exempt": {
+          "source": "IRS Exempt Organizations Business Master File",
+          "records": 71,
+          "url": "https://www.irs.gov/charities-non-profits/exempt-organizations-business-master-file-extract-eo-bmf",
+          "note": "501(c) HOAs/condos only (NTEE L50 or association name); 1120-H filers absent"
+        }
+      },
+      "available": [
+        {
+          "source": "DCCA AOUO contact list (all registered condo associations)",
+          "access": "pdf",
+          "url": "https://cca.hawaii.gov/wp-content/uploads/2026/04/AOUO-Contact-List-4.29.26.pdf",
+          "note": "822KB PDF, parseable; refreshed periodically"
+        }
+      ],
+      "unavailable": [
+        {
+          "source": "eHawaii business data list builder",
+          "why": "paid"
+        },
+        {
+          "source": "Bureau of Conveyances (statewide recorder)",
+          "why": "fee/subscription"
+        }
+      ],
+      "counties": {},
+      "notes": []
+    },
+    "ID": {
+      "name": "Idaho",
+      "status": "collected",
+      "collected": {
+        "corporate": {
+          "source": "Idaho Secretary of State \u2014 SOSBiz business search API (partial extract)",
+          "records": 4087,
+          "url": "https://sosbiz.idaho.gov/search/business",
+          "coverage": "partial"
+        },
+        "courts_federal": {
+          "source": "CourtListener RECAP",
+          "dockets": 18
+        },
+        "courts_appellate": {
+          "source": "CourtListener state opinions",
+          "opinions": 4
+        },
+        "irs_exempt": {
+          "source": "IRS Exempt Organizations Business Master File",
+          "records": 31,
+          "url": "https://www.irs.gov/charities-non-profits/exempt-organizations-business-master-file-extract-eo-bmf",
+          "note": "501(c) HOAs/condos only (NTEE L50 or association name); 1120-H filers absent"
+        }
+      },
+      "available": [],
+      "unavailable": [],
+      "counties": {},
+      "notes": [
+        "county recorders (Ada Landmark) search-only"
+      ]
+    },
+    "IL": {
+      "name": "Illinois",
+      "status": "collected",
+      "collected": {
+        "courts_federal": {
+          "source": "CourtListener RECAP",
+          "dockets": 340
+        },
+        "courts_appellate": {
+          "source": "CourtListener state opinions",
+          "opinions": 40
+        },
+        "irs_exempt": {
+          "source": "IRS Exempt Organizations Business Master File",
+          "records": 116,
+          "url": "https://www.irs.gov/charities-non-profits/exempt-organizations-business-master-file-extract-eo-bmf",
+          "note": "501(c) HOAs/condos only (NTEE L50 or association name); 1120-H filers absent"
+        },
+        "local_inventory": {
+          "source": "City of Chicago \u2014 House Share Prohibited Buildings List (condo/co-op associations) (1006); DuPage County IL GIS \u2014 Subdivisions (condominium & townhome plats) (1070); McHenry County IL GIS \u2014 Subdivisions (condominium & townhome plats) (27); City of Wood Dale IL \u2014 HOA contact inventory (24); City of Danville IL \u2014 Neighborhood Associations (9); Village of Oak Park IL \u2014 Neighborhood Associations (3); Village of Maryville IL \u2014 Subdivisions (condominium & townhome plats) (1); Kane County IL \u2014 condominium unit parcels (condo project from legal description) (586)",
+          "records": 2725,
+          "url": "https://data.cityofchicago.org/d/7bzs-jsyj",
+          "coverage": "partial",
+          "note": "county/city inventories, not a statewide registry \u2014 absence means nothing"
+        },
+        "condo_buildings": {
+          "source": "Cook County Assessor \u2014 residential condominium buildings (class 299)",
+          "url": "https://datacatalog.cookcountyil.gov/d/3r7i-mrz4",
+          "records": 18616,
+          "unit_pins": 456795,
+          "coverage": "partial",
+          "note": "Every Assessor class-299 condominium building in Cook County, named by street address (the data carries no association names): where condo associations exist, not who runs them. Unit count = unit PINs minus parking/common PINs.",
+          "retrieved_at": "2026-09-28T23:16:56.401769+00:00",
+          "duration_seconds": 730.0
+        }
+      },
+      "available": [],
+      "unavailable": [
+        {
+          "source": "SOS corporate bulk",
+          "why": "paid"
+        },
+        {
+          "source": "Cook County Clerk current recordings",
+          "why": "search-only"
+        },
+        {
+          "source": "Cook County recorder bulk indexes 2011-2015 (historic)",
+          "why": "checked 2026-09-28: PIN, document type, date and amount only \u2014 no party names, so a lis pendens cannot be tied to an association; series ended March 2015"
+        }
+      ],
+      "counties": {},
+      "notes": [
+        "condo ombudsperson registration requirement repealed 2017 \u2014 no registry"
+      ]
+    },
+    "IN": {
+      "name": "Indiana",
+      "status": "collected",
+      "collected": {
+        "courts_federal": {
+          "source": "CourtListener RECAP",
+          "dockets": 54
+        },
+        "courts_appellate": {
+          "source": "CourtListener state opinions",
+          "opinions": 35
+        },
+        "irs_exempt": {
+          "source": "IRS Exempt Organizations Business Master File",
+          "records": 120,
+          "url": "https://www.irs.gov/charities-non-profits/exempt-organizations-business-master-file-extract-eo-bmf",
+          "note": "501(c) HOAs/condos only (NTEE L50 or association name); 1120-H filers absent"
+        },
+        "local_inventory": {
+          "source": "City of Indianapolis / Marion County IN \u2014 Registered Community Organizations (homeowners associations) (226); City of Indianapolis / Marion County IN \u2014 Registered Community Organizations (neighborhood associations) (415); City of Greenwood IN \u2014 Homeowners Association polygons (106); Johnson County IN \u2014 Subdivisions (condominium & townhome plats) (4); City of Bloomington IN \u2014 HAND-registered Neighborhood Associations (68); City of Evansville / Vanderburgh County IN GIS \u2014 Neighborhood Associations (49); City of Elkhart IN GIS \u2014 Neighborhood Associations (70); City of Indianapolis / Marion County IN \u2014 Subdivision boundaries (condominium & townhome plats) (44); Lake County IN \u2014 Subdivisions / simultaneous conveyances (condominium & townhome plats) (196)",
+          "records": 1172,
+          "url": "https://data.indy.gov/datasets/IndyGIS::registered-community-organizations",
+          "coverage": "partial",
+          "note": "county/city inventories, not a statewide registry \u2014 absence means nothing"
+        }
+      },
+      "available": [],
+      "unavailable": [
+        {
+          "source": "IN.gov business bulk",
+          "why": "paid subscription"
+        },
+        {
+          "source": "Marion County recorder",
+          "why": "paid vendors (Doxpop/Tapestry)"
+        }
+      ],
+      "counties": {},
+      "notes": []
+    },
+    "IA": {
+      "name": "Iowa",
+      "status": "collected",
+      "collected": {
+        "corporate": {
+          "source": "Iowa Secretary of State \u2014 Active Iowa Business Entities (Iowa Data Hub)",
+          "records": 4252,
+          "url": "https://data.iowa.gov/catalog/dataset/554",
+          "coverage": "active_only"
+        },
+        "courts_federal": {
+          "source": "CourtListener RECAP",
+          "dockets": 12
+        },
+        "courts_appellate": {
+          "source": "CourtListener state opinions",
+          "opinions": 23
+        },
+        "irs_exempt": {
+          "source": "IRS Exempt Organizations Business Master File",
+          "records": 26,
+          "url": "https://www.irs.gov/charities-non-profits/exempt-organizations-business-master-file-extract-eo-bmf",
+          "note": "501(c) HOAs/condos only (NTEE L50 or association name); 1120-H filers absent"
+        }
+      },
+      "available": [],
+      "unavailable": [],
+      "counties": {},
+      "notes": [
+        "Iowa Land Records portal: free statewide recorded-index search (no bulk); SOS API is paid"
+      ]
+    },
+    "KS": {
+      "name": "Kansas",
+      "status": "collected",
+      "collected": {
+        "courts_federal": {
+          "source": "CourtListener RECAP",
+          "dockets": 9
+        },
+        "courts_appellate": {
+          "source": "CourtListener state opinions",
+          "opinions": 0
+        },
+        "irs_exempt": {
+          "source": "IRS Exempt Organizations Business Master File",
+          "records": 21,
+          "url": "https://www.irs.gov/charities-non-profits/exempt-organizations-business-master-file-extract-eo-bmf",
+          "note": "501(c) HOAs/condos only (NTEE L50 or association name); 1120-H filers absent"
+        },
+        "local_inventory": {
+          "source": "Wichita KS \u2014 homeowners associations (city GIS) (339); Wichita KS \u2014 neighborhood associations (city GIS) (76); Overland Park KS \u2014 homes associations (city Neighborhoods layer) (311); Leawood KS \u2014 2026 HOAs (city GIS) (120); Lawrence KS \u2014 registered neighborhood associations (city GIS) (55); Wyandotte County / Kansas City KS \u2014 neighborhood groups (Unified Government GIS) (21); Topeka KS \u2014 neighborhood improvement associations (NIAs, city GIS) (21); Manhattan KS \u2014 homeowners/neighborhood associations 2014 (city GIS) (19)",
+          "records": 940,
+          "url": "https://gismaps.wichita.gov/ageweb/rest/services/COWGIS/Districts/MapServer/6",
+          "coverage": "partial",
+          "note": "county/city inventories, not a statewide registry \u2014 absence means nothing"
+        }
+      },
+      "available": [],
+      "unavailable": [
+        {
+          "source": "SOS bulk via accesskansas",
+          "why": "paid"
+        }
+      ],
+      "counties": {},
+      "notes": []
+    },
+    "KY": {
+      "name": "Kentucky",
+      "status": "collected",
+      "collected": {
+        "courts_federal": {
+          "source": "CourtListener RECAP",
+          "dockets": 20
+        },
+        "courts_appellate": {
+          "source": "CourtListener state opinions",
+          "opinions": 0
+        },
+        "irs_exempt": {
+          "source": "IRS Exempt Organizations Business Master File",
+          "records": 56,
+          "url": "https://www.irs.gov/charities-non-profits/exempt-organizations-business-master-file-extract-eo-bmf",
+          "note": "501(c) HOAs/condos only (NTEE L50 or association name); 1120-H filers absent"
+        },
+        "local_inventory": {
+          "source": "Lexington-Fayette KY \u2014 registered neighborhood/homeowner associations (LFUCG Planning) (209); Louisville-Jefferson County KY \u2014 neighborhood associations (LOJIC open data) (44)",
+          "records": 253,
+          "url": "https://data.lexingtonky.gov/datasets/neighborhood-association",
+          "coverage": "partial",
+          "note": "county/city inventories, not a statewide registry \u2014 absence means nothing"
+        }
+      },
+      "available": [],
+      "unavailable": [
+        {
+          "source": "SOS bulk data service",
+          "why": "free for research but requires account + signed agreement"
+        }
+      ],
+      "counties": {},
+      "notes": []
+    },
+    "LA": {
+      "name": "Louisiana",
+      "status": "collected",
+      "collected": {
+        "courts_federal": {
+          "source": "CourtListener RECAP",
+          "dockets": 190
+        },
+        "courts_appellate": {
+          "source": "CourtListener state opinions",
+          "opinions": 41
+        },
+        "irs_exempt": {
+          "source": "IRS Exempt Organizations Business Master File",
+          "records": 54,
+          "url": "https://www.irs.gov/charities-non-profits/exempt-organizations-business-master-file-extract-eo-bmf",
+          "note": "501(c) HOAs/condos only (NTEE L50 or association name); 1120-H filers absent"
+        },
+        "local_inventory": {
+          "source": "East Baton Rouge Parish LA \u2014 neighborhood associations (Open Data BR) (317); East Baton Rouge Parish LA \u2014 existing neighborhood association boundaries (EBRGIS) (270); St. George LA \u2014 neighborhood associations (city GIS) (108); Shreveport LA \u2014 neighborhood associations (city/MPC GIS) (35); New Orleans LA \u2014 self-reported neighborhood organizations (Neighborhood Engagement Office) (65); Jefferson Parish LA \u2014 civic associations (parish GIS) (53)",
+          "records": 479,
+          "url": "https://data.brla.gov/Housing-and-Development/Neighborhood-Association/m7ct-r5ua",
+          "coverage": "partial",
+          "note": "county/city inventories, not a statewide registry \u2014 absence means nothing"
+        }
+      },
+      "available": [],
+      "unavailable": [
+        {
+          "source": "SOS commercial bulk",
+          "why": "paid"
+        },
+        {
+          "source": "Orleans/EBR clerks",
+          "why": "paid subscriptions"
+        }
+      ],
+      "counties": {},
+      "notes": [
+        "New Orleans Sheriff Sales dataset (data.nola.gov d52w-8nva) checked 2026-09-02: 1,771 rows, zero association/condominium plaintiffs \u2014 not an HOA source"
+      ]
+    },
+    "ME": {
+      "name": "Maine",
+      "status": "collected",
+      "collected": {
+        "courts_federal": {
+          "source": "CourtListener RECAP",
+          "dockets": 15
+        },
+        "courts_appellate": {
+          "source": "CourtListener state opinions",
+          "opinions": 13
+        },
+        "irs_exempt": {
+          "source": "IRS Exempt Organizations Business Master File",
+          "records": 35,
+          "url": "https://www.irs.gov/charities-non-profits/exempt-organizations-business-master-file-extract-eo-bmf",
+          "note": "501(c) HOAs/condos only (NTEE L50 or association name); 1120-H filers absent"
+        }
+      },
+      "available": [],
+      "unavailable": [
+        {
+          "source": "SOS ICRS bulk",
+          "why": "paid subscriber services"
+        },
+        {
+          "source": "SOS ICRS corporate name search",
+          "why": "terms on the search form prohibit data mining and 'automated tools in any form' (checked 2026-09-02) \u2014 not scripted; bulk is a paid subscription"
+        }
+      ],
+      "counties": {},
+      "notes": [
+        "mainelandrecords.com free per-registry index search"
+      ]
+    },
+    "MD": {
+      "name": "Maryland",
+      "status": "collected",
+      "collected": {
+        "courts_federal": {
+          "source": "CourtListener RECAP",
+          "dockets": 58
+        },
+        "courts_appellate": {
+          "source": "CourtListener state opinions",
+          "opinions": 2
+        },
+        "irs_exempt": {
+          "source": "IRS Exempt Organizations Business Master File",
+          "records": 196,
+          "url": "https://www.irs.gov/charities-non-profits/exempt-organizations-business-master-file-extract-eo-bmf",
+          "note": "501(c) HOAs/condos only (NTEE L50 or association name); 1120-H filers absent"
+        },
+        "hoa_registry": {
+          "source": "Montgomery County DHCA \u2014 registered common ownership communities (CCOC)",
+          "records": 1256,
+          "url": "https://www.montgomerycountymd.gov/department-housing-community-affairs/common-ownership-communities-coc"
+        }
+      },
+      "available": [],
+      "unavailable": [
+        {
+          "source": "SDAT business bulk",
+          "why": "paid"
+        },
+        {
+          "source": "mdlandrec.net land records",
+          "why": "requires account registration"
+        }
+      ],
+      "counties": {},
+      "notes": [
+        "Montgomery County CCOC list collected 2026-09-02 as a csv_registry (DHCA COC/Export CSV, 1,256 communities). Prince George's COC program is behind a WAF (403 to plain requests); no other MD county registers COCs"
+      ]
+    },
+    "MA": {
+      "name": "Massachusetts",
+      "status": "collected",
+      "collected": {
+        "courts_federal": {
+          "source": "CourtListener RECAP",
+          "dockets": 19
+        },
+        "courts_appellate": {
+          "source": "CourtListener state opinions",
+          "opinions": 6
+        },
+        "irs_exempt": {
+          "source": "IRS Exempt Organizations Business Master File",
+          "records": 85,
+          "url": "https://www.irs.gov/charities-non-profits/exempt-organizations-business-master-file-extract-eo-bmf",
+          "note": "501(c) HOAs/condos only (NTEE L50 or association name); 1120-H filers absent"
+        },
+        "local_inventory": {
+          "source": "MassGIS statewide property-tax parcels \u2014 condominium trusts & homeowners associations (parcel owner name) (12069)",
+          "records": 12069,
+          "url": "https://www.mass.gov/info-details/massgis-data-property-tax-parcels",
+          "coverage": "partial",
+          "note": "county/city inventories, not a statewide registry \u2014 absence means nothing"
+        }
+      },
+      "available": [],
+      "unavailable": [
+        {
+          "source": "SOC corporations bulk",
+          "why": "paid subscription"
+        }
+      ],
+      "counties": {},
+      "notes": [
+        "masslandrecords.com: free statewide recorded-index search, no bulk"
+      ]
+    },
+    "MI": {
+      "name": "Michigan",
+      "status": "collected",
+      "collected": {
+        "courts_federal": {
+          "source": "CourtListener RECAP",
+          "dockets": 89
+        },
+        "courts_appellate": {
+          "source": "CourtListener state opinions",
+          "opinions": 49
+        },
+        "irs_exempt": {
+          "source": "IRS Exempt Organizations Business Master File",
+          "records": 170,
+          "url": "https://www.irs.gov/charities-non-profits/exempt-organizations-business-master-file-extract-eo-bmf",
+          "note": "501(c) HOAs/condos only (NTEE L50 or association name); 1120-H filers absent"
+        },
+        "local_inventory": {
+          "source": "Oakland County MI \u2014 Simultaneous Conveyance condominium projects (2334); City of Ann Arbor MI \u2014 Condominium Associations (247); City of Farmington Hills MI \u2014 Subdivisions and Condominiums (condominium projects) (151); Roscommon County MI \u2014 Subdivisions and Condominiums (condominium projects) (53); Montcalm County MI \u2014 Subdivision & Condominium boundaries (condominiums by name) (35); Kalamazoo County MI \u2014 Plats and condominiums (condominium projects) (160); Lenawee County MI \u2014 Subdivisions (condominium & site-condominium projects) (73); City of Lansing MI \u2014 registered Neighborhood Associations (39); City of Grand Rapids MI \u2014 Neighborhood Associations (34)",
+          "records": 2969,
+          "url": "https://accessoakland.oakgov.com/",
+          "coverage": "partial",
+          "note": "county/city inventories, not a statewide registry \u2014 absence means nothing"
+        }
+      },
+      "available": [],
+      "unavailable": [
+        {
+          "source": "LARA corporate bulk",
+          "why": "paid"
+        },
+        {
+          "source": "Wayne County register",
+          "why": "pay-per-document"
+        }
+      ],
+      "counties": {},
+      "notes": []
+    },
+    "MN": {
+      "name": "Minnesota",
+      "status": "collected",
+      "collected": {
+        "courts_federal": {
+          "source": "CourtListener RECAP",
+          "dockets": 58
+        },
+        "courts_appellate": {
+          "source": "CourtListener state opinions",
+          "opinions": 1
+        },
+        "irs_exempt": {
+          "source": "IRS Exempt Organizations Business Master File",
+          "records": 88,
+          "url": "https://www.irs.gov/charities-non-profits/exempt-organizations-business-master-file-extract-eo-bmf",
+          "note": "501(c) HOAs/condos only (NTEE L50 or association name); 1120-H filers absent"
+        },
+        "local_inventory": {
+          "source": "Minneapolis MN \u2014 NCR neighborhood organizations (city open data) (70); Minnetonka MN \u2014 townhome, condo and cooperative associations (city GIS) (102); Rochester / Olmsted County MN \u2014 neighborhood associations (county open data) (53); Lake County MN \u2014 common interest communities (CIC unit plats, county GIS) (10)",
+          "records": 235,
+          "url": "https://opendata.minneapolismn.gov/datasets/6d3c4cca729f41818f38d267afc323a8_0/about",
+          "coverage": "partial",
+          "note": "county/city inventories, not a statewide registry \u2014 absence means nothing"
+        }
+      },
+      "available": [],
+      "unavailable": [
+        {
+          "source": "SOS business/lien bulk",
+          "why": "paid subscription"
+        },
+        {
+          "source": "Hennepin RecordEASE",
+          "why": "paid"
+        }
+      ],
+      "counties": {},
+      "notes": []
+    },
+    "MS": {
+      "name": "Mississippi",
+      "status": "collected",
+      "collected": {
+        "courts_federal": {
+          "source": "CourtListener RECAP",
+          "dockets": 33
+        },
+        "courts_appellate": {
+          "source": "CourtListener state opinions",
+          "opinions": 22
+        },
+        "corporate": {
+          "source": "Mississippi Secretary of State \u2014 corp-reporting nonprofit export",
+          "records": 2387,
+          "url": "https://corp.sos.ms.gov/corpreporting/",
+          "coverage": "all"
+        },
+        "irs_exempt": {
+          "source": "IRS Exempt Organizations Business Master File",
+          "records": 21,
+          "url": "https://www.irs.gov/charities-non-profits/exempt-organizations-business-master-file-extract-eo-bmf",
+          "note": "501(c) HOAs/condos only (NTEE L50 or association name); 1120-H filers absent"
+        }
+      },
+      "available": [],
+      "unavailable": [],
+      "counties": {},
+      "notes": [
+        "many counties have free Delta Computer Systems land-record search portals",
+        "Nonprofit corp export (all statuses) browser-exported by user 2026-08-17 via corp-reporting tool; 71.6k nonprofits scanned, NameReserved rows excluded"
+      ]
+    },
+    "MO": {
+      "name": "Missouri",
+      "status": "collected",
+      "collected": {
+        "courts_federal": {
+          "source": "CourtListener RECAP",
+          "dockets": 62
+        },
+        "courts_appellate": {
+          "source": "CourtListener state opinions",
+          "opinions": 46
+        },
+        "irs_exempt": {
+          "source": "IRS Exempt Organizations Business Master File",
+          "records": 98,
+          "url": "https://www.irs.gov/charities-non-profits/exempt-organizations-business-master-file-extract-eo-bmf",
+          "note": "501(c) HOAs/condos only (NTEE L50 or association name); 1120-H filers absent"
+        },
+        "local_inventory": {
+          "source": "Kansas City MO \u2014 registered neighborhood/homes associations (Open Data KC) (239); Kansas City MO \u2014 registered neighborhood associations (city GIS, current) (79); Columbia MO \u2014 neighborhood associations (city open data) (92); Springfield MO \u2014 registered neighborhood organizations (city GIS) (24); Independence MO \u2014 home owners association districts (city GIS) (44)",
+          "records": 417,
+          "url": "https://data.kcmo.org/dataset/Registered-Neighborhood-Homes-Associations/gctf-zc2y",
+          "coverage": "partial",
+          "note": "county/city inventories, not a statewide registry \u2014 absence means nothing"
+        }
+      },
+      "available": [],
+      "unavailable": [
+        {
+          "source": "SOS bulk",
+          "why": "paid records request"
+        }
+      ],
+      "counties": {},
+      "notes": [
+        "Jackson County recorder has free search-only portal"
+      ]
+    },
+    "MT": {
+      "name": "Montana",
+      "status": "collected",
+      "collected": {
+        "courts_federal": {
+          "source": "CourtListener RECAP",
+          "dockets": 18
+        },
+        "courts_appellate": {
+          "source": "CourtListener state opinions",
+          "opinions": 3
+        },
+        "irs_exempt": {
+          "source": "IRS Exempt Organizations Business Master File",
+          "records": 47,
+          "url": "https://www.irs.gov/charities-non-profits/exempt-organizations-business-master-file-extract-eo-bmf",
+          "note": "501(c) HOAs/condos only (NTEE L50 or association name); 1120-H filers absent"
+        },
+        "local_inventory": {
+          "source": "Montana Cadastral (MSL/DOR) \u2014 condominium projects by subdivision, Yellowstone County (457); Montana Cadastral (MSL/DOR) \u2014 condominium projects by subdivision, Flathead County (420); Montana Cadastral (MSL/DOR) \u2014 condominium projects by subdivision, Missoula County (178); Montana Cadastral (MSL/DOR) \u2014 condominium projects by subdivision, Cascade County (85); Montana Cadastral (MSL/DOR) \u2014 condominium projects by subdivision, Silver Bow County (15); Montana Cadastral (MSL/DOR) \u2014 condominium projects by subdivision, Lake County (11); Montana Cadastral (MSL/DOR) \u2014 condominium projects by subdivision, Gallatin County (5); Montana Cadastral (MSL/DOR) \u2014 condominium projects by subdivision, Ravalli County (2); Montana Cadastral (MSL/DOR) \u2014 condominium projects by subdivision, other counties (12); Flathead County MT \u2014 Subdivisions (condominium & townhome plats) (445); Gallatin County MT \u2014 Major Subdivisions (condominium & townhome plats) (21); Madison County MT \u2014 Subdivisions (condominium & townhome plats) (43)",
+          "records": 1339,
+          "url": "https://msl.mt.gov/geoinfo/msdi/cadastral",
+          "coverage": "partial",
+          "note": "county/city inventories, not a statewide registry \u2014 absence means nothing"
+        }
+      },
+      "available": [],
+      "unavailable": [
+        {
+          "source": "SOS bulk (biz.sosmt.gov)",
+          "why": "paid; API is Cloudflare-protected"
+        },
+        {
+          "source": "county recorders via iDoc Market",
+          "why": "paid"
+        }
+      ],
+      "counties": {},
+      "notes": []
+    },
+    "NE": {
+      "name": "Nebraska",
+      "status": "collected",
+      "collected": {
+        "courts_federal": {
+          "source": "CourtListener RECAP",
+          "dockets": 8
+        },
+        "courts_appellate": {
+          "source": "CourtListener state opinions",
+          "opinions": 0
+        },
+        "irs_exempt": {
+          "source": "IRS Exempt Organizations Business Master File",
+          "records": 23,
+          "url": "https://www.irs.gov/charities-non-profits/exempt-organizations-business-master-file-extract-eo-bmf",
+          "note": "501(c) HOAs/condos only (NTEE L50 or association name); 1120-H filers absent"
+        },
+        "local_inventory": {
+          "source": "Lincoln NE \u2014 Homeowner Association Contacts (Planning Dept opt-in list) (132); Omaha NE \u2014 Planning Dept neighborhood associations (HOA-named only) (46)",
+          "records": 178,
+          "url": "https://opendata.lincoln.ne.gov/datasets/homeowners-association-contacts",
+          "coverage": "partial",
+          "note": "county/city inventories, not a statewide registry \u2014 absence means nothing"
+        }
+      },
+      "available": [],
+      "unavailable": [
+        {
+          "source": "Nebraska.gov bulk/API",
+          "why": "paid subscriber service"
+        }
+      ],
+      "counties": {},
+      "notes": []
+    },
+    "NV": {
+      "name": "Nevada",
+      "status": "collected",
+      "collected": {
+        "courts_federal": {
+          "source": "CourtListener RECAP",
+          "dockets": 1003
+        },
+        "courts_appellate": {
+          "source": "CourtListener state opinions",
+          "opinions": 0
+        },
+        "irs_exempt": {
+          "source": "IRS Exempt Organizations Business Master File",
+          "records": 33,
+          "url": "https://www.irs.gov/charities-non-profits/exempt-organizations-business-master-file-extract-eo-bmf",
+          "note": "501(c) HOAs/condos only (NTEE L50 or association name); 1120-H filers absent"
+        },
+        "hoa_registry": {
+          "source": "Clark County / Henderson / Las Vegas GIS HOA layers (NRED-registered associations)",
+          "records": 1835,
+          "url": "https://maps.clarkcountynv.gov/arcgis/rest/services/AdminServ/Clark_County_HOA/FeatureServer/0",
+          "coverage": "partial",
+          "note": "Clark County only (clark 1016, henderson 366, henderson_master 24, las_vegas 508; 1914 rows merged to 1835). NRED registers ~3,700 statewide but publishes no roster; Washoe/Carson/Douglas (~700) have no public layer"
+        }
+      },
+      "available": [],
+      "unavailable": [
+        {
+          "source": "NRED common-interest-community (HOA) registration list",
+          "why": "no download published; license lookup app is bot-protected"
+        },
+        {
+          "source": "SOS corporate bulk",
+          "why": "paid subscription"
+        },
+        {
+          "source": "Clark County recorder index",
+          "why": "bulk extracts paid"
+        }
+      ],
+      "counties": {},
+      "notes": [
+        "NRED ombudsman quarterly reports (PDF) carry registration/complaint statistics",
+        "2026-09-02: NRED lookup needs an image captcha per query (not solved); Clark County / Henderson / Las Vegas ArcGIS HOA layers collected instead by get_nv_hoa.py (1,835 associations after merge). NRED Ombudsman report 1/31/2025: 3,720 associations statewide (Clark 2,994, Washoe 546, Carson 81, Douglas 64) \u2014 northern NV has no public layer"
+      ]
+    },
+    "NH": {
+      "name": "New Hampshire",
+      "status": "collected",
+      "collected": {
+        "courts_federal": {
+          "source": "CourtListener RECAP",
+          "dockets": 22
+        },
+        "courts_appellate": {
+          "source": "CourtListener state opinions",
+          "opinions": 6
+        },
+        "irs_exempt": {
+          "source": "IRS Exempt Organizations Business Master File",
+          "records": 27,
+          "url": "https://www.irs.gov/charities-non-profits/exempt-organizations-business-master-file-extract-eo-bmf",
+          "note": "501(c) HOAs/condos only (NTEE L50 or association name); 1120-H filers absent"
+        }
+      },
+      "available": [],
+      "unavailable": [
+        {
+          "source": "SOS QuickStart (bot-blocked)",
+          "why": "bulk lists paid"
+        },
+        {
+          "source": "AG condo offering registrations",
+          "why": "no public roster"
+        }
+      ],
+      "counties": {},
+      "notes": [
+        "nhdeeds.org free per-county index search",
+        "2026-09-02 survey: DOJ condo registry unpublished and doj.nh.gov returns 403 from this network; GRANIT parcels carry no owner names \u2014 nothing enumerable"
+      ]
+    },
+    "NJ": {
+      "name": "New Jersey",
+      "status": "collected",
+      "collected": {
+        "courts_federal": {
+          "source": "CourtListener RECAP",
+          "dockets": 199
+        },
+        "courts_appellate": {
+          "source": "CourtListener state opinions",
+          "opinions": 31
+        },
+        "irs_exempt": {
+          "source": "IRS Exempt Organizations Business Master File",
+          "records": 132,
+          "url": "https://www.irs.gov/charities-non-profits/exempt-organizations-business-master-file-extract-eo-bmf",
+          "note": "501(c) HOAs/condos only (NTEE L50 or association name); 1120-H filers absent"
+        }
+      },
+      "available": [],
+      "unavailable": [
+        {
+          "source": "DCA Planned Real Estate Development registrations",
+          "why": "no published list; OPRA request needed"
+        },
+        {
+          "source": "DORES business bulk",
+          "why": "paid"
+        }
+      ],
+      "counties": {},
+      "notes": [
+        "several county clerks (e.g. Monmouth) have free search-only land-records portals",
+        "2026-09-02 survey: PREDFDA registrations unpublished; MOD-IV flags 309,953 condo units but owner names are blank (Daniel's Law) \u2014 nothing enumerable"
+      ]
+    },
+    "NM": {
+      "name": "New Mexico",
+      "status": "collected",
+      "collected": {
+        "courts_federal": {
+          "source": "CourtListener RECAP",
+          "dockets": 21
+        },
+        "courts_appellate": {
+          "source": "CourtListener state opinions",
+          "opinions": 0
+        },
+        "irs_exempt": {
+          "source": "IRS Exempt Organizations Business Master File",
+          "records": 40,
+          "url": "https://www.irs.gov/charities-non-profits/exempt-organizations-business-master-file-extract-eo-bmf",
+          "note": "501(c) HOAs/condos only (NTEE L50 or association name); 1120-H filers absent"
+        },
+        "local_inventory": {
+          "source": "Albuquerque NM \u2014 recognized neighborhood associations (association-named only) (2); Santa Fe NM \u2014 registered neighborhood associations (HOA/condo types) (39); Santa Fe NM \u2014 condominium plats (project names) (333); Bernalillo County NM \u2014 recognized neighborhood associations (association-named only) (9)",
+          "records": 382,
+          "url": "https://www.arcgis.com/home/item.html?id=ea84772907ae48c5b667b4fcfab15439",
+          "coverage": "partial",
+          "note": "county/city inventories, not a statewide registry \u2014 absence means nothing"
+        }
+      },
+      "available": [],
+      "unavailable": [
+        {
+          "source": "SOS bulk",
+          "why": "per-entity search only"
+        }
+      ],
+      "counties": {},
+      "notes": [
+        "no HOA registry; HOA disclosure certificates are county-recorded"
+      ]
+    },
+    "NY": {
+      "name": "New York",
+      "status": "collected",
+      "collected": {
+        "corporate": {
+          "source": "NYS Department of State \u2014 Active Corporations (data.ny.gov)",
+          "records": 11198,
+          "url": "https://data.ny.gov/Economic-Development/Active-Corporations-Beginning-1800/n9v6-gdp6",
+          "coverage": "active_only"
+        },
+        "courts_federal": {
+          "source": "CourtListener RECAP",
+          "dockets": 131
+        },
+        "courts_appellate": {
+          "source": "CourtListener state opinions",
+          "opinions": 12
+        },
+        "irs_exempt": {
+          "source": "IRS Exempt Organizations Business Master File",
+          "records": 272,
+          "url": "https://www.irs.gov/charities-non-profits/exempt-organizations-business-master-file-extract-eo-bmf",
+          "note": "501(c) HOAs/condos only (NTEE L50 or association name); 1120-H filers absent"
+        }
+      },
+      "available": [],
+      "unavailable": [
+        {
+          "source": "AG condo/HOA offering-plan registrations",
+          "why": "search-only"
+        }
+      ],
+      "counties": {
+        "New York City (5 boroughs)": {
+          "liens": {
+            "source": "ACRIS via NYC Open Data (LOCC/TOLCC)",
+            "records": 39908,
+            "years": "2003-2026",
+            "note": "carries property addresses"
+          }
+        }
+      },
+      "notes": [
+        "ACRIS collected for the 5 boroughs; other NY counties have no free bulk recorder data"
+      ]
+    },
+    "NC": {
+      "name": "North Carolina",
+      "status": "collected",
+      "collected": {
+        "courts_federal": {
+          "source": "CourtListener RECAP",
+          "dockets": 92
+        },
+        "courts_appellate": {
+          "source": "CourtListener state opinions",
+          "opinions": 44
+        },
+        "irs_exempt": {
+          "source": "IRS Exempt Organizations Business Master File",
+          "records": 147,
+          "url": "https://www.irs.gov/charities-non-profits/exempt-organizations-business-master-file-extract-eo-bmf",
+          "note": "501(c) HOAs/condos only (NTEE L50 or association name); 1120-H filers absent"
+        },
+        "local_inventory": {
+          "source": "NC OneMap statewide parcels (NC CGIA) \u2014 association-owned parcels, owner name + mailing address (12446); City of Charlotte \u2014 Neighborhood Organization Contact List (HOA / neighborhood associations) (289); City of Raleigh \u2014 Neighborhood Registry (HOA-named entries, home counts) (256); City of Asheville \u2014 Neighborhood Organizations (association-named entries) (17)",
+          "records": 12975,
+          "url": "https://www.nconemap.gov/pages/parcels",
+          "coverage": "partial",
+          "note": "county/city inventories, not a statewide registry \u2014 absence means nothing"
+        }
+      },
+      "available": [],
+      "unavailable": [
+        {
+          "source": "SOS business registration data",
+          "why": "purchase contract; free-download lead did not check out; TOS bars scripted search"
+        },
+        {
+          "source": "Mecklenburg register (robots.txt disallow)",
+          "why": "not sanctioned"
+        }
+      ],
+      "counties": {},
+      "notes": []
+    },
+    "ND": {
+      "name": "North Dakota",
+      "status": "collected",
+      "collected": {
+        "corporate": {
+          "source": "North Dakota Secretary of State \u2014 FirstStop business search API (partial extract)",
+          "records": 1156,
+          "url": "https://firststop.sos.nd.gov/search/business",
+          "coverage": "partial"
+        },
+        "courts_federal": {
+          "source": "CourtListener RECAP",
+          "dockets": 1
+        },
+        "courts_appellate": {
+          "source": "CourtListener state opinions",
+          "opinions": 2
+        },
+        "irs_exempt": {
+          "source": "IRS Exempt Organizations Business Master File",
+          "records": 7,
+          "url": "https://www.irs.gov/charities-non-profits/exempt-organizations-business-master-file-extract-eo-bmf",
+          "note": "501(c) HOAs/condos only (NTEE L50 or association name); 1120-H filers absent"
+        }
+      },
+      "available": [],
+      "unavailable": [],
+      "counties": {},
+      "notes": [
+        "county recorders via iDoc Market are paid"
+      ]
+    },
+    "OH": {
+      "name": "Ohio",
+      "status": "collected",
+      "collected": {
+        "courts_federal": {
+          "source": "CourtListener RECAP",
+          "dockets": 73
+        },
+        "courts_appellate": {
+          "source": "CourtListener state opinions",
+          "opinions": 0
+        },
+        "corporate": {
+          "source": "Ohio Secretary of State \u2014 monthly business filings reports",
+          "records": 28,
+          "url": "https://www.ohiosos.gov/business/business-reports",
+          "coverage": "partial"
+        },
+        "irs_exempt": {
+          "source": "IRS Exempt Organizations Business Master File",
+          "records": 129,
+          "url": "https://www.irs.gov/charities-non-profits/exempt-organizations-business-master-file-extract-eo-bmf",
+          "note": "501(c) HOAs/condos only (NTEE L50 or association name); 1120-H filers absent"
+        }
+      },
+      "available": [
+        {
+          "source": "SOS monthly filings reports \u2014 additional months",
+          "access": "excel-browser",
+          "url": "https://www.ohiosos.gov/business/business-reports",
+          "note": "July 2026 nonprofit-articles report collected; drop more monthly files into .cache/oh/*.txt and re-run get_states.py to accumulate"
+        },
+        {
+          "source": "Franklin County Auditor parcel extracts",
+          "access": "csv",
+          "url": "https://www.franklincountyauditor.com/"
+        }
+      ],
+      "unavailable": [],
+      "counties": {},
+      "notes": [
+        "Monthly report route opened 2026-08-17: new nonprofit incorporations only (no status, no back catalog) \u2014 corp coverage stays partial; full extract remains paid"
+      ]
+    },
+    "OK": {
+      "name": "Oklahoma",
+      "status": "collected",
+      "collected": {
+        "courts_federal": {
+          "source": "CourtListener RECAP",
+          "dockets": 19
+        },
+        "courts_appellate": {
+          "source": "CourtListener state opinions",
+          "opinions": 3
+        },
+        "irs_exempt": {
+          "source": "IRS Exempt Organizations Business Master File",
+          "records": 37,
+          "url": "https://www.irs.gov/charities-non-profits/exempt-organizations-business-master-file-extract-eo-bmf",
+          "note": "501(c) HOAs/condos only (NTEE L50 or association name); 1120-H filers absent"
+        },
+        "local_inventory": {
+          "source": "Oklahoma City OK \u2014 registered neighborhood associations (HOA/POA/condo types) (216); Tulsa OK \u2014 registered neighborhoods (Homeowners Association type) (145)",
+          "records": 361,
+          "url": "https://data.okc.gov/portal/page/viewer?datasetName=Neighborhood+Associations&view=table",
+          "coverage": "partial",
+          "note": "county/city inventories, not a statewide registry \u2014 absence means nothing"
+        }
+      },
+      "available": [],
+      "unavailable": [
+        {
+          "source": "SOS bulk",
+          "why": "paid"
+        },
+        {
+          "source": "okcountyrecords.com",
+          "why": "Cloudflare + restrictive robots"
+        }
+      ],
+      "counties": {},
+      "notes": [
+        "IRS EO BMF roster collected 2026-09-02 for every state (get_irs_bmf.py)"
+      ]
+    },
+    "OR": {
+      "name": "Oregon",
+      "status": "collected",
+      "collected": {
+        "corporate": {
+          "source": "Oregon Secretary of State \u2014 Active Businesses (data.oregon.gov)",
+          "records": 5648,
+          "url": "https://data.oregon.gov/Business/Active-Businesses-ALL/tckn-sxa6",
+          "coverage": "active_only"
+        },
+        "courts_federal": {
+          "source": "CourtListener RECAP",
+          "dockets": 72
+        },
+        "courts_appellate": {
+          "source": "CourtListener state opinions",
+          "opinions": 0
+        },
+        "irs_exempt": {
+          "source": "IRS Exempt Organizations Business Master File",
+          "records": 71,
+          "url": "https://www.irs.gov/charities-non-profits/exempt-organizations-business-master-file-extract-eo-bmf",
+          "note": "501(c) HOAs/condos only (NTEE L50 or association name); 1120-H filers absent"
+        }
+      },
+      "available": [],
+      "unavailable": [
+        {
+          "source": "Real Estate Agency condo registrations",
+          "why": "no public downloadable registry"
+        },
+        {
+          "source": "Multnomah recorder (MultcoRecords)",
+          "why": "paid subscription"
+        }
+      ],
+      "counties": {},
+      "notes": []
+    },
+    "PA": {
+      "name": "Pennsylvania",
+      "status": "collected",
+      "collected": {
+        "corporate": {
+          "source": "PA Department of State \u2014 Registered Businesses (data.pa.gov)",
+          "records": 10674,
+          "url": "https://data.pa.gov/d/xvd7-5r2c",
+          "coverage": "active_only"
+        },
+        "courts_federal": {
+          "source": "CourtListener RECAP",
+          "dockets": 166
+        },
+        "courts_appellate": {
+          "source": "CourtListener state opinions",
+          "opinions": 37
+        },
+        "irs_exempt": {
+          "source": "IRS Exempt Organizations Business Master File",
+          "records": 166,
+          "url": "https://www.irs.gov/charities-non-profits/exempt-organizations-business-master-file-extract-eo-bmf",
+          "note": "501(c) HOAs/condos only (NTEE L50 or association name); 1120-H filers absent"
+        }
+      },
+      "available": [],
+      "unavailable": [],
+      "counties": {},
+      "notes": [
+        "Philadelphia rtt_summary (Carto API) has condo declarations but no lien doc types; Allegheny WPRDC has deeds only"
+      ]
+    },
+    "RI": {
+      "name": "Rhode Island",
+      "status": "collected",
+      "collected": {
+        "courts_federal": {
+          "source": "CourtListener RECAP",
+          "dockets": 14
+        },
+        "courts_appellate": {
+          "source": "CourtListener state opinions",
+          "opinions": 13
+        },
+        "irs_exempt": {
+          "source": "IRS Exempt Organizations Business Master File",
+          "records": 18,
+          "url": "https://www.irs.gov/charities-non-profits/exempt-organizations-business-master-file-extract-eo-bmf",
+          "note": "501(c) HOAs/condos only (NTEE L50 or association name); 1120-H filers absent"
+        }
+      },
+      "available": [],
+      "unavailable": [
+        {
+          "source": "SOS bulk data",
+          "why": "paid SFTP subscription"
+        }
+      ],
+      "counties": {},
+      "notes": [
+        "2026-09-02 survey: no association/condo layer anywhere, data.ri.gov gone; Providence tax roll has ~50 association owners \u2014 not collected"
+      ]
+    },
+    "SC": {
+      "name": "South Carolina",
+      "status": "collected",
+      "collected": {
+        "courts_federal": {
+          "source": "CourtListener RECAP",
+          "dockets": 177
+        },
+        "courts_appellate": {
+          "source": "CourtListener state opinions",
+          "opinions": 5
+        },
+        "complaints": {
+          "source": "SC DCA annual HOA complaint reports",
+          "records": 2263,
+          "years": "2018-2025"
+        },
+        "irs_exempt": {
+          "source": "IRS Exempt Organizations Business Master File",
+          "records": 53,
+          "url": "https://www.irs.gov/charities-non-profits/exempt-organizations-business-master-file-extract-eo-bmf",
+          "note": "501(c) HOAs/condos only (NTEE L50 or association name); 1120-H filers absent"
+        }
+      },
+      "available": [],
+      "unavailable": [
+        {
+          "source": "SOS business filings",
+          "why": "search-only"
+        }
+      ],
+      "counties": {},
+      "notes": [
+        "Charleston county ROD has free search-only index"
+      ]
+    },
+    "SD": {
+      "name": "South Dakota",
+      "status": "collected",
+      "collected": {
+        "courts_federal": {
+          "source": "CourtListener RECAP",
+          "dockets": 1
+        },
+        "courts_appellate": {
+          "source": "CourtListener state opinions",
+          "opinions": 1
+        },
+        "irs_exempt": {
+          "source": "IRS Exempt Organizations Business Master File",
+          "records": 15,
+          "url": "https://www.irs.gov/charities-non-profits/exempt-organizations-business-master-file-extract-eo-bmf",
+          "note": "501(c) HOAs/condos only (NTEE L50 or association name); 1120-H filers absent"
+        }
+      },
+      "available": [],
+      "unavailable": [
+        {
+          "source": "SOS bulk",
+          "why": "paid request; search-only otherwise"
+        }
+      ],
+      "counties": {},
+      "notes": []
+    },
+    "TN": {
+      "name": "Tennessee",
+      "status": "collected",
+      "collected": {
+        "courts_federal": {
+          "source": "CourtListener RECAP",
+          "dockets": 78
+        },
+        "courts_appellate": {
+          "source": "CourtListener state opinions",
+          "opinions": 55
+        },
+        "irs_exempt": {
+          "source": "IRS Exempt Organizations Business Master File",
+          "records": 71,
+          "url": "https://www.irs.gov/charities-non-profits/exempt-organizations-business-master-file-extract-eo-bmf",
+          "note": "501(c) HOAs/condos only (NTEE L50 or association name); 1120-H filers absent"
+        },
+        "local_inventory": {
+          "source": "Chattanooga TN \u2014 neighborhood association boundaries (association-named only) (35)",
+          "records": 35,
+          "url": "https://www.chattadata.org/Public-Safety/Neighborhood-Association-Boundaries/dxzz-idjy",
+          "coverage": "partial",
+          "note": "county/city inventories, not a statewide registry \u2014 absence means nothing"
+        }
+      },
+      "available": [
+        {
+          "source": "Shelby County register free index search",
+          "access": "scrape",
+          "url": "https://search.register.shelby.tn.us/search/index.php",
+          "note": "robots.txt permits; per-query search, no bulk"
+        }
+      ],
+      "unavailable": [
+        {
+          "source": "SOS TNBEAR database download",
+          "why": "paid"
+        }
+      ],
+      "counties": {},
+      "notes": []
+    },
+    "TX": {
+      "name": "Texas",
+      "status": "done",
+      "collected": {
+        "hoa_registry": {
+          "source": "TREC HOA management certificates (Socrata)",
+          "records": 16858,
+          "url": "https://data.texas.gov/resource/8auc-hzdi.json"
+        },
+        "courts_federal": {
+          "source": "CourtListener RECAP",
+          "dockets": 332
+        },
+        "courts_appellate": {
+          "source": "CourtListener state opinions",
+          "opinions": 1002
+        },
+        "irs_exempt": {
+          "source": "IRS Exempt Organizations Business Master File",
+          "records": 1098,
+          "url": "https://www.irs.gov/charities-non-profits/exempt-organizations-business-master-file-extract-eo-bmf",
+          "note": "501(c) HOAs/condos only (NTEE L50 or association name); 1120-H filers absent"
+        }
+      },
+      "available": [],
+      "unavailable": [
+        {
+          "source": "TX Secretary of State corporate bulk data",
+          "why": "paid (SOSDirect)"
+        },
+        {
+          "source": "county recorder lien indexes",
+          "why": "no free bulk source found (county-by-county paywalls)"
+        }
+      ],
+      "counties": {},
+      "notes": []
+    },
+    "UT": {
+      "name": "Utah",
+      "status": "collected",
+      "collected": {
+        "courts_federal": {
+          "source": "CourtListener RECAP",
+          "dockets": 42
+        },
+        "courts_appellate": {
+          "source": "CourtListener state opinions",
+          "opinions": 10
+        },
+        "irs_exempt": {
+          "source": "IRS Exempt Organizations Business Master File",
+          "records": 26,
+          "url": "https://www.irs.gov/charities-non-profits/exempt-organizations-business-master-file-extract-eo-bmf",
+          "note": "501(c) HOAs/condos only (NTEE L50 or association name); 1120-H filers absent"
+        },
+        "hoa_registry": {
+          "source": "Utah Department of Commerce \u2014 HOA Registry",
+          "records": 4126,
+          "url": "https://services.commerce.utah.gov/hoa/",
+          "note": "mandatory statewide registry; current registrations only"
+        }
+      },
+      "available": [],
+      "unavailable": [
+        {
+          "source": "Div. of Corporations bulk",
+          "why": "paid/GRAMA"
+        }
+      ],
+      "counties": {},
+      "notes": [
+        "HOA Registry swept 2026-09-02 (get_ut_hoa.py): one ajax endpoint, LIKE wildcard lists the whole registry; board/president names kept, phone/e-mail dropped"
+      ]
+    },
+    "VT": {
+      "name": "Vermont",
+      "status": "collected",
+      "collected": {
+        "courts_federal": {
+          "source": "CourtListener RECAP",
+          "dockets": 8
+        },
+        "courts_appellate": {
+          "source": "CourtListener state opinions",
+          "opinions": 14
+        },
+        "irs_exempt": {
+          "source": "IRS Exempt Organizations Business Master File",
+          "records": 15,
+          "url": "https://www.irs.gov/charities-non-profits/exempt-organizations-business-master-file-extract-eo-bmf",
+          "note": "501(c) HOAs/condos only (NTEE L50 or association name); 1120-H filers absent"
+        },
+        "local_inventory": {
+          "source": "VCGI statewide standardized parcels (Grand List) \u2014 association-owned parcels, owner name + mailing address (132)",
+          "records": 132,
+          "url": "https://geodata.vermont.gov/pages/parcels",
+          "coverage": "partial",
+          "note": "county/city inventories, not a statewide registry \u2014 absence means nothing"
+        }
+      },
+      "available": [],
+      "unavailable": [
+        {
+          "source": "SOS business registry",
+          "why": "old Socrata dataset removed; search-only now"
+        }
+      ],
+      "counties": {},
+      "notes": []
+    },
+    "VA": {
+      "name": "Virginia",
+      "status": "collected",
+      "collected": {
+        "hoa_registry": {
+          "source": "Virginia DPOR \u2014 registered condominiums",
+          "records": 192,
+          "url": "https://www.dpor.virginia.gov/RegulantLists"
+        },
+        "courts_federal": {
+          "source": "CourtListener RECAP",
+          "dockets": 100
+        },
+        "courts_appellate": {
+          "source": "CourtListener state opinions",
+          "opinions": 9
+        },
+        "irs_exempt": {
+          "source": "IRS Exempt Organizations Business Master File",
+          "records": 182,
+          "url": "https://www.irs.gov/charities-non-profits/exempt-organizations-business-master-file-extract-eo-bmf",
+          "note": "501(c) HOAs/condos only (NTEE L50 or association name); 1120-H filers absent"
+        }
+      },
+      "available": [],
+      "unavailable": [
+        {
+          "source": "SCC corporate bulk",
+          "why": "paid"
+        },
+        {
+          "source": "circuit-court land records",
+          "why": "paid per-clerk Secure Remote Access"
+        }
+      ],
+      "counties": {},
+      "notes": [
+        "DPOR CIC ombudsman publishes annual complaint-report PDFs"
+      ]
+    },
+    "WA": {
+      "name": "Washington",
+      "status": "collected",
+      "collected": {
+        "courts_federal": {
+          "source": "CourtListener RECAP",
+          "dockets": 330
+        },
+        "courts_appellate": {
+          "source": "CourtListener state opinions",
+          "opinions": 13
+        },
+        "irs_exempt": {
+          "source": "IRS Exempt Organizations Business Master File",
+          "records": 157,
+          "url": "https://www.irs.gov/charities-non-profits/exempt-organizations-business-master-file-extract-eo-bmf",
+          "note": "501(c) HOAs/condos only (NTEE L50 or association name); 1120-H filers absent"
+        },
+        "corporate": {
+          "source": "Washington Secretary of State \u2014 Corporations & Charities Filing System (CCFS)",
+          "records": 20148,
+          "url": "https://ccfs.sos.wa.gov/",
+          "coverage": "all",
+          "note": "advanced-search list rows (name contains HOMEOWNERS/CONDO/\u2026); every status incl. Administratively Dissolved/Inactive; principal-office address + registered-agent name; governors need per-entity detail calls (not collected). Turnstile-gated: swept through BrowserOS (get_wa_ccfs.py), not get_states.py",
+          "statuses": {
+            "Active": 15625,
+            "Administratively Dissolved": 3244,
+            "Delinquent": 455,
+            "Inactive": 384,
+            "Voluntarily Dissolved": 287,
+            "Expired": 81,
+            "Terminated": 54,
+            "Withdrawn": 10,
+            "Merged": 8
+          },
+          "collected_at": "2026-09-03"
+        }
+      },
+      "available": [],
+      "unavailable": [
+        {
+          "source": "SOS CCFS bulk extract",
+          "why": "discontinued (was free); the search UI is Turnstile-gated and its export buttons are disabled \u2014 swept page by page instead (get_wa_ccfs.py)"
+        },
+        {
+          "source": "King County recorder bulk",
+          "why": "paid"
+        }
+      ],
+      "counties": {},
+      "notes": [
+        "no state HOA registry or ombudsman",
+        "SoS CCFS swept 2026-09-02 (get_wa_ccfs.py): Turnstile-gated Angular SPA driven through BrowserOS over CDP, advanced-search list rows for the association vocabulary; every status kept (corp_coverage 'all'); governors/principal-office details are per-entity calls not yet collected; not in state_sources.yml, so a get_states.py run drops the WA corp_coverage key until this script reruns"
+      ]
+    },
+    "WV": {
+      "name": "West Virginia",
+      "status": "collected",
+      "collected": {
+        "courts_federal": {
+          "source": "CourtListener RECAP",
+          "dockets": 10
+        },
+        "courts_appellate": {
+          "source": "CourtListener state opinions",
+          "opinions": 14
+        },
+        "irs_exempt": {
+          "source": "IRS Exempt Organizations Business Master File",
+          "records": 63,
+          "url": "https://www.irs.gov/charities-non-profits/exempt-organizations-business-master-file-extract-eo-bmf",
+          "note": "501(c) HOAs/condos only (NTEE L50 or association name); 1120-H filers absent"
+        },
+        "local_inventory": {
+          "source": "WV GIS Technical Center statewide parcels (WV_Parcels) \u2014 association-owned parcels, owner name + mailing address (512)",
+          "records": 512,
+          "url": "https://wvgis.wvu.edu/data/dataset.php?ID=371",
+          "coverage": "partial",
+          "note": "county/city inventories, not a statewide registry \u2014 absence means nothing"
+        }
+      },
+      "available": [],
+      "unavailable": [
+        {
+          "source": "SOS bulk / list builder",
+          "why": "paid WV.gov account"
+        }
+      ],
+      "counties": {},
+      "notes": []
+    },
+    "WI": {
+      "name": "Wisconsin",
+      "status": "collected",
+      "collected": {
+        "courts_federal": {
+          "source": "CourtListener RECAP",
+          "dockets": 27
+        },
+        "courts_appellate": {
+          "source": "CourtListener state opinions",
+          "opinions": 9
+        },
+        "irs_exempt": {
+          "source": "IRS Exempt Organizations Business Master File",
+          "records": 76,
+          "url": "https://www.irs.gov/charities-non-profits/exempt-organizations-business-master-file-extract-eo-bmf",
+          "note": "501(c) HOAs/condos only (NTEE L50 or association name); 1120-H filers absent"
+        },
+        "local_inventory": {
+          "source": "WI DOA Statewide Parcel Map V12 (2026) \u2014 association-owned parcels, owner name + mailing address (2669); Dane County \u2014 recorded condominium plats (PlatBoundaries) (1040); Milwaukee County LIO \u2014 condominium plat index (Cadastral/Condo) (1345); City of Madison \u2014 Neighborhood Associations typed HOA / condominium / property-owners (19)",
+          "records": 5004,
+          "url": "https://www.sco.wisc.edu/parcels/data/",
+          "coverage": "partial",
+          "note": "county/city inventories, not a statewide registry \u2014 absence means nothing"
+        },
+        "hoa_registry": {
+          "source": "Wisconsin DFI \u2014 Homeowners' Association registry (Wis. Stat. 710.085)",
+          "records": 638,
+          "url": "https://apps.dfi.wi.gov/apps/HomeOwnersAssociation/Search",
+          "note": "HOAs only (no condos), filings since 2022"
+        }
+      },
+      "available": [
+        {
+          "source": "Milwaukee MPROP master property file",
+          "access": "csv",
+          "url": "https://data.milwaukee.gov/dataset/mprop",
+          "note": "condo parcels + owner names"
+        }
+      ],
+      "unavailable": [
+        {
+          "source": "DFI corporate bulk",
+          "why": "paid"
+        },
+        {
+          "source": "Milwaukee LandShark",
+          "why": "paid"
+        }
+      ],
+      "counties": {},
+      "notes": []
+    },
+    "WY": {
+      "name": "Wyoming",
+      "status": "collected",
+      "collected": {
+        "courts_federal": {
+          "source": "CourtListener RECAP",
+          "dockets": 8
+        },
+        "courts_appellate": {
+          "source": "CourtListener state opinions",
+          "opinions": 9
+        },
+        "irs_exempt": {
+          "source": "IRS Exempt Organizations Business Master File",
+          "records": 13,
+          "url": "https://www.irs.gov/charities-non-profits/exempt-organizations-business-master-file-extract-eo-bmf",
+          "note": "501(c) HOAs/condos only (NTEE L50 or association name); 1120-H filers absent"
+        },
+        "local_inventory": {
+          "source": "Teton County WY \u2014 assessor ownership (association-owned parcels) (96); Natrona County WY \u2014 assessor ownership via City of Casper GIS (association-owned parcels) (37)",
+          "records": 133,
+          "url": "https://maps.terragis.net/tetonwy/mapserver/download/download.html",
+          "coverage": "partial",
+          "note": "county/city inventories, not a statewide registry \u2014 absence means nothing"
+        }
+      },
+      "available": [],
+      "unavailable": [
+        {
+          "source": "SOS business database download",
+          "why": "paid ($10,200/yr); the rumored free file is empty"
+        }
+      ],
+      "counties": {},
+      "notes": []
+    },
+    "DC": {
+      "name": "District of Columbia",
+      "status": "collected",
+      "collected": {
+        "corporate": {
+          "source": "DC DLCP \u2014 Corporate Registrations (Open Data DC)",
+          "records": 1882,
+          "url": "https://opendata.dc.gov/datasets/DCGIS::corporate-registration",
+          "coverage": "all"
+        },
+        "courts_federal": {
+          "source": "CourtListener RECAP",
+          "dockets": 41
+        },
+        "courts_appellate": {
+          "source": "CourtListener state opinions",
+          "opinions": 5
+        },
+        "irs_exempt": {
+          "source": "IRS Exempt Organizations Business Master File",
+          "records": 27,
+          "url": "https://www.irs.gov/charities-non-profits/exempt-organizations-business-master-file-extract-eo-bmf",
+          "note": "501(c) HOAs/condos only (NTEE L50 or association name); 1120-H filers absent"
+        }
+      },
+      "available": [],
+      "unavailable": [
+        {
+          "source": "DHCD condo registrations",
+          "why": "no public list"
+        },
+        {
+          "source": "Recorder of Deeds index",
+          "why": "search-only (guest), no bulk"
+        }
+      ],
+      "counties": {},
+      "notes": []
+    }
+  }
+}

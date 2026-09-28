@@ -1,0 +1,26 @@
+# Wyoming — no statewide parcel/HOA source. County assessor ownership layers give association
+# owners of common-area parcels (collapsed to one row per owner name).
+# Skipped: Laramie County plat boundaries and Teton County subdivisions (plat names only);
+# Laramie assessor ownership (restricted service).
+- kind: csv
+  source: "Teton County WY — assessor ownership (association-owned parcels)"
+  page: "https://maps.terragis.net/tetonwy/mapserver/download/download.html"
+  url: "https://maps.terragis.net/tetonwy/mapserver/download/data/ownership_shp.zip"
+  dbf: ownership/ownership.dbf
+  fields: {name: owner, address: [address, address2], city: owner_city, zip: owner_zip,
+           status: accttype, status_detail: descript, record_id: pidn}
+  name_filter: true
+  name_regex: "^(.*?)(?:,?\\s+(?:C/O|ATTN:?)\\s.*)?$"   # drop "C/O manager" / "ATTN: person" tails
+  exclude_name: "\\bBANK\\b|MORTGAGE"
+  constants: {county: Teton}
+
+- kind: arcgis
+  source: "Natrona County WY — assessor ownership via City of Casper GIS (association-owned parcels)"
+  page: "https://data-casperwy.opendata.arcgis.com/"
+  url: "https://services.arcgis.com/sF6mYFdZFl3Y1kjj/arcgis/rest/services/Natrona_County_Ownership_Data/FeatureServer/0"
+  where: "UPPER(OWN1) LIKE '%HOMEOWNER%' OR UPPER(OWN1) LIKE '%OWNERS ASS%' OR UPPER(OWN1) LIKE '%CONDO%' OR UPPER(OWN1) LIKE '%TOWNHO%' OR UPPER(OWN1) LIKE '%PROPERTY OWNERS%' OR UPPER(OWN2) LIKE '%HOMEOWNER%' OR UPPER(OWN2) LIKE '%OWNERS ASS%' OR UPPER(OWN2) LIKE '%CONDO%'"
+  fields: {name: [OWN1, OWN2], address: [ADDR1, ADDR2, ADDR3], status_detail: LEGAL1, record_id: GEOCODE}
+  name_filter: true
+  name_regex: "^(.*?)(?:,?\\s+(?:C/O|ATTN:?)\\s.*)?$"   # drop "C/O manager" / "ATTN: person" tails
+  exclude_name: "\\bBANK\\b|MORTGAGE|^EDWARDS, CONDO"   # a person surnamed Condo
+  constants: {county: Natrona}

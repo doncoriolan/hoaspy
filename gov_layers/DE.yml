@@ -1,0 +1,24 @@
+# Delaware — no state registry (DUCIOA ombudsperson publishes no list; Division
+# of Corporations bulk is paid). New Castle County (~60% of DE population) maps
+# every mandatory-dues Maintenance Corporation (= DE HOA) and voluntary Civic
+# Association by subdivision.
+# Skipped: DEMHRA "Registered Homeowners' Associations" PDF (~55 manufactured-
+# home-community HOAs with officer contacts — PDF, no CSV; note for a manual
+# pass); NCC Civic Umbrella Groups layer 2 (18 coalitions, not associations);
+# Sussex County Condos layer (parcel ids only, no association name); Kent
+# County GIS (Akamai-blocked from this network).
+- kind: arcgis
+  source: "New Castle County DE GIS — Maintenance Corporations (mandatory-dues HOAs)"
+  page: "https://gis.nccde.org/agsserver/rest/services/BaseMaps/Civic/MapServer/1"
+  url: "https://gis.nccde.org/agsserver/rest/services/BaseMaps/Civic/MapServer/1"
+  page_size: 1000
+  fields: {name: SUBDIV_NAM, record_id: CODE, status_detail: PRIOR_NAME}
+  constants: {county: New Castle, status: "maintenance corporation"}
+
+- kind: arcgis
+  source: "New Castle County DE GIS — Civic Associations"
+  page: "https://gis.nccde.org/agsserver/rest/services/BaseMaps/Civic/MapServer/0"
+  url: "https://gis.nccde.org/agsserver/rest/services/BaseMaps/Civic/MapServer/0"
+  page_size: 1000
+  fields: {name: SUBDIV_NAM, record_id: CODE, status_detail: PRIOR_NAME}
+  constants: {county: New Castle, status: "civic association"}

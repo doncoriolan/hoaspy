@@ -1,0 +1,58 @@
+# North Carolina — no statewide HOA registry. The NC OneMap statewide parcel
+# layer (NC CGIA, all 100 counties) carries the assessor's owner name, so every
+# association that owns a common-area parcel shows up with its mailing address;
+# the city registries add the Charlotte / Raleigh / Asheville lists.
+# Skipped: Wake County parcels/subdivisions (maps.wake.gov robots Disallow: /),
+# Mecklenburg subdivisions (robots disallows ClaudeBot), Durham's PDF list.
+
+- kind: arcgis
+  source: "NC OneMap statewide parcels (NC CGIA) — association-owned parcels, owner name + mailing address"
+  page: "https://www.nconemap.gov/pages/parcels"
+  url: "https://services.nconemap.gov/secure/rest/services/NC1Map_Parcels/MapServer/0"
+  where: >-
+    ownname LIKE '%HOMEOWNER%' OR ownname LIKE '%HOME OWNER%' OR ownname LIKE '%CONDO%'
+    OR ownname LIKE '%PROPERTY OWNER%' OR ownname LIKE '%OWNERS ASSOC%'
+    OR ownname LIKE '%COMMUNITY ASSOC%' OR ownname LIKE '%MASTER ASSOC%'
+    OR ownname LIKE '%TOWNHOME%' OR ownname LIKE '%TOWNHOUSE%' OR ownname LIKE '%HOA%'
+  out_fields: "objectid,parno,ownname,mailadd,mcity,mzip,cntyname"
+  oid: objectid
+  page_size: 5000
+  fields: {name: ownname, address: mailadd, city: mcity, zip: mzip, county: cntyname, record_id: parno}
+  constants: {status: "parcel owner", status_detail: "association-named owner on the county tax roll"}
+  name_regex: '^(.*?)(?:\s*\bC/O.*|\s+ATTN?(?::|\s).*)?$'
+  name_filter: true
+  exclude_name: '^(?!.*ASSOC|.*ASSN|.*\bHOA\b|.*\bPOA\b|.*OWNERS\b)(?=.*(\bLLC\b|\bL\.?L\.?C\.?\b|\bLP\b|\bLTD\b|\bINC\b|\bCORP|DEVELOPMENT|RENTAL|PARTNERS|REALTY|BUILDERS|CONSTRUCTION))|\bBANK\b|MORTGAGE|CREDIT UNION|LIFE ESTATE|EDUCATION|CHURCH|SCHOOL|HOSPITAL|CEMETERY'
+  group_by_name: true
+
+- kind: arcgis
+  source: "City of Charlotte — Neighborhood Organization Contact List (HOA / neighborhood associations)"
+  page: "https://data.charlottenc.gov/datasets/charlotte::neighborhood-organization-contact-list-nocl-2"
+  url: "https://services.arcgis.com/BWD3gDuaqc7SQmy7/arcgis/rest/services/Neighborhood_Organization_Contact_List_ODP/FeatureServer/0"
+  where: "category = 'HOA/Neighborhood Association' OR category = 'Neighborhood Association'"
+  out_fields: "FID,globalid,full_name_,physical_a,city,zip_code,participat,category"
+  oid: FID
+  fields: {name: full_name_, address: physical_a, city: city, zip: zip_code, status: participat,
+           status_detail: category, record_id: globalid}
+  constants: {county: Mecklenburg, city: Charlotte}
+  group_by_name: true
+
+- kind: arcgis
+  source: "City of Raleigh — Neighborhood Registry (HOA-named entries, home counts)"
+  page: "https://data.raleighnc.gov/datasets/ral::raleigh-neighborhood-registry-3"
+  url: "https://services.arcgis.com/v400IkDOw1ad7Yad/arcgis/rest/services/Raleigh_Neighborhood_Registry/FeatureServer/0"
+  out_fields: "OBJECTID,GlobalID,Name,District,HOMES"
+  fields: {name: Name, units: HOMES, record_id: GlobalID, status_detail: District}
+  constants: {county: Wake, city: Raleigh, status: "registered neighborhood"}
+  name_filter: true
+  group_by_name: true
+
+- kind: arcgis
+  source: "City of Asheville — Neighborhood Organizations (association-named entries)"
+  page: "https://data-avl.opendata.arcgis.com/"
+  url: "https://gis.ashevillenc.gov/server/rest/services/Boundaries/NeighborhoodView/MapServer/11"
+  out_fields: "objectid,nbhd_id,status,nameoforganization,active_group"
+  oid: objectid
+  fields: {name: nameoforganization, status: status, status_detail: active_group, record_id: nbhd_id}
+  constants: {county: Buncombe, city: Asheville}
+  name_filter: true
+  group_by_name: true

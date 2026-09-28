@@ -1,0 +1,8 @@
+# Copy to config.yml (git-ignored). Only the `s3:` block is read by the
+# collectors (get_records, get_liens, get_miamidade_liens, get_tx_research);
+# leave `enabled: false` to keep everything local.
+s3:
+  enabled: false
+  bucket: your-bucket
+  prefix: hoaspy
+  region: us-east-1

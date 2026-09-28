@@ -1,0 +1,25 @@
+# secrets and personal session material — never commit
+.env
+*_cookie.txt
+*_token.txt
+*.cookie
+config.yml
+
+# collector outputs and caches (rebuildable)
+.cache/
+/records/
+/liens/
+/courts/
+/news/
+.s3_sync.json
+
+# python / tooling
+venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+*.log
+.DS_Store
+*.swp

@@ -1,0 +1,89 @@
+# Montana — MT SoS business search is Cloudflare-403 and bulk is paid. The only
+# statewide source is the Montana Cadastral parcel layer (MSL/DOR, served by
+# DNRC): every parcel with PropType = 'Condominium' carries the condo project in
+# `Subdivision`, so grouping by subdivision name enumerates ~1,185 condominium
+# projects statewide. COUNTYCD is a numeric code with no name column, so the
+# eight counties holding ~99% of the condo parcels get one block each with a
+# county constant; the remainder is a catch-all with no county. Only the
+# non-owner columns are requested (out_fields) — OwnerName etc. are never pulled.
+# 'Townhouse' parcels (12k) are NOT included: their Subdivision is usually the
+# surrounding plat (e.g. "DECKER ADD (LIBBY)"), not an association.
+# Skipped: City of Missoula Neighborhood Councils (21 city-run council areas,
+# not associations); "Major Homeowner Associations" AGOL item (personal account,
+# not verifiably government); Missoula County subdivisions (layer ids 404);
+# Sanders County subdivision parcels (5,702 rows, no condo/townhome-named plat).
+- &mt_cadastral
+  kind: arcgis
+  source: "Montana Cadastral (MSL/DOR) — condominium projects by subdivision, Yellowstone County"
+  page: "https://msl.mt.gov/geoinfo/msdi/cadastral"
+  url: "https://gis.dnrc.mt.gov/arcgis/rest/services/DNRALL/Cadastral/MapServer/0"
+  where: "PropType = 'Condominium' AND Subdivision IS NOT NULL AND COUNTYCD = 3"
+  out_fields: "OBJECTID,Subdivision,COUNTYCD,AddressLine1,CityStateZip,PropType"
+  page_size: 2000
+  fields: {name: Subdivision, address: [AddressLine1, CityStateZip], status: PropType}
+  constants: {county: Yellowstone}
+- <<: *mt_cadastral
+  source: "Montana Cadastral (MSL/DOR) — condominium projects by subdivision, Flathead County"
+  where: "PropType = 'Condominium' AND Subdivision IS NOT NULL AND COUNTYCD = 7"
+  constants: {county: Flathead}
+- <<: *mt_cadastral
+  source: "Montana Cadastral (MSL/DOR) — condominium projects by subdivision, Missoula County"
+  where: "PropType = 'Condominium' AND Subdivision IS NOT NULL AND COUNTYCD = 4"
+  constants: {county: Missoula}
+- <<: *mt_cadastral
+  source: "Montana Cadastral (MSL/DOR) — condominium projects by subdivision, Cascade County"
+  where: "PropType = 'Condominium' AND Subdivision IS NOT NULL AND COUNTYCD = 2"
+  constants: {county: Cascade}
+- <<: *mt_cadastral
+  source: "Montana Cadastral (MSL/DOR) — condominium projects by subdivision, Silver Bow County"
+  where: "PropType = 'Condominium' AND Subdivision IS NOT NULL AND COUNTYCD = 1"
+  constants: {county: Silver Bow}
+- <<: *mt_cadastral
+  source: "Montana Cadastral (MSL/DOR) — condominium projects by subdivision, Lake County"
+  where: "PropType = 'Condominium' AND Subdivision IS NOT NULL AND COUNTYCD = 15"
+  constants: {county: Lake}
+- <<: *mt_cadastral
+  source: "Montana Cadastral (MSL/DOR) — condominium projects by subdivision, Gallatin County"
+  where: "PropType = 'Condominium' AND Subdivision IS NOT NULL AND COUNTYCD = 6"
+  constants: {county: Gallatin}
+- <<: *mt_cadastral
+  source: "Montana Cadastral (MSL/DOR) — condominium projects by subdivision, Ravalli County"
+  where: "PropType = 'Condominium' AND Subdivision IS NOT NULL AND COUNTYCD = 13"
+  constants: {county: Ravalli}
+- <<: *mt_cadastral
+  source: "Montana Cadastral (MSL/DOR) — condominium projects by subdivision, other counties"
+  where: "PropType = 'Condominium' AND Subdivision IS NOT NULL AND COUNTYCD NOT IN (1, 2, 3, 4, 6, 7, 13, 15)"
+  constants: {}
+
+# County subdivision plat layers: no HOA flag, so keep only plats whose name
+# says condo/townhome/homeowners (server-side LIKE narrows the download,
+# name_filter applies the shared association regex).
+- kind: arcgis
+  source: "Flathead County MT — Subdivisions (condominium & townhome plats)"
+  page: "https://flathead-county-gis-hub-flatheadcounty.hub.arcgis.com/"
+  url: "https://services5.arcgis.com/K08Ti8IHU6QaR33e/arcgis/rest/services/Flathead_County_Subdivisions/FeatureServer/0"
+  where: "UPPER(SubName) LIKE '%CONDO%' OR UPPER(SubName) LIKE '%TOWNHO%' OR UPPER(SubName) LIKE '%HOMEOWNER%'"
+  name_filter: true
+  fields: {name: SubName, record_id: Code}
+  constants: {county: Flathead, status: "recorded plat"}
+
+- kind: arcgis
+  source: "Gallatin County MT — Major Subdivisions (condominium & townhome plats)"
+  page: "https://www.gallatinmt.gov/gis"
+  url: "https://services5.arcgis.com/k6rZTDGNZ7Srk5IB/arcgis/rest/services/Major_Minor_Subdivisions/FeatureServer/0"
+  oid: FID
+  where: "UPPER(SUB_NAME) LIKE '%CONDO%' OR UPPER(SUB_NAME) LIKE '%TOWNHO%' OR UPPER(SUB_NAME) LIKE '%HOMEOWNER%'"
+  name_filter: true
+  fields: {name: SUB_NAME}
+  constants: {county: Gallatin, status: "recorded plat"}
+
+- kind: arcgis
+  source: "Madison County MT — Subdivisions (condominium & townhome plats)"
+  page: "https://madisoncountymt.gov/"
+  url: "https://services7.arcgis.com/xh3dsZbIkSAmWWRV/arcgis/rest/services/Subdivisions_View/FeatureServer/0"
+  oid: FID
+  where: "UPPER(Subdivisio) LIKE '%CONDO%' OR UPPER(Subdivisio) LIKE '%TOWNHO%' OR UPPER(Subdivisio) LIKE '%HOMEOWNER%'"
+  name_filter: true
+  fields: {name: Subdivisio}
+  constants: {county: Madison, status: "recorded plat"}
+

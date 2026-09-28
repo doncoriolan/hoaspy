@@ -1,0 +1,102 @@
+{
+  "template": [
+    {"label": "Entity Information", "id": "TITLE"},
+    {"label": "Initial Filing Date", "id": "FILING_DATE"},
+    {"label": "Status", "id": "STATUS"},
+    {"label": "Entity Type", "id": "ENTITY_TYPE"},
+    {"label": "Formed In", "id": "FORMED_IN"},
+    {"label": "Agent", "id": "AGENT"}
+  ],
+  "rows": {
+    "8887370": {
+      "SORT_INDEX": 0,
+      "TITLE": ["1 Buena Vista HOA (B20250040101)"],
+      "ID": 8887370,
+      "FILING_DATE": "03/21/2025",
+      "RECORD_NUM": "057208159146248245104240148020001100214227032139",
+      "FORMED_IN": "CALIFORNIA",
+      "AGENT": "Rossmann",
+      "STATUS": "Active",
+      "ENTITY_TYPE": "Nonprofit Corporation - CA - Mutual Benefit"
+    },
+    "4209256": {
+      "SORT_INDEX": 1,
+      "TITLE": ["1004 W. BALBOA HOA (3477311)"],
+      "ID": 4209256,
+      "FILING_DATE": "05/17/2012",
+      "RECORD_NUM": "034081062156014186065091064144249196237198153002",
+      "FORMED_IN": "CALIFORNIA",
+      "AGENT": "CHRISTOPHER ARKIND",
+      "STATUS": "Active",
+      "ENTITY_TYPE": "Nonprofit Corporation - CA - Mutual Benefit - Common Interest Development Corporation"
+    },
+    "8580013": {
+      "SORT_INDEX": 4,
+      "TITLE": ["1014-1016 Diamond St HOA LLC (202463314958)"],
+      "ID": 8580013,
+      "FILING_DATE": "08/05/2024",
+      "RECORD_NUM": "187174136153118187210155172030239126181039067046",
+      "FORMED_IN": "CALIFORNIA",
+      "AGENT": "Martin Tynan",
+      "STATUS": "Active",
+      "ENTITY_TYPE": "Limited Liability Company - CA"
+    },
+    "3173402": {
+      "SORT_INDEX": 5,
+      "TITLE": ["1019-1021-1023 LINCOLN WAY HOA (90003540)"],
+      "ID": 3173402,
+      "FILING_DATE": "10/21/2019",
+      "RECORD_NUM": "041180220130158137105075218159143163110067097189",
+      "FORMED_IN": "CALIFORNIA",
+      "AGENT": null,
+      "STATUS": "Active",
+      "ENTITY_TYPE": "Unincorporated Common Interest Development"
+    },
+    "5278776": {
+      "SORT_INDEX": 14,
+      "TITLE": ["1058 HOAGIE LLC (201217510048)"],
+      "ID": 5278776,
+      "FILING_DATE": "06/15/2012",
+      "RECORD_NUM": "032055030149214247048021020182186022215206201151",
+      "FORMED_IN": "CALIFORNIA",
+      "AGENT": "ADAM MESNICK",
+      "STATUS": "Terminated",
+      "ENTITY_TYPE": "Limited Liability Company - CA"
+    },
+    "1311726": {
+      "SORT_INDEX": 52,
+      "TITLE": ["1207-1211 NOE ST. HOMEOWNERS ASSOCIATION (HOA) (90001481)"],
+      "ID": 1311726,
+      "FILING_DATE": "07/10/2008",
+      "RECORD_NUM": "154004044215149169188246169055035179065097239052",
+      "FORMED_IN": "CALIFORNIA",
+      "AGENT": null,
+      "STATUS": "Active",
+      "ENTITY_TYPE": "Unincorporated Common Interest Development"
+    },
+    "2453463": {
+      "SORT_INDEX": 7,
+      "TITLE": ["1025-1031 SANCHEZ STREET HOA INC. (4649351)"],
+      "ID": 2453463,
+      "FILING_DATE": "10/06/2020",
+      "RECORD_NUM": "010207035194015233129050197230200190163080029067",
+      "FORMED_IN": "CALIFORNIA",
+      "AGENT": "ERAN  STEINBERG",
+      "STATUS": "Suspended - FTB",
+      "ENTITY_TYPE": "Nonprofit Corporation - CA - Mutual Benefit - Common Interest Development Corporation"
+    },
+    "9421411": {
+      "SORT_INDEX": 480,
+      "TITLE": ["805 Hoarding Cleanup & Junk Removal LLC (B20260127203)"],
+      "ID": 9421411,
+      "FILING_DATE": "03/14/2026",
+      "RECORD_NUM": "093113167189033041241185099214188149061237031223",
+      "FORMED_IN": "CALIFORNIA",
+      "AGENT": "evan c jaramillo",
+      "STATUS": "Active",
+      "ENTITY_TYPE": "Limited Liability Company - CA"
+    }
+  },
+  "result": 0,
+  "message": ""
+}

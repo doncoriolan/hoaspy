@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
+    <meta name="description" content="Public Database" />
+    <meta name="author" content="Arizona Department of Real Estate" />
+    <title>Public Database</title>
+
+    <link href="/PdbWeb/Themes/SBAdmin/dist/css/styles.css" rel="stylesheet" />
+    <link href="https://cdn.datatables.net/1.10.20/css/dataTables.bootstrap4.min.css" rel="stylesheet" crossorigin="anonymous" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.11.2/js/all.min.js" crossorigin="anonymous"></script>
+
+    <link href="https://kendo.cdn.telerik.com/themes/7.0.2/common/common.css" rel="stylesheet" type="text/css" />
+    <link href="https://kendo.cdn.telerik.com/themes/7.0.2/default/default.css" rel="stylesheet" type="text/css" />
+    <link href="https://kendo.cdn.telerik.com/themes/8.0.1/bootstrap/bootstrap-main.css" rel="stylesheet" type="text/css" />
+
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <script src="https://unpkg.com/jszip/dist/jszip.min.js"></script>
+    <script src="https://cdn.kendostatic.com/2024.2.514/js/kendo.all.min.js"></script>
+    <script src="https://cdn.kendostatic.com/2024.2.514/js/kendo.aspnetmvc.min.js"></script>
+    <script src="/PdbWeb/kendo-ui-license.js"></script>
+
+
+    <script src="/PdbWeb/Scripts/kendo.modernizr.custom.js"></script>
+
+</head>
+<body class="sb-nav-fixed">
+    <nav class="sb-topnav navbar navbar-expand navbar-dark bg-dark">
+        <div class="navbar-brand">
+            
+            <a href="http://www.azre.gov"><img src="/PdbWeb/Content/ADRE-vector.png" height="40" width="40" /></a>&nbsp;&nbsp;Public Database
+        </div>
+        
+        <button class="btn btn-link btn-sm order-1 order-lg-0" id="sidebarToggle" href="#">
+            <i class="fas fa-bars"></i>
+        </button><!-- Navbar Search-->
+        <form class="d-none d-md-inline-block form-inline ml-auto mr-0 mr-md-3 my-2 my-md-0">
+            
+        </form>
+        <!-- Navbar-->
+        
+    </nav>
+    <div id="layoutSidenav">
+        <div id="layoutSidenav_nav">
+            <nav class="sb-sidenav accordion sb-sidenav-dark" id="sidenavAccordion">
+                <div class="sb-sidenav-menu">
+                    <div class="nav">
+                        <div class="sb-sidenav-menu-heading">Services</div>
+
+                        <a class="nav-link" href='/PdbWeb/Home/NavigateHome'>
+                            <div class="sb-nav-link-icon"><i class="fas fa-home"></i></div>
+                            Home
+                        </a>
+
+                        <a class="nav-link collapsed" href="#" data-toggle="collapse" data-target="#collapseSearch" aria-expanded="false" aria-controls="collapseSearch">
+                            <div class="sb-nav-link-icon"><i class="fas fa-search"></i></div>
+                            Search
+                            <div class="sb-sidenav-collapse-arrow"><i class="fas fa-angle-down"></i></div>
+                        </a>
+                        <div class="collapse" id="collapseSearch" aria-labelledby="headingOne" data-parent="#sidenavAccordion">
+                            <nav class="sb-sidenav-menu-nested nav">
+                                <a class="nav-link" href='/PdbWeb/Development/SearchDevelopments'>Developments</a>
+                                <a class="nav-link" href='/PdbWeb/Order/SearchOrders'>Disciplinary Actions</a>
+                                <a class="nav-link" href='/PdbWeb/EntityLicense/SearchEntityLicenses'>Entity Licenses</a>
+                                <a class="nav-link" href='/PdbWeb/IndividualLicense/SearchIndividualLicenses'>Individual Licenses</a>
+                                <a class="nav-link" href='/PdbWeb/Instructor/SearchInstructors'>Instructors</a>
+                                <a class="nav-link" href='/PdbWeb/CourseEvent/SearchCourseEvents'>Scheduled Courses</a>
+                                <a class="nav-link" href='/PdbWeb/School/SearchSchools'>Schools</a>
+                            </nav>
+                        </div>
+
+                        <a class="nav-link" href='/PdbWeb/List/ViewLists'>
+                            <div class="sb-nav-link-icon"><i class="fas fa-download"></i></div>
+                            Download Lists
+                        </a>
+
+                        <a class="nav-link" href='https://azre.gov/contact-us/message-center'>
+                            <div class="sb-nav-link-icon"><i class="fas fa-envelope"></i></div>
+                            Message Center
+                        </a>
+
+                        <a class="nav-link" href='https://ptl.az.gov/dre/'>
+                            <div class="sb-nav-link-icon"><i class="fas fa-globe"></i></div>
+                            Licensee Login
+                        </a>
+
+                    </div>
+                </div>
+
+            </nav>
+        </div>
+        <div id="layoutSidenav_content">
+            <main>
+                <div class="container-fluid">
+
+
+                    
+
+<script>
+    $(document).ready(function () {
+        $('#dataTableAmmendments').DataTable({
+            "lengthMenu": [[10, 25, 50, -1], [10, 25, 50, "All"]]
+        });
+        $('#dataTableSubsequentOwners').DataTable({
+            "lengthMenu": [[10, 25, 50, -1], [10, 25, 50, "All"]]
+        });
+        $('#dataTableConditionalSales').DataTable({
+            "lengthMenu": [[10, 25, 50, -1], [10, 25, 50, "All"]]
+        });
+        $('#dataTableLotReservations').DataTable({
+            "lengthMenu": [[10, 25, 50, -1], [10, 25, 50, "All"]]
+        });
+        $('#dataTableDisciplinaryActions').DataTable({
+            "lengthMenu": [[10, 25, 50, -1], [10, 25, 50, "All"]]
+        });
+    });
+    //$(function () {
+    //    $("form").kendoValidator();
+    //});
+</script>
+<h1 class="mt-4">Development</h1>
+<div class="card mb-4">
+    <div class="card-body">
+        <p>
+            The following information was retrieved from the Department's database at 9/28/2026 3:41:41 PM. The information presented reflects the database records at the time of your inquiry; however, it will not reflect pending updates which are being processed by the Department.
+        </p>
+        <p>
+            <strong>Please Note:</strong> The Public Report may contain information that is no longer accurate or complete.
+        </p>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-xl-6">
+        <div class="card mb-4">
+            <div class="card-header"><i class="fas fa-list mr-1"></i>Development Details</div>
+            <div class="card-body">
+                <dl class="row">
+                    <dt class="col-4 text-right">Registration Number</dt>
+                    <dd class="col-8">DM02-030803</dd>
+                    <dt class="col-4 text-right">Legal Name</dt>
+                    <dd class="col-8">SIERRA VISTA</dd>
+                    <dt class="col-4 text-right">Marketing Name</dt>
+                    <dd class="col-8">NONE</dd>
+                    
+                    <dt class="col-4 text-right">Date Filed</dt>
+                    <dd class="col-8">10/22/2002</dd>
+                    <dt class="col-4 text-right">Date Issued</dt>
+                    <dd class="col-8">1/22/2003</dd>
+                    <dt class="col-4 text-right">Application Type</dt>
+                    <dd class="col-8">Subdivision</dd>
+                    <dt class="col-4 text-right">Application Status</dt>
+                    <dd class="col-8">Issued</dd>
+                    <dt class="col-4 text-right">Lot Status</dt>
+                    <dd class="col-8">Improved Lots</dd>
+                    <dt class="col-4 text-right">County</dt>
+                    <dd class="col-8">Maricopa</dd>
+                </dl>
+            </div>
+        </div>
+    </div>
+    <div class="col-xl-6">
+        <div class="card mb-4">
+            <div class="card-header">
+                <i class="fas fa-list mr-1"></i>
+                Developer Details
+            </div>
+            <div class="card-body">
+                    <dl class="row">
+                        <dt class="col-4 text-right">Legal Name</dt>
+                        <dd class="col-8"><a href="/PdbWeb/Developer/ViewDeveloper/22245">BROWN FAMILY COMMUNITIES</a></dd>
+                        <dt class="col-4 text-right">DBA Name</dt>
+                        <dd class="col-8">N/A</dd>
+                    </dl>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card mb-4">
+    <div class="card-header"><i class="fas fa-file-pdf mr-1"></i>Public Report</div>
+    <div class="card-body">
+<form action="/PdbWeb/Development/DownloadPublicReport" class="form-horizontal" enctype="multipart/form-data" id="submit-form" method="post"><input name="__RequestVerificationToken" type="hidden" value="kpoq8NCyzzIqus7uKdj79kVfG8NJ0eNvPonhPCHxV-WcmKnSU3EEwzNKViOi3XS8flvxooe9hHy9CnEexBjryVf1a9q9-OV8Y69JskZMm3Q1" /><input id="id" name="id" type="hidden" value="30803" />                <p><input type="submit" class="btn btn-primary" value="Download" /></p>
+                <small class="form-text text-muted">
+                    Only click the Download button once. It can take a few seconds for the system to generate the PDF.
+                </small>
+</form>    </div>
+</div>
+
+
+<div class="card mb-4">
+    <div class="card-header"><i class="fas fa-table mr-1"></i>Amendments</div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-bordered" id="dataTableAmmendments" width="100%" cellspacing="0">
+                <thead>
+                    <tr>
+                        <th>Description</th>
+                        <th>Date Filed</th>
+                        <th>Date Issued</th>
+                    </tr>
+                </thead>
+                <tbody>
+                        <tr>
+                            <td>
+                                1ST AMENDMENT
+                            </td>
+                            <td data-order="631776672000000000">
+                                1/9/2003
+                            </td>
+                            <td data-order="631787904000000000">
+                                1/22/2003
+                            </td>
+                        </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div class="card mb-4">
+    <div class="card-header"><i class="fas fa-table mr-1"></i>Subsequent Owners</div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-bordered" id="dataTableSubsequentOwners" width="100%" cellspacing="0">
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Date Filed</th>
+                        <th>Date Issued</th>
+                        <th>Lot Coverage</th>
+                    </tr>
+                </thead>
+                <tbody>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div class="card mb-4">
+    <div class="card-header"><i class="fas fa-table mr-1"></i>Conditional Sales</div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-bordered" id="dataTableConditionalSales" width="100%" cellspacing="0">
+                <thead>
+                    <tr>
+                        <th>Date Filed</th>
+                        <th>Date Issued</th>
+                    </tr>
+                </thead>
+                <tbody>
+                        <tr>
+                            <td data-order="631689408000000000">
+                                9/30/2002
+                            </td>
+                            <td data-order="631697184000000000">
+                                10/9/2002
+                            </td>
+                        </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div class="card mb-4">
+    <div class="card-header"><i class="fas fa-table mr-1"></i>Lot Reservations</div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-bordered" id="dataTableLotReservations" width="100%" cellspacing="0">
+                <thead>
+                    <tr>
+                        <th>Date Filed</th>
+                        <th>Date Issued</th>
+                    </tr>
+                </thead>
+                <tbody>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div class="card mb-4">
+    <div class="card-header"><i class="fas fa-search mr-1"></i>Complaints</div>
+    <div class="card-body">
+            <p>There are currently 0 open complaints at the Department. Open complaints represent unproven allegations. Upon investigation many complaints are found to be without merit and dismissed. <strong>Open complaints are confidential and no information concerning them is available for release.</strong></p>
+    </div>
+</div>
+
+<div class="card mb-4">
+    <div class="card-header"><i class="fas fa-gavel mr-1"></i>Disciplinary Actions</div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-bordered" id="dataTableDisciplinaryActions" width="100%" cellspacing="0">
+                <thead>
+                    <tr>
+                        <th class="hidden-print"></th>
+                        <th>File Number</th>
+                        <th>Order Type</th>
+                        <th>Order Date</th>
+                    </tr>
+                </thead>
+                <tbody>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+
+                </div>
+            </main>
+            <footer class="py-4 bg-light mt-auto">
+                <div class="container-fluid">
+                    <div class="d-flex align-items-center justify-content-between small">
+                        <div class="text-muted">Arizona Department of Real Estate</div>
+                    </div>
+                </div>
+            </footer>
+        </div>
+    </div>
+
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.bundle.min.js" crossorigin="anonymous"></script>
+    <script src="/PdbWeb/Themes/SBAdmin/dist/js/scripts.js"></script>
+    <script src="https://cdn.datatables.net/1.10.20/js/jquery.dataTables.min.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.datatables.net/1.10.20/js/dataTables.bootstrap4.min.js" crossorigin="anonymous"></script>
+
+</body>
+</html>
+

@@ -1,0 +1,68 @@
+# Kansas — city GIS inventories (no statewide registry; KS SoS search is robots-disallowed).
+# Survey: scratchpad/survey_A/KS.md (all endpoints verified 2026-09-02).
+# Skipped: Sedgwick County Subdivisions (8,327 plats, no HOA flag/name); Lawrence contact
+# table (/1: person names, e-mail, phone only); Lenexa HOA page (Akamai 403).
+
+- kind: arcgis
+  source: "Wichita KS — homeowners associations (city GIS)"
+  page: "https://gismaps.wichita.gov/ageweb/rest/services/COWGIS/Districts/MapServer/6"
+  url: "https://gismaps.wichita.gov/ageweb/rest/services/COWGIS/Districts/MapServer/6"
+  fields: {name: HOA_NAME, record_id: HOA_NUM}
+  constants: {city: Wichita, county: Sedgwick, status: "homeowners association (city HOA map)"}
+
+- kind: arcgis
+  source: "Wichita KS — neighborhood associations (city GIS)"
+  page: "https://data-cityofwichita.hub.arcgis.com/maps/cityofwichita::wichita-neighborhood-associations"
+  url: "https://services5.arcgis.com/lOHEurd1BgncOSk1/arcgis/rest/services/Wichita_Neighborhood_Associations/FeatureServer/0"
+  oid: FID
+  fields: {name: NAME, record_id: NUM}
+  constants: {city: Wichita, county: Sedgwick, status: "neighborhood association (city-recognized)"}
+
+- kind: arcgis
+  source: "Overland Park KS — homes associations (city Neighborhoods layer)"
+  page: "https://services1.arcgis.com/YQsWDBr0DjMtoTQo/arcgis/rest/services/Neighborhoods/FeatureServer/0"
+  url: "https://services1.arcgis.com/YQsWDBr0DjMtoTQo/arcgis/rest/services/Neighborhoods/FeatureServer/0"
+  # STATUS types the rows: keep the 311 HOMES ASSOCIATION rows plus anything association-named;
+  # drops untyped neighborhoods (271) and voluntary neighborhood organizations (39).
+  where: "STATUS LIKE 'HOMES ASSOCIATION%' OR UPPER(NAME) LIKE '%ASSOC%' OR UPPER(NAME) LIKE '%HOMEOWNER%' OR UPPER(NAME) LIKE '% HOA%'"
+  fields: {name: NAME, status: STATUS}
+  constants: {city: Overland Park, county: Johnson}
+
+- kind: arcgis
+  source: "Leawood KS — 2026 HOAs (city GIS)"
+  page: "https://www.leawood.org/317/HOA-Public-Info-List"
+  url: "https://services7.arcgis.com/3wwljqzg0lhG1rav/arcgis/rest/services/2026_HOA_Map_WFL1/FeatureServer/15"
+  where: "HOAType <> 'Apartment'"
+  fields: {name: Name, status: HOAType}
+  constants: {city: Leawood, county: Johnson}
+
+- kind: arcgis
+  source: "Lawrence KS — registered neighborhood associations (city GIS)"
+  page: "https://services.arcgis.com/8O9UlSTnqjKptoda/arcgis/rest/services/Neighborhood_Associations/FeatureServer/0"
+  url: "https://services.arcgis.com/8O9UlSTnqjKptoda/arcgis/rest/services/Neighborhood_Associations/FeatureServer/0"
+  fields: {name: NeighborhoodName, record_id: AssociationID}
+  constants: {city: Lawrence, county: Douglas, status: "registered neighborhood/homeowners association"}
+
+- kind: arcgis
+  source: "Wyandotte County / Kansas City KS — neighborhood groups (Unified Government GIS)"
+  page: "https://gisweb.wycokck.org/server/rest/services/Hosted/Neighborhood_Groups/FeatureServer/0"
+  url: "https://gisweb.wycokck.org/server/rest/services/Hosted/Neighborhood_Groups/FeatureServer/0"
+  oid: objectid
+  # Mixes HOAs with watch groups / community clubs: keep association-named rows only.
+  where: "UPPER(name) LIKE '%ASSOC%' OR UPPER(name) LIKE '%HOMEOWNER%' OR UPPER(name) LIKE '%HOMES%' OR UPPER(name) LIKE '% HOA%'"
+  fields: {name: name, address: address, city: city, zip: zip, status: status}
+  constants: {city: Kansas City, county: Wyandotte}
+
+- kind: arcgis
+  source: "Topeka KS — neighborhood improvement associations (NIAs, city GIS)"
+  page: "https://data.topeka.org/datasets/Topeka::neighborhood-improvement-areas"
+  url: "https://maps.topeka.gov/arcgis/rest/services/OpenData/Open_Data_Base_Layers/FeatureServer/16"
+  fields: {name: NAME, record_id: NIA_NO}
+  constants: {city: Topeka, county: Shawnee, status: "neighborhood improvement association (city-recognized)"}
+
+- kind: arcgis
+  source: "Manhattan KS — homeowners/neighborhood associations 2014 (city GIS)"
+  page: "https://services.arcgis.com/rFQQFFw3jz8ox3VY/arcgis/rest/services/HomeOwnersAssoc_2014/FeatureServer/0"
+  url: "https://services.arcgis.com/rFQQFFw3jz8ox3VY/arcgis/rest/services/HomeOwnersAssoc_2014/FeatureServer/0"
+  fields: {name: ASS_NAME, record_id: ID}
+  constants: {city: Manhattan, county: Riley, status: "registered association (2014 list)"}

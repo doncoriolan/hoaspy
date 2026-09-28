@@ -1,0 +1,88 @@
+# Illinois — IDFPR's CCIC ombudsperson does not register associations and the
+# SoS search is per-record only. Best source is Chicago's "House Share
+# Prohibited Buildings List" (condo/co-op associations that voted to ban
+# short-term rentals); county/city plat layers contribute condo/townhome names.
+# Skipped: Bolingbrook HOA directory PDF (~40 associations with contacts — PDF
+# only; note for a manual pass); Orland Park subdivisions (HOA "agency" column
+# is empty in all 229 rows); Wood Dale "HOA" parcel layer and Cook County condo
+# assessor data (unit-level, no association name); Rockford NA layer (token
+# error); Peoria NA instant app (no service); Plainfield subdivisions (463 plats,
+# none named as a condo/townhome/HOA). Cook County Assessor condo buildings are
+# collected separately by get_cook_condos (records/cook_condos.jsonl).
+- kind: socrata
+  source: "City of Chicago — House Share Prohibited Buildings List (condo/co-op associations)"
+  page: "https://data.cityofchicago.org/d/7bzs-jsyj"
+  url: "https://data.cityofchicago.org/resource/7bzs-jsyj.json"
+  where: "association_cooperative_or_owner IS NOT NULL"
+  fields: {name: association_cooperative_or_owner, address: [address_number, street_direction, street_name, street_type],
+           units: number_of_units, record_id: submission_id, recorded_date: recorded_date}
+  constants: {city: Chicago, county: Cook, status: "condominium / cooperative (short-term-rental prohibited list)"}
+  # mixed with individual owners / LLCs — keep association-looking names only
+  name_regex: '^(.*\b(?:CONDO\w*|HOMEOWNERS?|HOME OWNERS?|OWNERS ASSOC\w*|TOWNHO\w+|CO-?OP\w*|COOPERATIVE|ASSOC\w*|ASSN|HOA)\b.*)$'
+  exclude_name: '\bLLC\b|\bL\.L\.C\b'
+
+- kind: arcgis
+  source: "DuPage County IL GIS — Subdivisions (condominium & townhome plats)"
+  page: "https://gisdata-dupage.opendata.arcgis.com/"
+  url: "https://utility.arcgis.com/usrsvcs/servers/b77cddc91b6c4a8d8d11f54bbef718d1/rest/services/OpenData/Subdivision/MapServer/1"
+  where: "UPPER(Name) LIKE '%CONDO%' OR UPPER(Name) LIKE '%TOWNHO%' OR UPPER(Name) LIKE '%HOMEOWNER%'"
+  name_filter: true
+  page_size: 1000
+  fields: {name: Name, record_id: SUB_DOC}
+  constants: {county: DuPage, status: "recorded plat"}
+
+- kind: arcgis
+  source: "McHenry County IL GIS — Subdivisions (condominium & townhome plats)"
+  page: "https://www.mchenrycountyil.gov/county-government/departments-a-i/geographic-information-systems-gis"
+  url: "https://services1.arcgis.com/6iYC5AXXYapRVNzl/arcgis/rest/services/Subdivisions/FeatureServer/0"
+  oid: FID
+  where: "UPPER(NAME) LIKE '%CONDO%' OR UPPER(NAME) LIKE '%TOWNHO%' OR UPPER(NAME) LIKE '%HOMEOWNER%'"
+  name_filter: true
+  fields: {name: NAME, record_id: SUBCODE}
+  constants: {county: McHenry, status: "recorded plat"}
+
+- kind: arcgis
+  source: "City of Wood Dale IL — HOA contact inventory"
+  page: "https://www.wooddale.com/"
+  url: "https://services3.arcgis.com/gtOFGDNHdftP2Pps/arcgis/rest/services/HOA_Contact_Info/FeatureServer/0"
+  oid: FID
+  # Contact/Address/Email/Telephone are a board member's personal contact — not mapped.
+  fields: {name: HOA, record_id: PIN}
+  constants: {city: Wood Dale, county: DuPage, status: "homeowners association"}
+
+- kind: arcgis
+  source: "City of Danville IL — Neighborhood Associations"
+  page: "https://www.cityofdanville.org/"
+  url: "https://gis.cityofdanville.org/arcgis/rest/services/Administrative/Neighborhood_Associations/FeatureServer/0"
+  fields: {name: naName, status_detail: naActive}
+  constants: {city: Danville, county: Vermilion, status: "neighborhood association"}
+
+- kind: arcgis
+  source: "Village of Oak Park IL — Neighborhood Associations"
+  page: "https://www.oak-park.us/"
+  url: "https://services5.arcgis.com/aymthbPDQOcCnuwg/arcgis/rest/services/Neighborhood_Associations/FeatureServer/0"
+  fields: {name: FullName, record_id: Name}
+  constants: {city: Oak Park, county: Cook, status: "neighborhood association"}
+
+- kind: arcgis
+  source: "Village of Maryville IL — Subdivisions (condominium & townhome plats)"
+  page: "https://www.vil.maryville.il.us/"
+  url: "https://services2.arcgis.com/yA8uDYLwXT5AnxTb/arcgis/rest/services/Subdivisions/FeatureServer/0"
+  where: "UPPER(Sub_Name) LIKE '%CONDO%' OR UPPER(Sub_Name) LIKE '%TOWNHO%' OR UPPER(Sub_Name) LIKE '%HOMEOWNER%'"
+  name_filter: true
+  fields: {name: Sub_Name, units: Lots, record_id: PlatBk_Pg}
+  constants: {city: Maryville, county: Madison, status: "recorded plat"}
+
+- kind: arcgis
+  source: "Kane County IL — condominium unit parcels (condo project from legal description)"
+  page: "https://kanegis.org/"
+  url: "https://services1.arcgis.com/oRKmdBXD6EbdmVgJ/arcgis/rest/services/KaneCo_IL_Parcels_Condos/FeatureServer/1"
+  out_fields: "OBJECTID,PIN,LegalDesc,SiteAddress,SiteCity,SiteZip"
+  page_size: 2000
+  fields: {name: LegalDesc, address: SiteAddress, city: SiteCity, zip: SiteZip, record_id: PIN}
+  constants: {county: Kane, status: "condominium (assessor parcels)"}
+  # LegalDesc looks like "UNIT 9-3404-E IN SHENANDOAH CONDOS" or "SHENANDOAH
+  # TOWNHOMES BLDG 4 UNIT 4-3340-H": take the project name that either starts
+  # the string or follows " IN ", ending at the CONDO/TOWNHOME word. Unit rows
+  # collapse to one row per project; `parcels` = unit count.
+  name_regex: '(?:^|\bIN )((?:(?!\bUNITS?\b|\bBLDG\b|\bIN\b|\bLOT\b)[A-Z0-9''&.,\- ])+?\b(?:CONDOS?|CONDOMINIUMS?|TOWNHOMES?|TOWNHOUSES?))\b'

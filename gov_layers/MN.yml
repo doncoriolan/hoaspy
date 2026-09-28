@@ -1,0 +1,41 @@
+# Minnesota — city/county layers (MN SoS portal robots-disallows everything; no named CIC
+# layer found statewide). Survey: scratchpad/survey_A/MN.md.
+# Skipped: Ramsey County Common Interest Communities (630 polygons, no name column);
+# Dakota County Property Subdivisions (6,054 plats, CICs excluded); Mahnomen County
+# Subdivisions (69 plats, no condo flag). Minneapolis chair/contact/e-mail/phone columns
+# are not mapped.
+
+- kind: arcgis
+  source: "Minneapolis MN — NCR neighborhood organizations (city open data)"
+  page: "https://opendata.minneapolismn.gov/datasets/6d3c4cca729f41818f38d267afc323a8_0/about"
+  url: "https://services.arcgis.com/afSMGVsC7QlRK1kZ/arcgis/rest/services/OPENDATA_NCR_ORGCONTACT/FeatureServer/0"
+  oid: FID
+  exclude_name: "CHAMBER OF COMMERCE|BUSINESS ASSOC"
+  fields: {name: ORG_NAME, address: ORG_ADDR, city: CITY, zip: ZIP, status_detail: NBHD}
+  constants: {city: Minneapolis, county: Hennepin, status: "neighborhood organization (NCR-recognized)"}
+
+- kind: arcgis
+  source: "Minnetonka MN — townhome, condo and cooperative associations (city GIS)"
+  page: "https://services.arcgis.com/vAmq2qjze38HN5HF/arcgis/rest/services/Townhomes_and_Condos/FeatureServer/3"
+  url: "https://services.arcgis.com/vAmq2qjze38HN5HF/arcgis/rest/services/Townhomes_and_Condos/FeatureServer/3"
+  # PrimaryContact is a management company or the association itself (verified: no persons).
+  fields: {name: Development, manager: PrimaryContact, address: ContactAddress, status: Status,
+           status_detail: Type, units: TotalUnitNumber}
+  constants: {city: Minnetonka, county: Hennepin, status: "association (city inventory)"}
+
+- kind: arcgis
+  source: "Rochester / Olmsted County MN — neighborhood associations (county open data)"
+  page: "https://public.gis.olmstedcounty.gov/arcgis/rest/services/AGOL_Open_Data/Olmsted_Neighborhood_Associations/FeatureServer/0"
+  url: "https://public.gis.olmstedcounty.gov/arcgis/rest/services/AGOL_Open_Data/Olmsted_Neighborhood_Associations/FeatureServer/0"
+  fields: {name: neighborhood_association, status: status, record_id: num}
+  constants: {city: Rochester, county: Olmsted}
+
+- kind: arcgis
+  source: "Lake County MN — common interest communities (CIC unit plats, county GIS)"
+  page: "https://services1.arcgis.com/NlvHF2FHoAfPIDvG/arcgis/rest/services/Conveyance_Division/FeatureServer/82"
+  url: "https://services1.arcgis.com/NlvHF2FHoAfPIDvG/arcgis/rest/services/Conveyance_Division/FeatureServer/82"
+  # Only 'Unit' divisions carry a CIC/condo name in GIS_SUBDNAME; lots/outlots are plats.
+  where: "SimConDivType = 'Unit'"
+  exclude_name: "MNDOT|ROW FOOTPRINT"
+  fields: {name: GIS_SUBDNAME, record_id: PLAN_NO}
+  constants: {county: Lake, status: "common interest community (recorded CIC plat)"}

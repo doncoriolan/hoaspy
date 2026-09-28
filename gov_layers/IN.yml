@@ -1,0 +1,90 @@
+# Indiana — INBiz is per-record only and bulk is paid; hub.mph.in.gov has no
+# business dataset. Coverage is city registries (Indianapolis DMD Registered
+# Community Organizations is the best) plus county plat layers.
+# Skipped: Fort Wayne registered-neighborhoods list (271 rows, PDF with officer
+# contacts — note for a manual pass); Indy "Indy Neighborhoods" (statistical
+# areas); Muncie planning districts. Evansville robots.txt asks Crawl-delay 60
+# — that layer needs exactly one request (49 rows), so it is honoured.
+- kind: arcgis
+  source: "City of Indianapolis / Marion County IN — Registered Community Organizations (homeowners associations)"
+  page: "https://data.indy.gov/datasets/IndyGIS::registered-community-organizations"
+  url: "https://gis.indy.gov/server/rest/services/OpenData/OpenData_Boundaries/MapServer/4"
+  where: "ORG_TYPE = 'H'"
+  out_fields: "OBJECTID,ORG_CODE,ORG_NAME,ORG_TYPE,STATUS,STREET,SUITE_ROOM,CITY,ZIP"
+  page_size: 1000
+  # LASTNAME/FIRSTNAME/HOME_PHONE/OFFICE_PHONE/EMAIL are officer contacts — not mapped.
+  fields: {name: ORG_NAME, record_id: ORG_CODE, status_detail: STATUS, address: [STREET, SUITE_ROOM], city: CITY, zip: ZIP}
+  constants: {county: Marion, status: "homeowners association (registered community organization)"}
+
+- kind: arcgis
+  source: "City of Indianapolis / Marion County IN — Registered Community Organizations (neighborhood associations)"
+  page: "https://data.indy.gov/datasets/IndyGIS::registered-community-organizations"
+  url: "https://gis.indy.gov/server/rest/services/OpenData/OpenData_Boundaries/MapServer/4"
+  where: "ORG_TYPE = 'N'"
+  out_fields: "OBJECTID,ORG_CODE,ORG_NAME,ORG_TYPE,STATUS,STREET,SUITE_ROOM,CITY,ZIP"
+  page_size: 1000
+  fields: {name: ORG_NAME, record_id: ORG_CODE, status_detail: STATUS, address: [STREET, SUITE_ROOM], city: CITY, zip: ZIP}
+  constants: {county: Marion, status: "neighborhood association (registered community organization)"}
+
+- kind: arcgis
+  source: "City of Greenwood IN — Homeowners Association polygons"
+  page: "https://greenwood.maps.arcgis.com/apps/webappviewer/index.html?id=265cc5b98b8f456b8c85e630bf10b1a5"
+  url: "https://services2.arcgis.com/6DdnNWEqLRF18ltQ/arcgis/rest/services/HOAdata/FeatureServer/0"
+  where: "HOAName IS NOT NULL AND HOAName <> ''"
+  fields: {name: HOAName, status_detail: Status}
+  constants: {city: Greenwood, county: Johnson, status: "homeowners association"}
+
+- kind: arcgis
+  source: "Johnson County IN — Subdivisions (condominium & townhome plats)"
+  page: "https://greenwood.maps.arcgis.com/"
+  url: "https://services2.arcgis.com/6DdnNWEqLRF18ltQ/arcgis/rest/services/Subdivisions_JC/FeatureServer/0"
+  where: "UPPER(NAME) LIKE '%CONDO%' OR UPPER(NAME) LIKE '%TOWNHO%' OR UPPER(NAME) LIKE '%HOMEOWNER%'"
+  name_filter: true
+  page_size: 1000
+  fields: {name: NAME, record_id: DOC_NUMBER, status_detail: SUB_TYPE}
+  constants: {county: Johnson, status: "recorded plat"}
+
+- kind: arcgis
+  source: "City of Bloomington IN — HAND-registered Neighborhood Associations"
+  page: "https://bloomington.in.gov/neighborhoods/associations"
+  url: "https://services9.arcgis.com/47GwVXZ9a8thrviM/arcgis/rest/services/Neighborhood_Associations/FeatureServer/0"
+  oid: objectid
+  fields: {name: neighborhood, record_id: nbrid}
+  constants: {city: Bloomington, county: Monroe, status: "neighborhood association"}
+
+- kind: arcgis
+  source: "City of Evansville / Vanderburgh County IN GIS — Neighborhood Associations"
+  page: "https://www.evansvillegis.com/"
+  url: "https://maps.evansvillegis.com/arcgis_server/rest/services/ECONOMIC_DEVELOPMENT/NEIGHBORHOOD_ASSOCIATIONS/MapServer/0"
+  page_size: 1000
+  fields: {name: FULL_NAME, record_id: NAME}
+  constants: {city: Evansville, county: Vanderburgh, status: "neighborhood association"}
+
+- kind: arcgis
+  source: "City of Elkhart IN GIS — Neighborhood Associations"
+  page: "https://www.elkhartindiana.org/"
+  url: "https://services5.arcgis.com/RhRpaq8RpEQjlpir/arcgis/rest/services/Neighborhood_Associations1/FeatureServer/0"
+  oid: objectid
+  page_size: 1000
+  # contact/email/phone are personal contact columns — not mapped.
+  fields: {name: assc_name, status_detail: registered}
+  constants: {city: Elkhart, county: Elkhart, status: "neighborhood association"}
+
+- kind: arcgis
+  source: "City of Indianapolis / Marion County IN — Subdivision boundaries (condominium & townhome plats)"
+  page: "https://data.indy.gov/"
+  url: "https://gis.indy.gov/server/rest/services/OpenData/OpenData_Boundaries/MapServer/1"
+  where: "UPPER(DEVELOPMENT_NAME) LIKE '%CONDO%' OR UPPER(DEVELOPMENT_NAME) LIKE '%TOWNHO%' OR UPPER(DEVELOPMENT_NAME) LIKE '%HOMEOWNER%'"
+  name_filter: true
+  page_size: 1000
+  fields: {name: DEVELOPMENT_NAME, record_id: SUBDIV_TAG}
+  constants: {county: Marion, status: "recorded plat"}
+
+- kind: arcgis
+  source: "Lake County IN — Subdivisions / simultaneous conveyances (condominium & townhome plats)"
+  page: "https://lcsogis.lakecountyin.org/"
+  url: "https://lcsogis.lakecountyin.org/server/rest/services/Subdivisions/FeatureServer/0"
+  where: "UPPER(CNVYNAME) LIKE '%CONDO%' OR UPPER(CNVYNAME) LIKE '%TOWNHO%' OR UPPER(CNVYNAME) LIKE '%HOMEOWNER%'"
+  name_filter: true
+  fields: {name: CNVYNAME, status_detail: [PlatBook, Page]}
+  constants: {county: Lake, status: "recorded plat"}
