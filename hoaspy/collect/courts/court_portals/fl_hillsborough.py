@@ -26,7 +26,7 @@ import time
 
 import requests
 
-from ._common import normalize, record, clean
+from ._common import normalize, record, clean, party_is_association
 from .fl_broward import query_name
 
 STATE = "FL"
@@ -108,7 +108,7 @@ class Client:
                 continue
             style = clean(d.get("caseStyle") or "")
             sides = [s.strip() for s in re.split(r"\s+vs?\.?\s+", style, maxsplit=1, flags=re.I)]
-            matched = [s for s in sides if ncore and ncore in normalize(s)]
+            matched = [s for s in sides if ncore and party_is_association(s, core)]
             if not matched:
                 continue
             seen.add(cn)

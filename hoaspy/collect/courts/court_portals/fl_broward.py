@@ -28,7 +28,7 @@ import urllib.request
 
 import websocket
 
-from ._common import normalize, record, clean
+from ._common import normalize, record, clean, party_is_association
 
 STATE = "FL"
 KEY = "fl_broward"
@@ -183,7 +183,7 @@ class Client:
             sides = [re.sub(r"\s+(Plaintiff|Defendant|Petitioner|Respondent)s?$", "", s.strip(), flags=re.I)
                      for s in re.split(r"\s+vs?\.?\s+", style, maxsplit=1, flags=re.I)]
             style = " v. ".join(sides)
-            matched = [s for s in sides if ncore and ncore in normalize(s)]
+            matched = [s for s in sides if ncore and party_is_association(s, core)]
             if not matched:
                 # The party index matches on leading words ("HARBOR VILLA" also
                 # hits "Harbor Village"), and the caption shows lead parties

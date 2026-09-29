@@ -1273,5 +1273,55 @@ class TestMiamiDadeCivilFeed(unittest.TestCase):
         self.assertEqual(u, "https://www2.miamidadeclerk.gov/ocs/searchResults?qs=abc%2Fdef")
 
 
+class TestCourtPartyGate(unittest.TestCase):
+    """The Broward and Hillsborough portals match parties on leading words,
+    so a query for "GOLDEN LAKES, A CONDO" also returns "Golden Lakes Medical
+    Center Inc". party_is_association keeps the association and drops the
+    business that shares its first words (or carries an association word
+    next to a business word)."""
+
+    def test_party_gate(self):
+        from hoaspy.collect.courts.court_portals._common import party_is_association as ok
+        core = "GOLDEN LAKES"
+        for party in ("Golden Lakes Condominium Association Inc", "GOLDEN LAKES, A CONDO",
+                      "Golden Lakes", "The Golden Lakes Inc", "Golden Lakes Phase II Assn",
+                      "GOLDEN LAKES HOMEOWNERS ASSOCIATION, INC. et al"):
+            self.assertTrue(ok(party, core), party)
+        for party in ("Golden Lakes Medical Center Inc", "Golden Lakes Apartments LLC",
+                      "Golden Lakes Fee Owner LP", "Golden Lakes Realty Corp",
+                      "Third Avenue Chiropractic Ctr", "Homeowners Finance Co.",
+                      "Sunrise Lakes Inc"):
+            self.assertFalse(ok(party, core), party)
+        self.assertTrue(ok("Third Avenue Condo of Hallandale, a Condo", "THIRD AVENUE"))
+        self.assertFalse(ok("Third Avenue Chiropractic Ctr", "THIRD AVENUE"))
+        self.assertTrue(ok("Gates of Westshore", "GATES OF WESTSHORE"))
+        self.assertFalse(ok("Gates of Westshore Owner LLC", "GATES OF WESTSHORE"))
+        # an association marker wins over trade words, not over a business form
+        for party, core in (("Capital Ridge Homeowners Association", "CAPITAL RIDGE"),
+                            ("Roberto Clemente Homes Condominium Assoc", "ROBERTO CLEMENTE HOMES"),
+                            ("Alaska Medical Building Condominium Assoc", "ALASKA MEDICAL BUILDING"),
+                            ("Church Ridge Estates Homeowners Association", "CHURCH RIDGE ESTATES")):
+            self.assertTrue(ok(party, core), party)
+        for party, core in (("Park Plaza Assoc Ltd", "PARK PLAZA"), ("Sherman Townhomes LLC", "SHERMAN"),
+                            ("Townhouse Associates D/B/A Spring Garden Townhouses", "SPRING GARDEN")):
+            self.assertFalse(ok(party, core), party)
+        from hoaspy.collect.courts.court_portals._common import looks_like_association as la
+        self.assertTrue(la("Harvest Queen Creek Community Association"))
+        self.assertTrue(la("315 SEVENTH AVENUE CONDOMINIUM"))
+        self.assertFalse(la("Homeowners Finance Co."))
+        self.assertFalse(la("Ilikai Property Owner LLC"))
+        self.assertFalse(la("Golden Lakes Medical Center Inc"))
+        self.assertFalse(la("Park Plaza Assoc Ltd"), "LTD must be seen before stop words strip it")
+        self.assertFalse(la("Community Association Underwriters of America"))
+        self.assertTrue(la("Orangewood East Master Condominium Association, Inc. c/o Elite Property Management"))
+        self.assertTrue(la("Jockey Club Condominium Apartments Inc"), "condo apartments are associations")
+        self.assertTrue(ok("Sunrise Lakes Condominium Apts Phase I", "SUNRISE LAKES"))
+        from hoaspy.collect.registries.get_gov_layers import clean_city
+        self.assertEqual(clean_city("11010 Raven Ridge Rd"), "")
+        self.assertEqual(clean_city("Po Box 97243"), "")
+        self.assertEqual(clean_city("  Charlotte "), "Charlotte")
+
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)
