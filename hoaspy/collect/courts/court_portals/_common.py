@@ -35,20 +35,20 @@ ASSOC_MARK_RE = re.compile(
     r"ASSOCIATION|\bASSOC\b|\bASSN\b|\bHOA\b|\bPOA\b|\bCOA\b|CONDOMINIUM|\bCONDOS?\b|"
     r"HOMEOWNERS?\b|HOME ?OWNERS?\b|PROPERTY OWNERS?\b|UNIT OWNERS?\b|TOWNHOMES?\b|"
     r"TOWNHOUSES?\b|COOPERATIVE|\bCO ?OP\b|BOARD OF MANAGERS|BOARD OF DIRECTORS")
-# Business forms that outrank an association marker: a limited partnership
-# or LLC that owns rentals, a lender, an insurer, a manager, an apartment
-# operator ("Homeowners Finance Co.", "Park Plaza Assoc Ltd").
-BUSINESS_RE = re.compile(
-    r"\b(?:LLC|L L C|LP|L P|LLP|LTD|PLLC|FINANCE|FINANCIAL|MORTGAGE|BANK|BANCORP|"
-    r"INSURANCE|INSURERS?|UNDERWRITERS|INDEMNITY|ASSURANCE|SURETY|REALTY|MANAGEMENT|"
-    r"MANAGERS?|SERVICES(?!\s+ASS(?:OCIATION|OC|N)\b)|ASSOCIATES|FEE OWNER|OWNER LP|"
-    r"LEASING|RENTALS?)\b")
-
-
-def has_business_form(name: str) -> bool:
-    """A business form (LLC/LP/LTD, finance, insurance, management…) in a
-    name, checked before stop words are stripped."""
-    return bool(BUSINESS_RE.search(_raw(name)))
+# Ownership forms that are never an association: LLCs and limited
+# partnerships own rentals or develop ("Redstone Condo, LLC").
+_OWNER_FORMS = re.compile(r"\b(?:LLC|L L C|LP|L P|LLP|L L P|LLLP|FEE OWNER|OWNER LP|ASSOCIATES)\b")
+# Business activities. Decisive when they follow the last association word
+# ("Homeowners Finance Co.", "Community Association Underwriters", "Homeowner
+# Association Services") or when there is no association word; before it
+# they are just part of a name ("Left Bank Condominium Association",
+# "Financial Center Condominium Office Association").
+_ACTIVITY = re.compile(
+    r"\b(?:FINANCE|FINANCIAL|MORTGAGE|BANK|BANCORP|INSURANCE|INSURERS?|UNDERWRITERS|"
+    r"INDEMNITY|ASSURANCE|SURETY|REALTY|MANAGEMENT|MANAGERS?|SERVICES|"
+    r"LEASING|RENTALS?|APARTMENTS?|APTS)\b")
+# Kept for callers that only need the vocabulary.
+BUSINESS_RE = re.compile(_OWNER_FORMS.pattern + "|" + _ACTIVITY.pattern + r"|\b(?:LTD|PLLC)\b")
 # Other business vocabulary, decisive only when no association marker is
 # present ("Golden Lakes Medical Center", "Mark III Devel Corp").
 TRADE_RE = re.compile(
@@ -70,7 +70,7 @@ _ASSOC_TAIL = re.compile(
     r"[IVX]+|\d+[A-Z]?)\s*)*$")
 
 
-_CARE_OF = re.compile(r"\b(?:C/O|C O|IN CARE OF)\b.*$")
+_CARE_OF = re.compile(r"\b(?:C/O|C O|IN CARE OF|D B A|DBA|A K A|AKA|T D B A|TDBA)\b.*$")
 
 
 def _raw(name: str) -> str:
@@ -80,11 +80,27 @@ def _raw(name: str) -> str:
     return _CARE_OF.sub("", _NOISE.sub(" ", (name or "").upper())).strip()
 
 
+def has_business_form(name: str) -> bool:
+    """True when the name is a business rather than an association: an
+    owner form (LLC/LP), 'Ltd'/'PLLC' without the full word Association, or
+    a business activity after the last association word (or with none).
+    Checked on the raw text, before normalize() drops LLC/LTD as stop words;
+    'Board of Managers' (NYC condos) is an association word, not managers."""
+    raw = _raw(name).replace("BOARD OF MANAGERS", "BOARD")
+    if not raw:
+        return False
+    if _OWNER_FORMS.search(raw):
+        return True
+    if re.search(r"\b(?:LTD|PLLC)\b", raw) and not re.search(r"\bASSOCIATION\b|\bASSN\b", raw):
+        return True
+    last = max((m.end() for m in ASSOC_MARK_RE.finditer(raw)), default=-1)
+    return any(m.start() >= last for m in _ACTIVITY.finditer(raw))
+
+
 def looks_like_association(name: str) -> bool:
     """An association marker with no overriding business form."""
-    raw = _raw(name)
-    p = normalize(raw)
-    return bool(p) and bool(ASSOC_MARK_RE.search(p)) and not BUSINESS_RE.search(raw)
+    p = normalize(_raw(name))
+    return bool(p) and bool(ASSOC_MARK_RE.search(p)) and not has_business_form(name)
 
 
 def party_is_association(party: str, queried_core: str) -> bool:
@@ -98,7 +114,7 @@ def party_is_association(party: str, queried_core: str) -> bool:
     p, q = normalize(raw), normalize(queried_core)
     if not p or not q or q not in p:
         return False
-    if BUSINESS_RE.search(raw):
+    if has_business_form(party):
         return False
     if ASSOC_MARK_RE.search(p):
         return True
