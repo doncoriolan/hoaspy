@@ -245,7 +245,7 @@ def to_rows(state: str, cfg: dict, raw: list[dict]) -> list[dict]:
             "status_detail": _row_field(a, fields, consts, "status_detail"),
             "recorded_date": _row_field(a, fields, consts, "recorded_date")[:10],
             "address": _row_field(a, fields, consts, "address"),
-            "city": _row_field(a, fields, consts, "city").title(),
+            "city": clean_city(_row_field(a, fields, consts, "city")).title(),
             "county": _row_field(a, fields, consts, "county").title().replace(" County", ""),
             "zip": _row_field(a, fields, consts, "zip")[:5],
             "units": _units(_row_field(a, fields, consts, "units")),
@@ -256,6 +256,16 @@ def to_rows(state: str, cfg: dict, raw: list[dict]) -> list[dict]:
     log.info("%s %s: %d raw -> %d kept -> %d associations", state, cfg["source"][:60],
              len(raw), n_in, len(rows))
     return rows
+
+
+_ADDRESS_LINE = re.compile(r"\d|\bP\.? ?O\.? BOX\b|\bSTE\b|\bSUITE\b|\bUNIT\b|\bAPT\b|\bFLOOR\b|\bBLDG\b", re.I)
+
+
+def clean_city(city: str) -> str:
+    """A city field that carries a street line or PO box (the NC OneMap
+    mailing-city column does for ~2k parcels) is dropped rather than saved."""
+    c = " ".join((city or "").split())
+    return "" if _ADDRESS_LINE.search(c) else c
 
 
 def _row_field(a: dict, fields: dict, consts: dict, key: str) -> str:
