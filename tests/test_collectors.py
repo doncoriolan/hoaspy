@@ -1327,6 +1327,19 @@ class TestCourtPartyGate(unittest.TestCase):
         self.assertTrue(has_business_form("Homeowners Finance Co."))
         self.assertTrue(has_business_form("Park Plaza Assoc Ltd"))
         self.assertFalse(has_business_form("First Colony Community Services Association"))
+        # an activity word BEFORE the association word is part of the name
+        for name in ("The Left Bank Condominium Association, Inc.", "Financial Center Condominium Office Association",
+                     "Park National Bank Condominium Association, Inc.", "Purgatory Condominium Rental Association",
+                     "Monument Meadows Property Owners Association, Ltd.", "Portview Condominium Association, PLLC",
+                     "Board of Managers of the Riverview Condominium", "Jockey Club Condominium Apartments Inc"):
+            self.assertFalse(has_business_form(name), name)
+            self.assertTrue(la(name), name)
+        for name in ("Homeowners Mutual Insurance Company", "Alliance of Community Association Managers",
+                     "Community Association Insurance Solutions, LLC", "Redstone Condo, LLC",
+                     "Jay Street Condominiums, Building 1, LP", "Park Plaza Assoc Ltd",
+                     "Marys Lake Estates Homeowners Associates, Inc.", "Sumner Townhomes Fee Owner LLC"):
+            self.assertTrue(has_business_form(name), name)
+            self.assertFalse(la(name), name)
 
 
 
