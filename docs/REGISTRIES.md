@@ -208,12 +208,25 @@ status, county, developer), POSTs the card's anti-forgery token to
   proper-cased "… Association" name repeated in the text; generic phrases
   ("the Association", "Homeowners Association") are dropped;
 - the regular assessment (`$84.00/month`), the lot count ("divided into 395
-  Lots"), the subdivision's town (from "Town/City of X" in the location
-  section) and the town's ZIP — the most common "X, Arizona 85xxx" in the
-  report, i.e. the local-services addresses: a town-level placement.
+  Lots"), the subdivision's town and the town's ZIP. The town is "Town/City
+  of X" in the location section, else "…, X, Pima County, Arizona" (never a
+  street), else the most common "Town/City of X" in the report; the capture
+  is then repaired from the report itself, because a line wrap cuts names
+  short ("City of Casa / Grande" → Casa) and running text runs them long
+  ("Town of Payson Gila County,", "City of Tucson Standard Detail"): it is
+  extended to a longer, more frequent candidate that starts with it, trailing
+  non-name words are trimmed, and it must match one of the report's own
+  "X, Arizona 85xxx" addresses when any exists (trimming until one does). The
+  ZIP is the one in the location section if given, else the most common
+  "X, Arizona 85xxx" — the local-services addresses: a town-level placement.
 
 Reports issued before `--since` (default 2005) and pre-2002 numeric
-registration numbers (no id mapping, no structured section) are skipped.
+registration numbers (no id mapping, no structured section) are skipped, and
+so are reports whose county is not an Arizona county: ADRE also registers
+out-of-state land sold to Arizonans (Tamarack in Idaho, Maui condominiums,
+"Out Of State"), which are not Arizona associations. The county is read out
+of the card's free text ("Maricopa County", "City Of Goodyear, Maricopa
+County," → Maricopa).
 One row per association; phased subdivisions naming the same HOA merge,
 with every registration listed under `subdivisions`, plus `developer` and
 `assessment` (shown on the report). Broker and developer contact details are

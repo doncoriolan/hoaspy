@@ -218,12 +218,32 @@ UNITS_RE = re.compile(
     r"(?:residential\s+|single[- ]family\s+|attached\s+|detached\s+)?(?:lots?|units?|homes?|"
     r"condominium\s+units?|townho\w+|parcels?)\b", re.I)
 LOCATION_RE = re.compile(r"SUBDIVISION\s+LOCATION[:\s]*(.{0,600}?)(?:\n\s*\n|\n[A-Z][A-Z /&]{5,}:)", re.S)
-TOWN_RE = re.compile(r"\b(?:Town|City)\s+of\s+([A-Z][a-z'’-]+(?:\s(?:[A-Z][a-z'’-]+|de|del|la)){0,2}?)"
+TOWN_RE = re.compile(r"\b(?:Town|City)\s+of\s+((?:(?:St|Ft|Mt)\.\s)?[A-Z][a-z'’-]+(?:\s(?:[A-Z][a-z'’-]+|de|del|la)){0,2}?)"
                      r"(?=,|\.|;|:|\s+(?:in|within|and|Arizona|AZ|will|shall|is|has|for|or|at|on|to|which|where|"
                      r"Water|Fire|Police|Planning|Public|Building|Engineering|Utilities|Parks|Sanitation|Solid|Sewer|"
                      r"Streets|Transportation|Environmental|Development|Community|Department|Services|Division|Located|"
-                     r"Phone|Provider|Municipal|Code|Zoning|Ordinance|General|Plan|Aviation|Easement)\b|\n|$)")
+                     r"Phone|Provider|Municipal|Code|Zoning|Ordinance|General|Plan|Aviation|Easement)\b|"
+                     r"\s+(?!(?:de|del|la)\b)[a-z]|\n|$)")
 NOT_A_TOWN = {"Arizona", "Phoenix Fire", "Maricopa County", "Pima County", "New York", "Los Angeles"}
+# "…, Tucson, Pima County, Arizona": the legal-location phrasing when no "Town/City of" is named.
+LOC_TOWN_RE = re.compile(r"(?<![A-Za-z])([A-Z][a-z'’-]+(?:\s(?:[A-Z][a-z'’-]+|de|del|la)){0,2}),"
+                         r"\s+((?:[A-Z][a-z]+\s+){1,2})County,\s+(?:State\s+of\s+)?(?:Arizona|AZ)\b")
+LOC_PREFIX_RE = re.compile(r"^(?:Unincorporated|Incorporated|City|Town|Village|In|At|Near|The|Downtown)(?:\s+of)?(?:\s+|$)")
+STREET_HEAD_RE = re.compile(r"^(?:Avenida|Camino|Calle|Via|Paseo|Placita|Vereda|Circulo|Corte)\b")
+# "Hayward Avenue Phoenix" (the comma between street and town is missing): the town is what follows the street type
+STREET_MID_RE = re.compile(r"^.*\b(?:Road|Rd|Street|St|Avenue|Ave|Drive|Dr|Boulevard|Blvd|Lane|Ln|Way|Parkway|Pkwy|Highway|Hwy|"
+                           r"Trail|Loop|Circle|Cir|Place|Pl|Court|Ct)\.?\s+(?=[A-Z])")
+GENERIC_WORDS = {"City", "Town", "County", "Village", "Streets", "Street", "Community", "Arizona"}
+AZ_COUNTIES = ("Apache", "Cochise", "Coconino", "Gila", "Graham", "Greenlee", "La Paz", "Maricopa", "Mohave", "Navajo",
+               "Pima", "Pinal", "Santa Cruz", "Yavapai", "Yuma")
+STREET_TAIL_RE = re.compile(r"\b(?:Road|Rd|Street|St|Avenue|Ave|Drive|Dr|Boulevard|Blvd|Lane|Ln|Way|Parkway|Pkwy|Highway|Hwy|"
+                            r"Trail|Loop|Circle|Cir|Place|Pl|Court|Ct|Route|Rte|Freeway|Fwy|Interstate|Corner|Intersection|"
+                            r"Section|Township|Range|Miles?|North|South|East|West|Meridian|Baseline|Roads|Streets|Avenues|"
+                            r"Drives|Lanes)\.?$")
+LOC_ZIP_RE = re.compile(r"(?:Arizona|AZ),?\s+(8[56]\d{3})\b")
+# words the "Town/City of X" capture runs into that are not part of the name
+TOWN_TAIL_RE = re.compile(r"\s+(?:[A-Z][a-z]+\s+County|Boundary|Limits|Landfill|Gas|Utility|Standard|Detail|Corporate|"
+                          r"Hall|Council|Manager|Office|Airport|Library|Booster|Station|Plant|Facility|Reservoir|Wells?)$")
 JUNK_WORDS = re.compile(
     r"\b(?:PARTICIPATE|CONTROL|RESPONSIBILIT\w*|OBLIGATIONS?|DEMANDS?|OWNED|DEEDED?|CONSISTENT|REQUIREMENTS?|"
     r"PURCHASERS?|ADJACENT|WASHES|DECLARATION|PLAT|WITHIN|NOTE|PAYMENTS?|RECORDED|RESTRICTIONS|CURRENT|"
@@ -388,28 +408,104 @@ def parse_report(text: str, county: str = "") -> dict:
         except ValueError:
             pass
     loc = LOCATION_RE.search(flat)
-    town = ""
+    town, loc_zip = "", ""
+    cands = collections.Counter(re.sub(r"\s+", " ", t.group(1)) for t in TOWN_RE.finditer(flat))
     if loc:
-        tm = TOWN_RE.search(loc.group(1))
-        if tm and tm.group(1) not in NOT_A_TOWN:
-            town = tm.group(1).strip()
+        section = loc.group(1)
+        tm = TOWN_RE.search(section)
+        if tm and re.sub(r"\s+", " ", tm.group(1)) not in NOT_A_TOWN:
+            town = unwrap_town(tm.group(1), section[tm.end(1):], flat)
         else:
-            um = UNINC_RE.search(loc.group(1))
-            if um:
+            lm = LOC_TOWN_RE.search(section)
+            um = UNINC_RE.search(section)
+            named = LOC_PREFIX_RE.sub("", re.sub(r"\s+", " ", lm.group(1))) if lm else ""
+            rest = STREET_MID_RE.sub("", named)
+            if rest != named and rest not in GENERIC_WORDS:
+                named = rest                               # "Hayward Avenue Phoenix" -> Phoenix (Circle City stays)
+            # "…, St. Johns, Apache County" / ", Ft. Mohave": the abbreviation is part of the name when it follows a
+            # comma or a preposition; after "1st" or "Main" it is a street
+            ab = re.search(r"(?:^|[,;:]|\b(?:of|in|at|near|to|the))\s*(St|Ft|Mt)\.\s*$", section[:lm.start(1)]) if lm else None
+            if ab and named:
+                full = f"{ab.group(1)}. {named}"
+                if town_zips(full, flat) or not town_zips(named, flat):
+                    named = full
+            if named and named not in NOT_A_TOWN and named not in GENERIC_WORDS and not named.endswith("County") \
+                    and not STREET_TAIL_RE.search(named) and not STREET_HEAD_RE.search(named):
+                town = named                              # "…, Tucson, Pima County, Arizona"
+            elif um:
                 town = f"unincorporated {um.group(1)} County"
-    if not town:
-        towns = collections.Counter(re.sub(r"\s+", " ", t.group(1)) for t in TOWN_RE.finditer(flat))
-        for cand, _n in towns.most_common():
-            if cand not in NOT_A_TOWN:
-                town = cand
-                break
-    out["city"] = re.sub(r"\s+", " ", town).strip()
-    if town and not town.startswith("unincorporated"):
-        zips = collections.Counter(
-            re.findall(re.escape(town) + r",?\s+(?:Arizona|AZ),?\s+(8[56]\d{3})\b", flat, re.I))
-        if zips:
-            out["zip"] = zips.most_common(1)[0][0]
+            elif lm and (not named or named.endswith("County")):
+                town = f"unincorporated {lm.group(2).strip()} County"   # "…, Unincorporated, Apache County, Arizona"
+        zm = LOC_ZIP_RE.search(section)
+        if zm:
+            loc_zip = zm.group(1)
+    if not town or not _plausible(town):
+        town = next((c for c, _n in cands.most_common() if _plausible(c)), "")
+    town, zc = repair_town(town, cands, flat)
+    if not _plausible(town):                    # "Ma" from a letter-spaced "Town of Ma r a n a": try the rest
+        town = next((c for c, _n in cands.most_common() if _plausible(c) and c != town), "")
+        town, zc = repair_town(town, cands, flat)
+        if not _plausible(town):
+            town, zc = "", ""
+    out["city"] = town
+    out["zip"] = loc_zip or zc
     return out
+
+
+def _plausible(town: str) -> bool:
+    """Three letters or more (Ajo and Why are real; "Ma" and "St" are not)
+    and not a known non-town."""
+    return len(re.sub(r"[^A-Za-z]", "", town)) >= 3 and town not in NOT_A_TOWN and town not in GENERIC_WORDS
+
+
+def unwrap_town(town: str, after: str, flat: str) -> str:
+    """"City of Casa" at a line end whose next line starts "Grande, Pinal
+    County" is one name split by the wrap: join them when the joined name is
+    used as a place elsewhere in the report ("Casa Grande," or "Casa Grande,
+    Arizona") — i.e. it occurs at least twice."""
+    nm = re.match(r"\n([A-Z][a-z'’-]+(?:\s[A-Z][a-z'’-]+)?)(?=,|\.|\s)", after)
+    if not nm:
+        return town
+    joined = re.sub(r"\s+", " ", f"{town} {nm.group(1)}")
+    pat = r"\s+".join(re.escape(w) for w in joined.split()) + r"(?:,|\s+(?:Arizona|AZ)\b)"
+    return joined if len(re.findall(pat, flat)) >= 2 else town
+
+
+def town_zips(town: str, flat: str) -> collections.Counter:
+    """ZIPs from '<town>, Arizona 85xxx' addresses in the text (the words may
+    wrap across a line, so they are joined with \\s+ rather than a space)."""
+    pat = r"\s+".join(re.escape(w) for w in town.split()) + r",?\s+(?:Arizona|AZ),?\s+(8[56]\d{3})\b"
+    return collections.Counter(re.findall(pat, flat, re.I))
+
+
+def repair_town(town: str, cands: collections.Counter, flat: str) -> tuple[str, str]:
+    """(town, zip) after repairing the "Town/City of X" capture from the
+    report itself. A line wrap cuts a name short ("City of Casa / Grande" ->
+    "Casa") and running text runs it long ("Town of Payson Gila County,",
+    "City of Tucson Standard Detail"), so: extend to a longer, more frequent
+    "Town of …" candidate that starts with it; trim trailing words that are
+    not a name; and take the ZIP from the report's own "<Town>, Arizona 85xxx"
+    addresses. A name is never shortened just to find a ZIP (a Prescott Valley
+    subdivision whose services sit in Prescott stays in Prescott Valley)."""
+    town = re.sub(r"\s+", " ", town).strip().rstrip("-'’ ")
+    if not town or town.startswith("unincorporated"):
+        return town, ""
+    longer = [c for c in cands if c.startswith(town + " ") and cands[c] > cands.get(town, 0)]
+    if longer:
+        town = max(longer, key=lambda c: cands[c])
+    elif not town_zips(town, flat):
+        # "City of Lake Havasu" (informal, 3x) vs "City of Lake Havasu City" (2x): the report's own
+        # addresses say which one is the place name
+        addressed = [c for c in cands if c.startswith(town + " ") and town_zips(c, flat)]
+        if addressed:
+            town = max(addressed, key=lambda c: (sum(town_zips(c, flat).values()), cands[c]))
+    while True:
+        trimmed = TOWN_TAIL_RE.sub("", town)
+        if trimmed == town or not trimmed:
+            break
+        town = trimmed
+    z = town_zips(town, flat)
+    return town, (z.most_common(1)[0][0] if z else "")
 
 
 # ------------------------------------------------------------- pipeline
@@ -487,6 +583,19 @@ def county_name(s: str) -> str:
     return " ".join(w.capitalize() for w in (s or "").split())
 
 
+def az_county(s: str) -> str | None:
+    """The Arizona county named on the detail card ('MARICOPA', 'Maricopa County',
+    'Town Of Queen Creek, Maricopa County,' -> 'Maricopa'); '' when the card
+    names none; None when the land is somewhere else — ADRE also registers
+    out-of-state subdivisions sold to Arizonans ('Out Of State', 'Idaho',
+    'Lahaina, Maui, Hawaii'), which are not Arizona associations."""
+    c = county_name(s)
+    for k in AZ_COUNTIES:
+        if re.search(rf"\b{k}\b", c, re.I):
+            return k
+    return "" if not c else None
+
+
 def to_records(details: dict[int, dict]) -> list[dict]:
     """One registry row per association named in any report."""
     by_name: dict[str, dict] = {}
@@ -494,7 +603,10 @@ def to_records(details: dict[int, dict]) -> list[dict]:
         d = details[dev_id]
         if d.get("missing") or not d.get("pdf"):
             continue
-        d["county"] = county_name(d.get("county", ""))     # checkpoints predate parse_detail's fix
+        county = az_county(d.get("county", ""))
+        if county is None:
+            continue                                        # out-of-state land registered for sale in Arizona
+        d["county"] = county
         issued = _iso(d.get("date_issued", ""))
         for i, name in enumerate(d.get("associations") or []):
             key = re.sub(r"[^a-z0-9]", "", name.lower())

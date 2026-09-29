@@ -704,6 +704,78 @@ class TestAzAdreParsing(unittest.TestCase):
         self.assertEqual(p["zip"], "85007")
         self.assertEqual(p["units"], 395)
 
+    def test_town_repairs(self):
+        """The "Town/City of X" capture is repaired from the report itself: a
+        line wrap that cut the name short (City of Casa / Grande) is extended
+        from the same name elsewhere in the text, words that are not the name
+        (Payson Gila County, Tucson Standard Detail, Queen Creek Boundary) are
+        trimmed, St./Ft. abbreviations survive, "…, Tucson, Pima County,
+        Arizona" names the town when no "City of" does (but never a street),
+        and the ZIP comes from the Location section itself before the
+        local-services addresses, which may wrap too."""
+        parse = self.az.parse_report
+        wrapped = ("SUBDIVISION LOCATION: Northwest of the corner of East Kortsen Road, City of Casa\n"
+                   "Grande, Pinal County, Arizona.\n\nSewage Disposal: City of Casa Grande, (520) 421-8600.\n"
+                   "Water: City of Casa Grande, 510 E. Florence Blvd., Casa\nGrande, Arizona 85122.\n")
+        p = parse(wrapped)
+        self.assertEqual((p["city"], p["zip"]), ("Casa Grande", "85122"))
+        county = ("SUBDIVISION LOCATION: E. Frontier Street and S. Ridgeway Lane Town of Payson Gila County,\n"
+                  "Arizona.\n\nWater: Provider The Town of Payson 928-474-5242.\n"
+                  "Sales office: 1000 N. Beeline Hwy, Payson, Arizona 85541.\n")
+        p = parse(county)
+        self.assertEqual((p["city"], p["zip"]), ("Payson", "85541"))
+        junk = ("SUBDIVISION LOCATION: Sunrise Drive and Hacienda Del Sol Road., Tucson, Pima County, Arizona.\n\n"
+                "Landscaping shall follow the planting guidelines of Pima County, City of Tucson Standard Detail\n"
+                "WWM A-4.\nTucson Water, 310 W. Alameda St., Tucson, AZ 85701.\n")
+        p = parse(junk)
+        self.assertEqual((p["city"], p["zip"]), ("Tucson", "85701"))
+        boundary = ("SUBDIVISION LOCATION: Between Kenworthy Road and Chandler Heights Road, south of Ocotillo\n"
+                    "Road, within Pinal County, Arizona.\n\n\uf0b7 Town of Queen Creek Boundary, approximately 1 mile\n"
+                    "\uf0b7 City of Mesa Boundary, approximately 3 miles\n")
+        self.assertEqual(parse(boundary)["city"], "Queen Creek", "a boundary distance is a town-level placement, not a name")
+        street = "SUBDIVISION LOCATION: Chandler Heights Road, Pinal County, Arizona.\n\n"
+        self.assertEqual(parse(street)["city"], "", "a street before ', Pinal County, Arizona' is not a town")
+        abbrev = "The well is 18 miles northeast of the Town of St. Johns. The principle aquifer is the Coconino\nSandstone.\n"
+        self.assertEqual(parse(abbrev)["city"], "St. Johns")
+        loczip = ("SUBDIVISION LOCATION: Northeast corner of Rancho Vistoso Blvd., Town of Oro\nValley, Pima County, "
+                  "Arizona 85737. Major cross streets are Tangerine Road.\n\n"
+                  "Sewer: Pima County Wastewater, Oro Valley, Arizona 85755.\nFire: Golder Ranch, Oro Valley, Arizona 85755.\n")
+        p = parse(loczip)
+        self.assertEqual((p["city"], p["zip"]), ("Oro Valley", "85737"),
+                         "the Location section's own ZIP outranks the local-services majority")
+        plain = "SUBDIVISION LOCATION: West of 91st Avenue, City of Mesa, Maricopa County, Arizona.\n\nWater: City of Mesa Gas Utility.\n"
+        self.assertEqual(parse(plain)["city"], "Mesa", "an equally rare longer candidate must not extend a good name")
+        cases = {   # location text -> town, for the "…, X, <County> County, Arizona" rule
+            "2831 Tonto Dr, .Lake Havasu City, Mohave County, State of Arizona .": "Lake Havasu City",
+            "with entrances at Desperado Way, in the City Phoenix, Maricopa County, State of Arizona.": "Phoenix",
+            "Master Planned Community of San Tan 320, Unincorporated Pinal\nCounty, Pinal County, State of Arizona.":
+                "unincorporated Pinal County",
+            "East of Lovers Lane, Unincorporated, Apache County, State of Arizona.": "unincorporated Apache County",
+            "Northwest corner of Avenida Compadres, Pima County, Arizona.": "",
+            "Entering into the City of St. Johns from Hwy 60. Turn South on 24th West.": "St. Johns",
+            "South of Hayward Avenue Phoenix, Maricopa County, Arizona.": "Phoenix",
+            "North of the intersection of Grand and North Dysart Roads, Maricopa County, Arizona.": "",
+            "Latimore Drive, In Bullhead City, Mohave County, Arizona.": "Bullhead City",
+            "Northwest corner of 1st St. Tucson, Pima County, Arizona.": "Tucson",
+            "Section 12, Gila and Salt River Meridian, Maricopa County, Arizona.": "",
+            "East of Circle City, Maricopa County, Arizona.": "Circle City",
+            "Tucson, Pima County Arizona – Rosalynn Place\n\nWater: City of Tucson- Water Dept.": "Tucson",
+            "18 miles northeast of town, St. Johns, Apache County, Arizona.": "St. Johns",
+            "Highway 95 and Joy Lane, Ft. Mohave, Mohave County, Arizona.\n\nWater: 1234 Hwy 95, Ft. Mohave, AZ 86426.": "Ft. Mohave",
+        }
+        for text, want in cases.items():
+            self.assertEqual(parse(f"SUBDIVISION LOCATION: {text}\n\n")["city"], want, text)
+        spaced = ("SUBDIVISION LOCATION: Latimore Drive and Clark Farms Boulevard, Town of Ma r a n a , Pima County, Arizona.\n\n"
+                  "Water: Town of Marana Municipal Water (520) 382-2570.\nSewage Disposal: Town of Marana Municipal Water.\n")
+        self.assertEqual(parse(spaced)["city"], "Marana", "a letter-spaced print falls back to the rest of the report")
+        informal = ("SUBDIVISION LOCATION: McCulloch Blvd and Malibu Drive- Lake Havasu City – Mohave County - Arizona\n\n"
+                    "Water: City of Lake Havasu City. (928) 855-2618\nSewage Disposal: City of Lake Havasu City. (928) 855-2618\n"
+                    "Streets: City of Lake Havasu with costs for maintenance.\nFire: City of Lake Havasu with costs.\n"
+                    "Garbage: City of Lake Havasu with costs.\nOffice: 2330 McCulloch Blvd, Lake Havasu City, AZ 86403.\n")
+        p = parse(informal)
+        self.assertEqual((p["city"], p["zip"]), ("Lake Havasu City", "86403"),
+                         "the report's own addresses pick the official name over the more frequent informal one")
+
     def test_generic_names_and_sentences(self):
         az = self.az
         for g in ("the Association", "Homeowners Association", "Residential Association",
@@ -730,11 +802,22 @@ class TestAzAdreParsing(unittest.TestCase):
             3: {"id": 3, "pdf": True, "registration_no": "DM26-000003", "legal_name": "NO HOA",
                 "date_issued": "1/1/2026", "county": "Pima", "associations": []},
             4: {"id": 4, "missing": True},
+            5: {"id": 5, "pdf": True, "registration_no": "DM26-000005", "legal_name": "TAMARACK RESORT",
+                "date_issued": "1/9/2026", "county": "Valley County Idaho", "associations": ["Tamarack Owners Association"]},
+            6: {"id": 6, "pdf": True, "registration_no": "DM26-000006", "legal_name": "MAUI CONDOS",
+                "date_issued": "1/9/2026", "county": "Out Of State", "associations": ["Maui Condos Association"]},
+            7: {"id": 7, "pdf": True, "registration_no": "DM26-000007", "legal_name": "GOODYEAR PHASE 1",
+                "date_issued": "1/9/2026", "county": "City Of Goodyear, Maricopa County,",
+                "associations": ["Goodyear Homeowners Association"]},
         }
         az.TEXT_DIR = ROOT / "tests" / "fixtures" / "nope"        # no cached text -> keep given parse
         rows = az.to_records(details)
-        self.assertEqual(len(rows), 1)
-        r = rows[0]
+        self.assertEqual(sorted(r["name"] for r in rows), ["Arlington Estates at South Mountain Homeowners Association",
+                                                           "Goodyear Homeowners Association"],
+                         "out-of-state land registered for sale in Arizona (Idaho, 'Out Of State') is not an AZ row")
+        goodyear = next(r for r in rows if r["name"].startswith("Goodyear"))
+        self.assertEqual(goodyear["county"], "Maricopa", "the county is read out of the card's free text")
+        r = next(r for r in rows if r["name"].startswith("Arlington"))
         self.assertEqual(r["state"], "AZ")
         self.assertEqual(r["county"], "Maricopa")
         self.assertEqual(r["name"], "Arlington Estates at South Mountain Homeowners Association")
