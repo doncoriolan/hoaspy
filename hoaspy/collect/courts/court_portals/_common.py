@@ -46,7 +46,7 @@ _OWNER_FORMS = re.compile(r"\b(?:LLC|L L C|LP|L P|LLP|L L P|LLLP|FEE OWNER|OWNER
 _ACTIVITY = re.compile(
     r"\b(?:FINANCE|FINANCIAL|MORTGAGE|BANK|BANCORP|INSURANCE|INSURERS?|UNDERWRITERS|"
     r"INDEMNITY|ASSURANCE|SURETY|REALTY|MANAGEMENT|MANAGERS?|SERVICES|"
-    r"LEASING|RENTALS?|APARTMENTS?|APTS)\b")
+    r"LEASING|RENTALS?)\b")
 # Kept for callers that only need the vocabulary.
 BUSINESS_RE = re.compile(_OWNER_FORMS.pattern + "|" + _ACTIVITY.pattern + r"|\b(?:LTD|PLLC)\b")
 # Other business vocabulary, decisive only when no association marker is
