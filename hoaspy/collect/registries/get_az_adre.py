@@ -532,7 +532,7 @@ def to_records(details: dict[int, dict]) -> list[dict]:
     for row in by_name.values():
         n = len(row["subdivisions"])
         latest = max((s["issued"] for s in row["subdivisions"] if s["issued"]), default="")
-        bits = [f"{n} subdivision report{'s' if n != 1 else ''}"]
+        bits = []
         if latest:
             bits.append(f"latest issued {latest}")
         if row["assessment"]:

@@ -743,6 +743,7 @@ class TestAzAdreParsing(unittest.TestCase):
         self.assertEqual(r["units"], 631)
         self.assertEqual(r["assessment"], "$84.00/month")
         self.assertIn("2 subdivision Public Reports", r["status"])
+        self.assertEqual(r["status_detail"], "latest issued 2026-09-14; regular assessment $84.00/month")
         self.assertTrue(r["source_url"].startswith("https://services.azre.gov/PdbWeb/Development/ViewDevelopment/"))
         self.assertNotIn("@", json.dumps(r))
 
