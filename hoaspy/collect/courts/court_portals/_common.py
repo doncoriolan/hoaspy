@@ -41,7 +41,14 @@ ASSOC_MARK_RE = re.compile(
 BUSINESS_RE = re.compile(
     r"\b(?:LLC|L L C|LP|L P|LLP|LTD|PLLC|FINANCE|FINANCIAL|MORTGAGE|BANK|BANCORP|"
     r"INSURANCE|INSURERS?|UNDERWRITERS|INDEMNITY|ASSURANCE|SURETY|REALTY|MANAGEMENT|"
-    r"MANAGERS?|SERVICES|ASSOCIATES|FEE OWNER|OWNER LP|LEASING|RENTALS?)\b")
+    r"MANAGERS?|SERVICES(?!\s+ASS(?:OCIATION|OC|N)\b)|ASSOCIATES|FEE OWNER|OWNER LP|"
+    r"LEASING|RENTALS?)\b")
+
+
+def has_business_form(name: str) -> bool:
+    """A business form (LLC/LP/LTD, finance, insurance, management…) in a
+    name, checked before stop words are stripped."""
+    return bool(BUSINESS_RE.search(_raw(name)))
 # Other business vocabulary, decisive only when no association marker is
 # present ("Golden Lakes Medical Center", "Mark III Devel Corp").
 TRADE_RE = re.compile(

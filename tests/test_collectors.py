@@ -1320,6 +1320,13 @@ class TestCourtPartyGate(unittest.TestCase):
         self.assertEqual(clean_city("11010 Raven Ridge Rd"), "")
         self.assertEqual(clean_city("Po Box 97243"), "")
         self.assertEqual(clean_city("  Charlotte "), "Charlotte")
+        # "Community Services Association" is a Texas HOA form, not a service company
+        self.assertTrue(la("Walden on Lake Houston Community Services Association Inc"))
+        self.assertFalse(la("Homeowner Association Services, Inc."))
+        from hoaspy.collect.courts.court_portals._common import has_business_form
+        self.assertTrue(has_business_form("Homeowners Finance Co."))
+        self.assertTrue(has_business_form("Park Plaza Assoc Ltd"))
+        self.assertFalse(has_business_form("First Colony Community Services Association"))
 
 
 
