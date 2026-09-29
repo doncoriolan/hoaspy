@@ -691,6 +691,8 @@ class TestAzAdreParsing(unittest.TestCase):
         self.assertEqual(d["marketing_name"], "", "NONE must read as empty")
         self.assertEqual(d["date_issued"], "1/22/2003")
         self.assertEqual(d["county"], "Maricopa")
+        self.assertEqual(self.az.parse_detail(self.html.replace(">Maricopa<", ">MARICOPA<"))["county"], "Maricopa",
+                         "county spelling must be normalised")
         self.assertEqual(d["developer"], "BROWN FAMILY COMMUNITIES")
         self.assertEqual(d["application_status"], "Issued")
 
@@ -722,7 +724,7 @@ class TestAzAdreParsing(unittest.TestCase):
                 "associations": ["Arlington Estates at South Mountain Homeowners Association"],
                 "assessment": "$84.00/month", "city": "Phoenix", "zip": "85007", "units": 236},
             1: {"id": 1, "pdf": True, "registration_no": "DM26-000001", "legal_name": "ARLINGTON ESTATES PHASE 1",
-                "date_issued": "9/14/2025", "county": "Maricopa", "developer": "DEV LLC",
+                "date_issued": "9/14/2025", "county": "MARICOPA", "developer": "DEV LLC",
                 "associations": ["Arlington Estates At South Mountain Homeowners Association"],
                 "assessment": "", "city": "Phoenix", "zip": "85007", "units": 395},
             3: {"id": 3, "pdf": True, "registration_no": "DM26-000003", "legal_name": "NO HOA",
@@ -734,12 +736,14 @@ class TestAzAdreParsing(unittest.TestCase):
         self.assertEqual(len(rows), 1)
         r = rows[0]
         self.assertEqual(r["state"], "AZ")
+        self.assertEqual(r["county"], "Maricopa")
         self.assertEqual(r["name"], "Arlington Estates at South Mountain Homeowners Association")
         self.assertEqual(len(r["subdivisions"]), 2)
         self.assertEqual(r["recorded_date"], "2025-09-14")
         self.assertEqual(r["units"], 631)
         self.assertEqual(r["assessment"], "$84.00/month")
         self.assertIn("2 subdivision Public Reports", r["status"])
+        self.assertEqual(r["status_detail"], "latest issued 2026-09-14; regular assessment $84.00/month")
         self.assertTrue(r["source_url"].startswith("https://services.azre.gov/PdbWeb/Development/ViewDevelopment/"))
         self.assertNotIn("@", json.dumps(r))
 

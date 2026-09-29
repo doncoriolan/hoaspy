@@ -187,6 +187,7 @@ def parse_detail(page: str) -> dict:
     for k in ("marketing_name", "developer"):
         if d.get(k, "").upper() in ("NONE", "N/A", ""):
             d[k] = ""
+    d["county"] = county_name(d.get("county", ""))
     return d
 
 
@@ -481,6 +482,11 @@ def reparse(details: dict[int, dict]) -> None:
             d.update(parse_report(text, d.get("county", "")))
 
 
+def county_name(s: str) -> str:
+    """'MARICOPA' / 'Maricopa' -> 'Maricopa' (the card mixes spellings)."""
+    return " ".join(w.capitalize() for w in (s or "").split())
+
+
 def to_records(details: dict[int, dict]) -> list[dict]:
     """One registry row per association named in any report."""
     by_name: dict[str, dict] = {}
@@ -488,6 +494,7 @@ def to_records(details: dict[int, dict]) -> list[dict]:
         d = details[dev_id]
         if d.get("missing") or not d.get("pdf"):
             continue
+        d["county"] = county_name(d.get("county", ""))     # checkpoints predate parse_detail's fix
         issued = _iso(d.get("date_issued", ""))
         for i, name in enumerate(d.get("associations") or []):
             key = re.sub(r"[^a-z0-9]", "", name.lower())
@@ -525,7 +532,7 @@ def to_records(details: dict[int, dict]) -> list[dict]:
     for row in by_name.values():
         n = len(row["subdivisions"])
         latest = max((s["issued"] for s in row["subdivisions"] if s["issued"]), default="")
-        bits = [f"{n} subdivision report{'s' if n != 1 else ''}"]
+        bits = []
         if latest:
             bits.append(f"latest issued {latest}")
         if row["assessment"]:
