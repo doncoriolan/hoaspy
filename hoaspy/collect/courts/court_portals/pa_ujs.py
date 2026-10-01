@@ -4,10 +4,20 @@ organization name.
     https://ujsportal.pacourts.us/CaseSearch
 
 Anonymous, no captcha; an ASP.NET Core antiforgery token from one GET per
-session is the only state. Organization search is SQL-LIKE (we append '%'
-after stripping Inc/LLC) and must carry one narrowing field — a 1900-to-today
-filing-date range returns every docket type in one document (no server
-paging, no cap observed). Recon 2026-09-02 (scratchpad courts_recon/PA_ujs.md).
+session is the only state. Organization search is SQL-LIKE and must carry
+one narrowing field — a 1900-to-today filing-date range returns every docket
+type in one document (no server paging, no cap observed). Recon 2026-09-02
+(scratchpad courts_recon/PA_ujs.md).
+
+Captions abbreviate: "Hemlock Farms Community Association" is docketed as
+"Hemlock Farms Community Assoc." (331 cases), "Hemlock Farms Comm Assoc"
+(36) and spelled out in only 9 of 411. So the query is the name's leading
+words plus the stem of its first association word ("Hemlock Farms Comm%",
+see query_name), and party_matches() folds the abbreviations before
+comparing instead of looking for the registered spelling verbatim. A record's
+`associations` is therefore the name we queried, not the caption's spelling
+(that stays in `case_name`): build_site would make "Hemlock Farms Comm
+Assoc" a second community.
 
 Coverage caveat: association hits are Magisterial District Judge dockets
 (MJ-*-CV/LT-*). Common Pleas *civil* dockets are not on this portal — they
@@ -23,7 +33,7 @@ import re
 import requests
 
 from . import RateLimited
-from ._common import name_matches, record, clean
+from ._common import has_business_form, normalize, record, clean
 
 STATE = "PA"
 KEY = "pa_ujs"
@@ -35,7 +45,8 @@ INFO = {
     "access": "anonymous, no captcha; per-association organization-name search",
     "coverage": "Magisterial District Judge dockets statewide (civil + landlord/tenant); "
                 "Common Pleas civil dockets are NOT on this portal",
-    "caveat": "best-effort — prefix name match on our registered spelling; MDJ tier only",
+    "caveat": "best-effort — prefix search on the name's leading words, caption "
+              "abbreviations folded; MDJ tier only",
 }
 UA = ("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 "
       "(KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36")
@@ -79,9 +90,82 @@ def _parse(body: str) -> list[dict]:
     return hits
 
 
+# Caption spellings of the association vocabulary, folded to one form.
+_ABBREV = {"ASSN": "ASSOCIATION", "ASSO": "ASSOCIATION", "COMM": "COMMUNITY",
+           "CMNTY": "COMMUNITY", "CONDO": "CONDOMINIUM", "CONDOS": "CONDOMINIUM",
+           "CONDOMINIUMS": "CONDOMINIUM", "HOMEOWNER": "HOMEOWNERS", "PROP": "PROPERTY",
+           "OWNER": "OWNERS", "RESIDENT": "RESIDENTS", "TOWNHOMES": "TOWNHOME",
+           "TOWNHOUSES": "TOWNHOUSE", "PROPERTYOWNERS": "PROPERTY OWNERS",
+           "HOA": "HOMEOWNERS ASSOCIATION", "POA": "PROPERTY OWNERS ASSOCIATION",
+           "COA": "CONDOMINIUM ASSOCIATION"}
+# Words that say what kind of body it is, not which one.
+_GENERIC = {"ASSOCIATION", "COMMUNITY", "CONDOMINIUM", "HOMEOWNERS", "PROPERTY", "OWNERS",
+            "RESIDENTS", "TOWNHOME", "TOWNHOUSE", "MASTER", "UNIT", "LOT", "PLANNED"}
+# What to search for in place of the first generic word: short enough to
+# reach its abbreviations ("Comm" finds Community, Comm and Comm.Assoc.).
+_STEM = {"ASSOCIATION": "Ass", "COMMUNITY": "Comm", "CONDOMINIUM": "Condo",
+         "HOMEOWNERS": "Home", "PROPERTY": "Prop", "OWNERS": "Owner", "RESIDENTS": "Resident"}
+
+
+def _fold(name: str) -> list[str]:
+    """Stop-word-free tokens with caption abbreviations spelled out:
+    'Lake Meade Propertyowners Assoc., Inc.' -> LAKE MEADE PROPERTY OWNERS
+    ASSOCIATION. Truncated tails ('ASSOCI') fold too."""
+    raw = re.sub(r"\b([A-Za-z])\.([A-Za-z])\.([A-Za-z])\b\.?", r"\1\2\3", name or "")  # H.O.A.
+    raw = re.sub(r"\bhome owner", "homeowner", raw.replace("'", "").replace("’", ""), flags=re.I)
+    raw = re.sub(r"\bass ociation\b", "association", raw, flags=re.I)          # IRS field break
+    out: list[str] = []
+    for t in normalize(raw).split():
+        if t.startswith("ASSOC") and not t.startswith("ASSOCIATE"):
+            t = "ASSOCIATION"
+        out += _ABBREV.get(t, t).split()
+    return out
+
+
+def _core(tokens: list[str]) -> tuple[list[str], set[str]]:
+    return [t for t in tokens if t not in _GENERIC], {t for t in tokens if t in _GENERIC}
+
+
+def party_matches(party: str, name: str) -> bool:
+    """Is this caption party the association we queried? Equal once folded,
+    or the same distinguishing words with a compatible kind — 'Hemlock Farms
+    Comm Assoc' and the truncated 'Hemlock Farms Community' are Hemlock
+    Farms Community Association; 'Lakeview Homeowners Assoc' is not Lakeview
+    Condominium Association, a bare 'Hemlock Farms' is not an association,
+    and 'Southpointe II Property Owners Assoc' is a different body."""
+    pt, qt = _fold(party), _fold(name)
+    if not pt or not qt:
+        return False
+    if pt == qt:
+        return True
+    if has_business_form(party):
+        return False
+    (pc, pg), (qc, qg) = _core(pt), _core(qt)
+    return bool(pc) and pc == qc and bool(pg) and bool(qg) and (pg <= qg or qg <= pg)
+
+
 def query_name(name: str) -> str:
-    q = _SUFFIX.sub("", clean(name)).strip(" ,.")
-    return (q or clean(name)) + "%"
+    """LIKE pattern for one association: the words before its first generic
+    word plus that word's stem — 'Lake Meade Property Owners Association,
+    Inc.' -> 'Lake Meade Prop%'. A name that opens with a generic word, has
+    none, or carries distinguishing words after them ('Rental Property
+    Owners Association of Lebanon County' — 'Rental Prop%' would be half
+    the docket) is searched whole, minus Inc/LLC."""
+    full = _SUFFIX.sub("", clean(name)).strip(" ,.") or clean(name)
+    words = full.split()
+    kinds = [bool(f) and f[0] in _GENERIC for f in (_fold(w) for w in words)]
+    for i, w in enumerate(words[:-1]):                 # "Home Owners" is one generic word
+        if w.upper() == "HOME" and words[i + 1].upper().startswith("OWNER"):
+            kinds[i] = True
+    first = kinds.index(True) if True in kinds else 0
+    if first == 0 or any(_fold(w) and not k for w, k in zip(words[first:], kinds[first:])):
+        return full + "%"
+    word = words[first].strip(",.")
+    if word.upper() in ("HOA", "POA", "COA"):          # 'Elk Manor Estates H%' reaches
+        stem = word[0] if first > 1 else word          # HOA and Homeowners alike
+    else:
+        stem = _STEM.get(_fold(word)[0], word)
+    return " ".join(words[:first] + [stem]) + "%"
 
 
 class Client:
@@ -129,10 +213,10 @@ class Client:
             caption = h["caption"]
             sides = re.split(r"\s+v\.?\s+", caption, maxsplit=1, flags=re.I)
             parties = [p.strip() for p in sides]
-            matched = [p for p in parties if name_matches(re.sub(r",?\s*et al\.?$", "", p, flags=re.I), name)]
+            matched = [p for p in parties if party_matches(re.sub(r",?\s*et al\.?$", "", p, flags=re.I), name)]
             if not matched:
                 continue
-            role = "plaintiff" if name_matches(re.sub(r",?\s*et al\.?$", "", parties[0], flags=re.I), name) else "defendant"
+            role = "plaintiff" if party_matches(re.sub(r",?\s*et al\.?$", "", parties[0], flags=re.I), name) else "defendant"
             kind = _DOCKET_KIND.get((h["docket_number"].split("-") + ["", "", ""])[2], "")
             rec = record(
                 key=KEY, state=STATE, case_name=caption,
@@ -141,7 +225,7 @@ class Client:
                 docket_number=h["docket_number"], date_filed=h["filing_date"],
                 nature_of_suit=" — ".join(x for x in (h["court_type"], kind) if x),
                 status=h["case_status"],
-                associations=[re.sub(r",?\s*et al\.?$", "", m, flags=re.I) for m in matched],
+                associations=[name],
                 url=h.get("docket_sheet_url") or f"{BASE}/CaseSearch",
                 case_id=h["docket_number"], queried=name)
             rec["association_role"] = [role]

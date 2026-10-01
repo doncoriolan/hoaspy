@@ -30,11 +30,15 @@ def name_matches(party: str, queried: str) -> bool:
     return bool(p and q) and (p == q or q in p or p in q)
 
 
-# An explicit association marker in a party name.
+# An explicit association marker in a party name. Matched against both the
+# raw text and normalize()'s output, where OF and CO are stop words — hence
+# "BOARD (OF)? MANAGERS" and "COUNCIL (OF)? (UNIT|CO)? OWNERS" (Maryland's
+# statutory condominium form, "Council of Unit Owners of X").
 ASSOC_MARK_RE = re.compile(
     r"ASSOCIATION|\bASSOC\b|\bASSN\b|\bHOA\b|\bPOA\b|\bCOA\b|CONDOMINIUM|\bCONDOS?\b|"
     r"HOMEOWNERS?\b|HOME ?OWNERS?\b|PROPERTY OWNERS?\b|UNIT OWNERS?\b|TOWNHOMES?\b|"
-    r"TOWNHOUSES?\b|COOPERATIVE|\bCO ?OP\b|BOARD OF MANAGERS|BOARD OF DIRECTORS")
+    r"TOWNHOUSES?\b|COOPERATIVE|\bCO ?OP\b|BOARD (?:OF )?MANAGERS|BOARD (?:OF )?DIRECTORS|"
+    r"COUNCIL (?:OF )?(?:UNIT |CO[- ]?)?OWNERS\b")
 # Ownership forms that are never an association: LLCs and limited
 # partnerships own rentals or develop ("Redstone Condo, LLC").
 _OWNER_FORMS = re.compile(r"\b(?:LLC|L L C|LP|L P|LLP|L L P|LLLP|FEE OWNER|OWNER LP|ASSOCIATES)\b")

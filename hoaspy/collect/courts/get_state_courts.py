@@ -6,13 +6,16 @@ CourtListener gives us federal dockets and state *appellate* opinions
 nationwide (get_courts.py); re:SearchTX gives Texas trial courts
 (get_tx_research.py). Every other state's trial courts live in that state's
 (or county's) portal. This driver queries each portal **by association
-name** — the names we already hold in records/ — through a per-portal
-adapter in hoaspy/collect/courts/court_portals/, and writes courts/trial_<KEY>.jsonl in the same
-docket shape build_site.py already folds in.
+name** — the names we already hold in records/ (registries, corporate
+rosters, the IRS exempt-organization roster) — through a per-portal adapter
+in hoaspy/collect/courts/court_portals/, and writes courts/trial_<KEY>.jsonl
+in the same docket shape build_site.py already folds in. An adapter may add
+`SWEEPS`, statewide prefixes queried after the names (Maryland's "council of
+unit owners"), to catch communities no roster holds.
 
     ./venv/bin/python -m hoaspy.collect.courts.get_state_courts --list                 # adapters
     ./venv/bin/python -m hoaspy.collect.courts.get_state_courts --portal ct_civil -v    # one portal
-    ./venv/bin/python -m hoaspy.collect.courts.get_state_courts --portal ny_webcivil --cookie-file ny_cookie.txt
+    ./venv/bin/python -m hoaspy.collect.courts.get_state_courts --portal md_casesearch --cookie-file md_cookie.txt
     ./venv/bin/python -m hoaspy.collect.courts.get_state_courts --all                  # every adapter
 
 Each portal run is checkpointed per name (courts/.trial_<KEY>_done.txt and
@@ -48,12 +51,14 @@ log = logging.getLogger("state_courts")
 def association_names(state: str, limit: int | None = None,
                       counties: set[str] | None = None) -> list[str]:
     """Distinct association-shaped names we hold for `state`, from every
-    records file, longest first (a fuller name is a tighter query).
+    records file (registries, corporate rosters, the IRS exempt-organization
+    roster), longest first (a fuller name is a tighter query).
     `counties` (upper-case) limits county-scoped portals to the associations
     that sit in that county; rows without a county are then skipped."""
     seen: set[str] = set()
     names: list[str] = []
-    for fn in ("associations.jsonl", "state_corps.jsonl", "state_registries.jsonl"):
+    for fn in ("associations.jsonl", "state_corps.jsonl", "state_registries.jsonl",
+               "irs_exempt_orgs.jsonl"):
         p = ROOT / "records" / fn
         if not p.exists():
             continue
@@ -73,6 +78,20 @@ def association_names(state: str, limit: int | None = None,
                     names.append(nm)
     names.sort(key=len, reverse=True)
     return names[:limit] if limit else names
+
+
+def portal_names(mod, args) -> list[str]:
+    """What one portal run queries: `--names FILE` verbatim, else the
+    association names we hold for the portal's state followed by the
+    adapter's `SWEEPS` — statewide prefixes such as Maryland's "council of
+    unit owners" that catch communities no roster holds (`--no-sweeps`
+    leaves them out)."""
+    if args.names:
+        return [l.strip() for l in args.names.read_text().splitlines() if l.strip()]
+    names = association_names(mod.STATE, args.limit, getattr(mod, "COUNTIES", None))
+    if not getattr(args, "no_sweeps", False):
+        names += [s for s in getattr(mod, "SWEEPS", ()) if s not in names]
+    return names
 
 
 # -- checkpointing ---------------------------------------------------------------
@@ -158,9 +177,7 @@ def run_portal(key: str, mod, args) -> int:
             print(f"{key}: needs a Cookie header — pass --cookie-file (see "
                   f"hoaspy/collect/courts/court_portals/{mod.__name__.split('.')[-1]}.py docstring).", file=sys.stderr)
             return 2
-    names = association_names(mod.STATE, args.limit, getattr(mod, "COUNTIES", None))
-    if args.names:
-        names = [l.strip() for l in args.names.read_text().splitlines() if l.strip()]
+    names = portal_names(mod, args)
     if not names:
         print(f"{key}: no {mod.STATE} association names in records/", file=sys.stderr)
         return 1
@@ -244,6 +261,8 @@ def main() -> int:
     ap.add_argument("--cookie-file", type=Path, help="Cookie header file for portals that need one")
     ap.add_argument("--names", type=Path, help="override: file of names, one per line")
     ap.add_argument("--limit", type=int, help="cap the number of names per portal")
+    ap.add_argument("--no-sweeps", action="store_true",
+                    help="skip the adapter's statewide SWEEPS prefixes, query held names only")
     ap.add_argument("--pace", type=float, default=1.0, help="seconds between requests")
     ap.add_argument("--out", type=Path, default=OUT_DIR)
     ap.add_argument("--fresh", action="store_true", help="ignore checkpoints")

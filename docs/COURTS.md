@@ -15,7 +15,7 @@ for other states' and counties' trial-court sites, and one subscriber feed
 | --- | --- | --- | --- | --- |
 | `get_courts` | all 50 states + DC | CourtListener v4 search API: RECAP federal dockets, state supreme/appellate opinions | anonymous, paced | `courts/dockets.jsonl`, `courts/opinions.jsonl`, `courts/sources.json` (top level) |
 | `get_tx_research` | Texas trial courts (participating county/district courts) | re:SearchTX (Office of Court Administration) | your own logged-in Cookie header; 200 searches/hour | `courts/tx_research.jsonl`, `sources.json["tx_research"]` |
-| `get_state_courts` + `court_portals/*` | AK, CT, PA statewide; Broward and Hillsborough counties FL | each portal's own search (see the adapter table) | anonymous; Broward through the local BrowserOS browser | `courts/trial_<KEY>.jsonl`, `sources.json["trial_courts"][KEY]` |
+| `get_state_courts` + `court_portals/*` | AK, CT, MD, PA statewide; VA general district courts; Broward and Hillsborough counties FL; the Supreme Court of Ohio | each portal's own search (see the adapter table) | anonymous; Broward and Virginia through the local BrowserOS browser | `courts/trial_<KEY>.jsonl`, `sources.json["trial_courts"][KEY]` |
 | `records_miamidade_civil` | Miami-Dade County, FL | Clerk's Commercial Data Services **Civil** FTP feed | subscriber FTP files staged by hand; public per-case links | `courts/trial_fl_miamidade.jsonl`, `sources.json["trial_courts"]["fl_miamidade"]` |
 
 Record counts per source are in `courts/sources.json` (rebuilt on every run)
@@ -29,10 +29,10 @@ blocked is NEEDS.md §3d.
 | --- | --- |
 | `hoaspy/collect/courts/get_courts.py` | CourtListener: court maps from the courts API, five party queries + five caption queries, checkpoint after every query, `STATE_NAMES` (also imported by `build_site`) |
 | `hoaspy/collect/courts/get_tx_research.py` | re:SearchTX: session from a Cookie header, phrase query per association, `to_record`, `QuotaError`/`PermissionError`, per-name checkpoint |
-| `hoaspy/collect/courts/get_state_courts.py` | Portal driver: association names per state from `records/`, checkpoint per portal, quota/permission handling, `dedupe`, `sources.json` catalog |
+| `hoaspy/collect/courts/get_state_courts.py` | Portal driver: association names per state from `records/` (`association_names`) plus an adapter's `SWEEPS` (`portal_names`), checkpoint per portal, quota/permission handling, `dedupe`, `sources.json` catalog |
 | `hoaspy/collect/courts/court_portals/__init__.py` | The adapter contract, `RateLimited`, `registry()` (imports every non-underscore module in the package) |
 | `hoaspy/collect/courts/court_portals/_common.py` | `ASSOCIATION_RE`, `normalize`, `name_matches`, `iso_date`, `record()` — the one place the trial record shape is built |
-| `hoaspy/collect/courts/court_portals/{ak_courtview,ct_civil,pa_ujs,fl_broward,fl_hillsborough}.py` | One adapter per portal |
+| `hoaspy/collect/courts/court_portals/{ak_courtview,ct_civil,pa_ujs,fl_broward,fl_hillsborough,md_casesearch,va_gdc,oh_supreme}.py` | One adapter per portal |
 | `hoaspy/collect/courts/records_miamidade_civil.py` | Feed parser (`daily_civil_*.zip`, `Indebtedness_*.zip`), association tiers, property ZIP, public OCS links |
 | `hoaspy/build/build_site.py` → `Builder.add_courts`, `add_opinions`, `_attach_case` | Consumer |
 
@@ -125,15 +125,19 @@ parity (court records are referenced by link, not hosted).
 Every other state's trial courts live in that state's (or county's) own
 portal. The driver queries each portal **by association name** — the names
 we already hold for that state in `records/associations.jsonl`,
-`state_corps.jsonl` and `state_registries.jsonl` (association-shaped only,
-longest first; county-scoped adapters restrict to rows in their `COUNTIES`)
-— through an adapter, and writes `courts/trial_<KEY>.jsonl`.
+`state_corps.jsonl`, `state_registries.jsonl` and `irs_exempt_orgs.jsonl`
+(association-shaped only, longest first; county-scoped adapters restrict to
+rows in their `COUNTIES`) — through an adapter, and writes
+`courts/trial_<KEY>.jsonl`. An adapter may also declare `SWEEPS`: statewide
+prefixes queried after the names (Maryland's "council of unit owners"),
+which catch communities no roster holds; `--no-sweeps` leaves them out and
+`--names FILE` replaces the whole list.
 
 **Adapter contract** (`court_portals/__init__.py`): a module exposes `STATE`,
 `KEY` (the output file slug), `INFO` (`name`, `url`, `access`, `coverage`,
 `caveat` — copied into `sources.json`), `NEEDS_COOKIE`, optionally
-`COUNTIES`, and `class Client(cookie, pace)` with `search(name) ->
-list[dict]` built through `_common.record(...)`. Adapters raise
+`COUNTIES` and `SWEEPS`, and `class Client(cookie, pace)` with `search(name)
+-> list[dict]` built through `_common.record(...)`. Adapters raise
 `PermissionError` when a session has expired and `RateLimited(retry_after)`
 on a quota. `registry()` discovers adapters by importing every module in the
 package that does not start with `_` and has both `KEY` and `Client`, so a
@@ -144,8 +148,11 @@ new portal is one new file. `--list` prints them.
 | `ak_courtview` | AK statewide trial courts, reliable from 1990 | CourtView public access; Wicket per-session encrypted `?x=` URLs scraped from each response; company search is starts-with | 500-case cap per search; no public deep link (`url` = portal root, `docket_number` re-enters) |
 | `ct_civil` | CT Superior Court civil, family, housing, all 16 districts | Party search (`PartySearch.aspx`), 200 rows/page, no cap; filing date/type/disposition from the stateless `LoadDocket.aspx?DocketNo=` deep link (one extra request per case) | "Starts With" on our registered spelling |
 | `pa_ujs` | PA statewide **Magisterial District Judge** dockets | UJS portal organization search with an antiforgery token; SQL-LIKE name with `%`; one 1900-to-today date range returns everything | Common Pleas civil dockets are *not* on this portal — small-claims / landlord-tenant tier only |
+| `oh_supreme` | **Supreme Court of Ohio**, every case since 1985 (appeals from the twelve District Courts of Appeals, the Board of Tax Appeals and the PUCO; original actions) — the state's highest court, not a trial court: records carry `level: "supreme"`, `lower_court`, `lower_court_case`, `county` and `disposition` | Clerk's online docket, one handler (`POST Ajax.ashx`): `CaseSearch` by `paramPartyEntityName` — an adjacent-word phrase, each word a prefix — then `GetCaseDetails` per case for the parties and their roles; needs only the `X-CSRF-TOKEN` constant published in the page's own `site.min.js` and a `Referer`; per-name queries on the distinctive core (and its `&`/`and` twin), then statewide `SWEEPS` of the association words ("condo", "homeowner", "owners assoc", …) kept only when the party is a community (`community_name`); deep link `#/caseinfo/<year>/<number>` | 1,000-row cap, newest first → split by filing-date window; county Common Pleas and municipal dockets are not here; amicus-only appearances are left out; lake, civic, village and townhome associations are not swept (too often not HOAs) and are found only by name |
 | `fl_broward` | Broward County / 17th Circuit civil division | eCaseView business-name search POSTed with a Cloudflare Turnstile token that only a real browser can mint, so each name runs in a throw-away BrowserOS context over CDP (`127.0.0.1:9100`), ~8–12 s per name; `COUNTIES = {BROWARD}` | 200-row cap, newest first, no paging; leading-word match on the DBPR core name; no deep link |
 | `fl_hillsborough` | Hillsborough County / 13th Circuit, filings from 1976 | HOVER JSON API: `LogAnonymous` mints a guid, `Case/Search` by business; `COUNTIES = {HILLSBOROUGH}` | 500-row cap with `start` ignored → split by filing-date window; PerimeterX blocks only the per-case summary call; no deep link |
+| `md_casesearch` | MD District and Circuit Court civil cases, all 24 jurisdictions, from the 1980s | Case Search's JSON endpoint (`POST /api-caselist/v1/cases`, business-name **prefix** search, civil), run as same-origin `fetch()` inside your own Chrome window over its DevTools port (`cdp:` line in `--cookie-file md_cookie.txt`) or with that browser's `datadome` cookie (DataDome refuses plain requests and headless browsers, a real browser passes its device check with no click); per-name queries on the distinctive core, then statewide `SWEEPS` of the Maryland forms — "council of unit owners" (Real Prop. § 11-109), "council of co-owners", "homeowners", "board of directors of", "condominium"; public deep link `case-detail-page?caseId=` | 600-row cap, sorted by party name → split by filing-date window; a party recorded only as the bare form ("COUNCIL OF UNIT OWNERS") names no community and is dropped; "Board of Directors of X" kept only when X carries an association word or is a community we hold; a 403 stops the run for a fresh cookie |
+| `va_gdc` | VA general district courts — civil claims up to $25,000, where assessments are collected — every court, cases the courts still hold online | Online Case Information System name search, **one court at a time** (128 civil dockets per name). Cloudflare passes in a real browser and the terms page is accepted once, so one tab in its own BrowserOS context (`127.0.0.1:9100`) issues every search as a same-origin `fetch()`; a timed-out session is reopened and the court redone. Starts-with on the name's core, 20 rows a page paged to the end; a flooded prefix is restarted one level narrower (`query_levels`: core → core + first letter of the association word → first four letters + HOA/POA) unless most rows are the association itself. Clerk spellings ("PROERTY OWNERS ASOOCIATION", "OWNER'S ASN") are canonicalised and parties gated by `party_matches`. Rows are folded to one record per base case number (`GV23011788-00` warrant in debt, `-01` garnishment … → `actions`); filing date and judgment amounts come from the detail page of the `-00` action (`HOASPY_VA_GDC_DETAILS=0` skips it; `HOASPY_VA_GDC_COURTS=059,153` limits the courts) | circuit-court civil cases are a different portal; same-named associations in different counties are not told apart (`court` / `court_fips` on every record); no deep link; `date_filed` is empty when only later actions are still online (`filed_year` from the case number stands in); the run stops if the terms page asks for a verification code again |
 
 Portals judged blocked (server-verified captchas, terms of use forbidding
 bots, paid indexes) and the verdict per state are in NEEDS.md §3d;
@@ -214,6 +221,10 @@ entry adds link/ZIP/plaintiff/defendant counts and the feed statistics.
 ./venv/bin/python -m hoaspy.collect.courts.get_state_courts --portal ct_civil -v
 ./venv/bin/python -m hoaspy.collect.courts.get_state_courts --all --wait-on-quota      # every anonymous adapter
 ./venv/bin/python -m hoaspy.collect.courts.get_state_courts --portal fl_broward         # needs BrowserOS running (NEEDS.md 3c)
+./venv/bin/python -m hoaspy.collect.courts.get_state_courts --portal md_casesearch --cookie-file md_cookie.txt   # Maryland: your browser's datadome cookie
+# Virginia general district courts: BrowserOS running; names from the IRS roster (courts/.trial_va_gdc_names.txt), ~5–7 h
+./venv/bin/python -m hoaspy.collect.courts.get_state_courts --portal va_gdc --names courts/.trial_va_gdc_names.txt --pace 0.5 --wait-on-quota
+HOASPY_VA_GDC_COURTS=059,153 ./venv/bin/python -m hoaspy.collect.courts.get_state_courts --portal va_gdc --limit 5 -v   # two courts, five names
 
 # Miami-Dade trial courts from the staged Civil feed
 ./venv/bin/python -m hoaspy.collect.courts.records_miamidade_civil --no-upload
@@ -233,7 +244,7 @@ Exit codes from the trial collectors are meaningful: `2` missing cookie,
 | `records/associations.jsonl`, `state_corps.jsonl`, `state_registries.jsonl`, `irs_exempt_orgs.jsonl` | the registry collectors ([REGISTRIES.md](REGISTRIES.md)) | the association names the trial collectors query and the Miami-Dade feed whitelists against |
 | `courts/dockets.jsonl`, `courts/opinions.jsonl` | `get_courts` | RECAP dockets, appellate opinions (merged across runs) |
 | `courts/tx_research.jsonl` | `get_tx_research` | TX trial dockets |
-| `courts/trial_<KEY>.jsonl` | `get_state_courts` | one file per adapter (`trial_ak_courtview`, `trial_ct_civil`, `trial_pa_ujs`, `trial_fl_broward`, `trial_fl_hillsborough`) |
+| `courts/trial_<KEY>.jsonl` | `get_state_courts` | one file per adapter (`trial_ak_courtview`, `trial_ct_civil`, `trial_pa_ujs`, `trial_fl_broward`, `trial_fl_hillsborough`, `trial_md_casesearch`, `trial_va_gdc`, `trial_oh_supreme`) |
 | `courts/trial_fl_miamidade.jsonl` | `records_miamidade_civil` | Miami-Dade trial cases with `association_role`, `county`, `zip`, `has_public_link` |
 | `courts/sources.json` | all of the above | CourtListener provenance at the top level; `tx_research` and `trial_courts.<KEY>` entries merged in by the others |
 | `courts/.tx_research_*`, `courts/.trial_<KEY>_*` | trial collectors | resume checkpoints (git-ignored) |
@@ -256,7 +267,10 @@ attached to the entity matched from every name in `associations`
 (`_attach_case`, county hint from the record's `county`, conservative match;
 an unmatched name creates the entity, inheriting the feed's county). The
 `level` is what separates "Named in a federal case" from "Sued an owner in
-county court" / "Sued in county court", and the verdict groups same-label
+county court" / "Sued in county court"; a record that names its own `level`
+keeps it, so the Supreme Court of Ohio docket (`level: "supreme"`, in
+`trial_oh_supreme.jsonl`) flags as "Taken to the state supreme court" with
+its `disposition` as the outcome and maps as Appellate. The verdict groups same-label
 court flags into one row — the catalog is
 [DATA.md — flags](DATA.md#flags-things-to-watch-out-for-and-score). The
 map's case rings, case-type labels and plaintiff/defendant split are built
@@ -268,9 +282,28 @@ from the same case dicts by `hoaspy/build/build_map.py` (MAP.md).
 - **re:SearchTX:** a personal, short-lived Cookie header in `tx_cookie.txt`
   (git-ignored via `tx_cookie.txt` / `*_cookie.txt`) or `HW_TXRESEARCH_COOKIE`.
   It is never uploaded.
-- **Portals:** the shipped adapters are anonymous (`NEEDS_COOKIE = False`);
-  an adapter that sets it takes `--cookie-file`. `fl_broward` needs the
-  BrowserOS browser up with CDP on `127.0.0.1:9100` (NEEDS.md §3c).
+- **Portals:** the adapters are anonymous (`NEEDS_COOKIE = False`) except
+  `md_casesearch`, whose `--cookie-file md_cookie.txt` names how to reach
+  the portal, two ways. **(a)** `cdp: http://127.0.0.1:9612` — a real Chrome
+  you started with `--remote-debugging-port=9612` (not headless; DataDome
+  refuses headless): the adapter takes the tab on the portal, presses
+  "I Agree" and runs every search as that page's own same-origin `fetch()`,
+  so DataDome sees the browser it already trusts and its tag keeps the
+  cookie fresh; a refused fetch reloads the page once. **(b)** the `Cookie:`
+  header (or just `datadome=…`) of a `/api-caselist/v1/cases` request from
+  your own Chrome session, copied from DevTools → Network, plus a second
+  line `User-Agent: …` with that browser's user agent — works outside the
+  browser for a few hundred requests, then DataDome refuses it. The file is
+  git-ignored (`*_cookie.txt`) and never uploaded. A 403 stops the run
+  resumably; "Access is temporarily restricted … Automated (bot) activity on
+  your network" is an IP-level hold that only time lifts. First sweep,
+  2026-09-30/10-01: cookie refused after ~340 requests at 1.5 s, host held
+  for 5½ h, resumed with a fresh cookie at `--pace 5`, refused again after
+  ~200 requests, then held with the IP named — 440 of 1,256 names done
+  (15,412 cases); the remaining names and the statewide sweeps resume from
+  the checkpoint when the hold lifts, or from another network.
+  `fl_broward` needs the BrowserOS browser up with CDP on `127.0.0.1:9100`
+  (NEEDS.md §3c).
 - **Miami-Dade feed:** FTP credentials are the subscriber's and are not in
   the repo; stage the zips by hand. `MIAMI_DADE_API` in `.env` is the separate
   paid lookup API and is not used here.
@@ -280,16 +313,28 @@ from the same case dicts by `hoaspy/build/build_map.py` (MAP.md).
 ## Limits & gotchas
 
 - **Coverage is layered and partial.** Federal + appellate everywhere; trial
-  courts only for TX, AK, CT, PA (MDJ tier), Broward, Hillsborough and
+  courts only for TX, AK, CT, MD, PA (MDJ tier), Broward, Hillsborough and
   Miami-Dade. Absence of a case is absence *in these sources*; the
   per-state "not checked" footers stay in force
   ([DATA.md](DATA.md#coverage-honesty-rules)).
 - **Name-match recall is unmeasured.** Every trial collector queries the
   spelling we hold (starts-with or leading-word on most portals); a caption
   spelled differently is missed.
-- **Caps:** 500 rows (AK, Hillsborough — the latter splits by date), 200 rows
-  (Broward), ~1000 deep-paging rows and 200 searches/hour (TX), 8,000
-  results per CourtListener query at the default `--max-pages`.
+- **Caps:** 500 rows (AK, Hillsborough — the latter splits by date), 600
+  rows (Maryland, split by date; a single day still over the cap is logged
+  and left short), 200 rows (Broward), ~1000 deep-paging rows and 200
+  searches/hour (TX), 8,000 results per CourtListener query at the default
+  `--max-pages`.
+- **Maryland names communities by their governing body.** Condominiums
+  litigate as "Council of Unit Owners of X Condominium", some HOAs as
+  "Board of Directors of X"; the records keep the party as the court wrote
+  it and `build_site.core_of` drops the body words (`COUNCIL`, `UNIT`,
+  `BOARD`, `DIRECTORS`, `MANAGERS`) so the case attaches to the registered
+  "X Condominium". A party that is only the bare form, or "Homeowners
+  Association Inc" with no community name, is dropped — its caption may
+  name the community, but the row does not. Disclaimer recorded 2026-09-30:
+  no bar on automated use; only interference and record alteration are
+  forbidden.
 - **Deep links:** AK, Broward and Hillsborough have none; `url` is the search
   page and `docket_number` is the locator. re:SearchTX links require the
   reader's own login.
@@ -313,6 +358,10 @@ check, 429 → `QuotaError`, 401 → `PermissionError`, name loader),
 records, OCS link), `TestDataIntegrity.test_trial_court_files_have_docket_shape`
 (every `trial_*.jsonl` has the shape `add_courts` folds in), `TestCourtFlags`
 (trial vs federal labels, level stamping, ZIP/county carried onto cases),
+`TestOhSupremeParsing` (search phrase from a roster name and its `&`/`and`
+twin, the same-community and sweep gates on real docket parties, the
+supreme-court record shape, amicus and alias rows left out, the 1,000-row
+date split and the per-case details cache),
 `TestPortalGuide.test_indexed_portals_name_collected_files` (`portals.json`
 never claims an index that does not exist), `TestCaseLayer` (map labels and
 per-community case summaries). CourtListener paging and the live portal

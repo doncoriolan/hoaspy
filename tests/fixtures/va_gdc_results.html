@@ -1,0 +1,1136 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html lang="en">
+	<head>
+		<META http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
+		<META name="GENERATOR" content="IBM Software Development Platform">
+		<META http-equiv="Content-Style-Type" content="text/css">
+		<link rel="stylesheet" href="cjistemp/styles/style.css?v=6.4.1.2"  type="text/css">
+		<link rel="stylesheet" type="text/css" href="cjistemp/styles/style.css?v=09302026">
+		<link rel="stylesheet" href="cjistemp/styles/jquery/jquery.treeview.css"  type="text/css">
+		<link rel="stylesheet"	href="cjistemp/scripts/ui-lightness/jquery-ui-1.8.13.custom.css" type="text/css">
+        <script type="text/javascript" src="cjistemp/scripts/cjis.js?v=09302026"></script>
+		<script type="text/javascript" src="cjistemp/scripts/jquery/jquery.js?v=09302026"></script>
+		<script type="text/javascript" src="cjistemp/scripts/jquery/jquery.treeview.js?v=09302026"></script>
+		<script type="text/javascript" src="cjistemp/scripts/jquery/jquery-ui-1.8.13.custom.min.js?v=09302026"></script>
+		<title>
+			GENERAL DISTRICT COURT ONLINE CASE INFORMATION SYSTEM
+		</title>
+		 <script type="text/javascript">
+		 var childWindow = null;
+		 $(window).unload(function() {
+			 if (childWindow)
+                 childWindow.close();
+         });
+		  $(document).ready(function(){
+			 $('#newWindow').click(function (event){
+				 if($(this).hasClass("popupLink")){
+					 var w=500;
+					 var h=300;
+					 var left = (screen.width/2)-(w/2);
+					 var top = (screen.height/2)-(h/2);
+					 try{
+					 	var xAxisValue = window.screenX|| window.screenLeft || 0 ;
+					 	var yAxisValue = window.screenY || window.screenTop || 0;
+					 	left = xAxisValue + $(window).width()/2 - w/2;
+					 	top = yAxisValue + $(window).height()/2 - h/2;
+					 }
+					 catch(e){
+						left = (screen.width/2)-(w/2);
+						top = (screen.height/2)-(h/2);
+					 }
+					 var url = $(this).attr("href");
+					 var windowName = "Login";//$(this).attr("name");
+					 childWindow = window.open(url, windowName, 'toolbar=no, location=no, directories=no, status=no, menubar=no, scrollbars=no, resizable=no, copyhistory=no, width='+w+', height='+h+', top='+top+', left='+left);
+					 childWindow.focus();
+					 event.preventDefault();
+				 }
+			 });
+		 });
+		 </script>
+	</head>
+	<body onload="">
+	<table align="center" width="100%" style="border:0px" cellpadding="0" cellspacing="0" role="presentation">
+	<tr>
+	<td>
+	<table align="center" width="100%" style="border:0px" cellpadding="0" cellspacing="0" role="presentation">
+						<tr>
+			      			<td colspan="2" align="center" valign="bottom" class="headerback" nowrap="nowrap">
+<script language="Javascript" type="text/javascript">
+	function hideHeader() {
+		document.getElementById("headerDiv").style.display = "none";
+	}
+	var searchCounter=2
+</script>
+<!-- <div class="headerback"></div>  -->
+<header>
+	<div class="headerimage"></div>
+</header>
+			      			</td>
+			    		</tr>
+			    		<tr>
+			    		    <td align="left" valign="top" nowrap="nowrap" class="navigationback" width="217px">
+<div class="contentwrapper">
+<nav role="navigation">
+	<table width="100%" border="0" cellspacing="0" cellpadding="0" >
+	  <tr>
+	    <td class="navigation" valign="top">
+	    	<div class="navigationtop"></div>
+	    	<div class="navigationback">
+	    		<div class="menu">
+	    		<div align="center">
+		    		<table cellpadding="0" cellspacing="0">
+						    <tr>
+							    <td style="text-align: -moz-center;" >
+							    	       <input type="hidden" name="courtName" value="Accomack General District Court" />
+							    	       <input type="hidden" name="courtName" value="Fairfax County General District Court" />
+							    	       <input type="hidden" name="courtName" value="Newport News-Civil General District Court" />
+							    	       <input type="hidden" name="courtName" value="Newport News-Criminal General District Court" />
+							    	       <input type="hidden" name="courtName" value="Newport News-Traffic General District Court" />
+							    	       <input type="hidden" name="courtName" value="Norfolk General District Court" />
+							    	       <input type="hidden" name="courtName" value="Norfolk General District-Criminal Division" />
+							    	       <input type="hidden" name="courtName" value="Prince William General District Court" />
+							    	       <input type="hidden" name="courtName" value="Richmond-Marsh Criminal/Traffic General District Court at Manchester" />
+							    	       <input type="hidden" name="courtFips" value="001" />
+							    	       <input type="hidden" name="courtFips" value="059" />
+							    	       <input type="hidden" name="courtFips" value="703" />
+							    	       <input type="hidden" name="courtFips" value="701" />
+							    	       <input type="hidden" name="courtFips" value="702" />
+							    	       <input type="hidden" name="courtFips" value="710" />
+							    	       <input type="hidden" name="courtFips" value="711" />
+							    	       <input type="hidden" name="courtFips" value="153" />
+							    	       <input type="hidden" name="courtFips" value="761" />
+							    	 <table cellpadding="0" cellspacing="0">
+						                <tr>
+							    	       <td><input type="text" name="selectedCourtName" title="Select Court Name" aria-label="Select Court Name" id="txtcourts1" value='Prince William General District Court'/></td>
+                                           <td><img src="cjistemp/images/dropdownarrow.jpg" alt="courtNameDropDown" id="btndropdown1" width="20" height="20" /></td>
+							    	    </tr>
+							    	 </table>
+							    </td>
+							 </tr>
+							 <tr>
+							 	<td>&nbsp;</td>
+							 </tr>
+					</table>
+				</div>
+				</div>
+				<div class="trafficcriminaltab">
+					<div class="navigationItems ">
+						<ul>
+								<li><span onclick="return checkCourtSelection();" id="desc-name-search-T"><a name="moduleLink" href="nameSearch.do?fromSidebar=true&formAction=searchLanding&searchDivision=T&searchFipsCode=153&localFipsCode=153" aria-describedby="desc-name-search-T" aria-label="Traffic/Criminal Name Search"> Name Search</a></span></li>
+								<li><span onclick="return checkCourtSelection();" id="desc-case-number-search-T"><a name="moduleLink" href="criminalCivilCaseSearch.do?fromSidebar=true&formAction=searchLanding&searchDivision=T&searchFipsCode=153&curentFipsCode=153" aria-describedby="desc-case-number-search-T" aria-label="Traffic/Criminal Case Number Search">Case Number Search</a></span></li>
+								<li><span onclick="return checkCourtSelection();" id="desc-hearing-date-search-T"><a name="moduleLink" href="caseSearch.do?fromSidebar=true&searchLanding=searchLanding&searchType=hearingDate&searchDivision=T&searchFipsCode=153&curentFipsCode=153" aria-describedby="desc-hearing-date-search-T" aria-label="Traffic/Criminal Hearing Date Search">Hearing Date Search</a></span></li>
+								<li><span onclick="return checkCourtSelection();" id="desc-service-search-T"><a name="moduleLink" href="caseSearch.do?fromSidebar=true&searchLanding=searchLanding&searchType=servicesName&searchDivision=T&searchFipsCode=153&curentFipsCode=153" aria-describedby="desc-service-search-T" aria-label="Traffic/Criminal Service/Process Search">Service/Process Search</a></span></li>
+						</ul>
+					</div>
+				</div>
+				<div class="civiltab">
+					<div class="navigationItems ">
+						<ul>
+							<li><span onclick="return checkCourtSelection();" id="desc-name-search-V"><a name="moduleLink" href="nameSearch.do?fromSidebar=true&formAction=searchLanding&searchDivision=V&searchFipsCode=153&localFipsCode=153" aria-describedby="desc-name-search-V" aria-label="Civil Name Search"> Name Search</a></span></li>
+							<li><span onclick="return checkCourtSelection();" id="desc-case-number-search-V"><a name="moduleLink" href="criminalCivilCaseSearch.do?fromSidebar=true&formAction=searchLanding&searchDivision=V&searchFipsCode=153&curentFipsCode=153" aria-describedby="desc-case-number-search-V" aria-label="Civil Case Number Search">Case Number Search</a></span></li>
+							<li><span onclick="return checkCourtSelection();"  id="desc-hearing-date-search-V"><a name="moduleLink" href="caseSearch.do?fromSidebar=true&searchLanding=searchLanding&searchType=hearingDate&searchDivision=V&searchFipsCode=153&curentFipsCode=153" aria-describedby="desc-hearing-date-search-V" aria-label="Civil Hearing Date Search">Hearing Date Search</a></span></li>
+							<li><span onclick="return checkCourtSelection();" id="desc-service-search-V"><a name="moduleLink" href="caseSearch.do?fromSidebar=true&searchLanding=searchLanding&searchType=servicesName&searchDivision=V&searchFipsCode=153&curentFipsCode=153"  aria-describedby="desc-service-search-V" aria-label="Civil Service/Process Search">Service/Process Search</a></span></li>
+		                </ul>
+					</div>
+				</div>
+	    	</div>
+	    </td>
+	  </tr>
+	</table>
+	</nav>
+</div>
+			      			</td>
+			      			<td align="left" valign="top" nowrap="nowrap" width="100%" >
+			        			<div class="goldenbar" role="region"  aria-label="Application Toolbar">
+			        				<div style="float:right">
+									 	<div style="display:inline">
+				        				&nbsp;<a href="welcomePage.do?" aria-label="Home"><img src="cjistemp/images/home.gif"  width="20" height="20" alt="Home" aria-describedby="home-desc"/></a>
+				        				<span id="home-desc" class="visually-hidden">Navigates to the homepage of the application.</span>&nbsp;
+				        				<a href="#" onclick="popitup('help.do'); return false;" aria-label="Help" >
+				        				<img src="cjistemp/images/help.gif"  width="20" height="20" alt="Help" aria-describedby="help-desc"/>
+				        				</a>
+				        				<span id="help-desc" class="visually-hidden">Help</span>
+				        				</div>
+				        			</div>
+			        				<div id="headerCourtName" style="text-align:center; vertical-align:middle;">
+			        					Prince William General District Court&nbsp;
+			        				</div>
+			        			</div>
+			        			<br/>
+			        			<main>
+	<script>document.querySelector('title').textContent += " - Civil Search by Name";</script>
+<script language="javascript" type="text/javascript" src="cjistemp/scripts/prototype.js?v=09302026"></script>
+<form name="nameSearchForm" method="post" action="/gdcourts/nameSearch.do">
+    <input type="hidden" name="formAction" value="newSearch">
+	<input type="hidden" name="displayCaseNumber">
+	<input type="hidden" name="formBean">
+	<input type="hidden" name="localFipsCode">
+	<input type="hidden" name="caseActive">
+	<input type="hidden" name="localLastName">
+	<input type="hidden" name="forward">
+	<input type="hidden" name="back">
+	<table width="100%" style="margin:0px;">
+		<tr>
+			<td>
+<table width="100%" border="0" cellpadding="4" cellspacing="2">
+	 <tr>
+	   	    <td class="pageheader"><h1 class="visually-hidden">Civil Search by Name</h1>Civil Search by Name</td>
+	 </tr>
+		 <tr>
+		     <td class="tableback">
+		     <table width="100%" border="0" cellpadding="2" cellspacing="2">
+			       <tr>
+			           <td class="labelLeft" width="15%"></td>
+			           		<td class="labelLeft" align="left">Last/Business Name<span class="redtext">*</span></td>
+			           <td class="labelLeft" aria-hidden="true">First</td>
+			           <td class="labelLeft" aria-hidden="true">Middle/Initial</td>
+			           <td class="labelLeft" aria-hidden="true">Suffix</td>
+			       </tr>
+			       <tr>
+			           <td class="label" style="text-align:top">Name:</td>
+			           <td><label for="localnamesearchlastname" style="position:absolute; width:1px; height:1px; margin:-1px; padding:0; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0;">Last Name</label>
+			           <input type="text" name="localnamesearchlastName" maxlength="30" size="30" value="MONTCLAIR P" id="localnamesearchlastname" title="Enter the person's last name">
+			           <input type="hidden" name="lastName" value="MONTCLAIR P" id="txtlastname"></td>
+			           <td><label for="localnamesearchfirstname" style="position:absolute; width:1px; height:1px; margin:-1px; padding:0; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0;">First Name</label>
+			           <input type="text" name="localnamesearchfirstName" maxlength="30" size="30" value="" id="localnamesearchfirstname" title="Enter the person's First name">
+			           <input type="hidden" name="firstName" value="" id="txtfirstname"></td>
+			           <td><label for="localnamesearchmiddlename" style="position:absolute; width:1px; height:1px; margin:-1px; padding:0; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0;">Middle/Initial Name</label>
+			           <input type="text" name="localnamesearchmiddleName" maxlength="30" size="30" value="" id="localnamesearchmiddlename" title="Enter the person's Middle/Initial name">
+			           <input type="hidden" name="middleName" value="" id="txtmiddlename"></td>
+			           <td><label for="localnamesearchsuffix" style="position:absolute; width:1px; height:1px; margin:-1px; padding:0; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0;">Suffix</label>
+			           <input type="text" name="localnamesearchsuffix" maxlength="5" size="5" value="" id="localnamesearchsuffix" title="Enter the person's suffix">
+			           <input type="hidden" name="suffix" value="" id="txtsuffix"></td>
+			       </tr>
+			       <tr>
+			       		<td>&nbsp;</td>
+			       		<td class="labelDescription" style="text-align:left" colspan="4">
+			       		<span id="lastNameInstructions">
+							   	 (For best results, enter the name as it appears on the civil pleading.)
+						</span>
+			       		</td>
+			       </tr>
+			       <tr>
+			            <td class="label">Data Status:</td>
+			            <td colspan="4">
+			            	<label for="localnamesearchsearchCategory" style="position:absolute; width:1px; height:1px; margin:-1px; padding:0; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0;">Data Status</label>
+				             <select name="localnamesearchsearchCategory" id="localnamesearchsearchCategory" title="Select Data Status"><option value="A">Current</option>
+								<option value="I">Archived</option>
+								<option value="O" selected="selected">All</option></select>
+							 <input type="hidden" name="searchCategory" value="O" id="txtsearchCategory">
+							 <span class="redtext floatright">* indicates a required field</span>
+			           </td>
+			       </tr>
+		  	  </table>
+		      </td>
+		  </tr>
+	 <tr>
+	   	  <td class="buttonpanel">
+	   	      <input type="submit" class="submitBox" onclick="submitForm('newSearch', '153');" value="Search"/>
+	   	      <input type="submit" class="submitBox" onclick="submitForm('reset', '153');" value="Reset"/>
+	   	      <input type="hidden" name="searchFipsCode" value="153">
+	   	      <input type="hidden" name="searchDivision" value="V">
+	   	      <input type="hidden" name="searchType" value="name">
+			  <div id="reset-announcement"
+				   aria-live="assertive"
+				   role="alert"
+				   aria-atomic="true"
+				   class="visually-hidden"></div>
+	   	  </td>
+	 </tr>
+	 <tr>
+	   	  <td>&nbsp;</td>
+	 </tr>
+	 	<tr>
+	       	<td class="labelValue">
+		  		Having trouble finding your case?  Refer to our Help icon
+		  		<img alt="Help" src="cjistemp/images/help.gif" width="20" height="20" />
+		  		 located at the top of this page.
+		  	</td>
+	  	</tr>
+	  	<tr>
+	   	  <td>&nbsp;</td>
+	 	</tr>
+</table>
+<script language="javascript">
+  window.onload = function() {
+	  const errorDiv = document.getElementById("searchError");
+	  resetAnnouncement();
+	    if (errorDiv) {
+	        errorDiv.focus();
+	    } else {
+	        const lastNameField = document.getElementById("localnamesearchlastname");
+	        if (lastNameField) {
+	            lastNameField.focus();
+	        }
+	    }
+    const lastNameInput = document.getElementById("localnamesearchlastname");
+    if (lastNameInput) {
+    	lastNameInput.setAttribute("required", "required");
+    	lastNameInput.oninvalid = function () {
+            this.setCustomValidity("Please enter Last Name which is a required field.");
+        };
+        lastNameInput.oninput = function () {
+            this.setCustomValidity("");
+        };
+    }
+    lastNameInput.setAttribute("autocomplete", "family-name");
+    document.getElementById('localnamesearchfirstname').setAttribute('autocomplete', 'given-name');
+    document.getElementById('localnamesearchmiddlename').setAttribute('autocomplete', 'additional-name');
+    document.getElementById('localnamesearchsuffix').setAttribute('autocomplete', 'honorific-suffix');
+    document.getElementById('localnamesearchlastname') .setAttribute('aria-describedby', 'lastNameInstructions');
+  };
+  function resetAnnouncement() {
+	  // Get the name of form action, if it is reset, announce the message.
+	  const formActions = document.getElementsByName("formAction");
+	  if(formActions) {
+		  const formAction = formActions[0].value;
+		  if(formAction === "reset") {
+			  announce("reset-announcement", "Search results are cleared.");
+		  } else {
+			  resetDiv.innerHTML = "";
+		  }
+	  }
+  }
+  function announce(id, message) {
+	  const resetDiv = document.getElementById(id);
+	  if (resetDiv) {
+		  resetDiv.innerHTML = message;
+		  resetDiv.focus();
+	  }
+  }
+</script>
+			</td>
+		</tr>
+			<tr>
+			    <td align="center" nowrap="nowrap">
+			        <span class="floatright" >
+							<input type="submit" onclick="submitForm('next', '153');" class="submitBox disableOnBack" value="Next" title="Next" />
+					</span>
+			           <input type="submit" class="submitBox disableOnBack" onclick="submitForm('caseDetails', '153');" value="Display Case Details" title="Display Case Details"/>
+				</td>
+			</tr>
+  		<tr>
+  			<td>
+<table class="tableborder" cellspacing="0" width="100%">
+	<tr>
+         <td width="3%" align="center" class="gridheader">&nbsp;</td>
+         <td width="11%" class="gridheader">Case #</td>
+         <td width="24%" class="gridheader">Plaintiff</td>
+         <td width="24%" class="gridheader">Defendant		                     		                          </td>
+         <td width="8%" class="gridheader">Hearing Date </td>
+         <td width="7%" class="gridheader">Hearing Time</td>
+         <td width="11%" class="gridheader">Case Judgment</td>
+         <td width="12%"class="gridheader">Case Type</td>
+    </tr>
+	<input type="hidden" name="unCheckedCases" value="">
+			<tr class="evenRow">
+			    <td class="gridrow">
+	    	                 <input type="checkbox" onclick="clickCaseCheckbox(this)" aria-label="Select Court Name"
+	    	                  name="checkedCases" value="GV25026738-00"/>
+			    </td>
+			   	<td class="gridrow">
+			   		<a href="nameSearch.do?formAction=caseDetails&displayCaseNumber=GV25026738-00&localFipsCode=153&caseActive=true&clientSearchCounter=2" />
+						GV25026738-00
+					</a>
+			   	</td>
+				<td class="gridrow">
+					MONTCLAIR PLAZA LLC
+				</td>
+				<td class="gridrow">
+					SAMPLE TENANT LLC
+				</td>
+				<td class="gridrow">
+					05/20/2026
+			  	</td>
+				<td class="gridrow">
+					01:30 PM
+			  	</td>
+				<td class="gridrow">
+					Case Dismissed
+				</td>
+				<td class="gridrow">
+					Warrant In Debt
+				</td>
+			</tr>
+			<tr class="oddRow">
+			    <td class="gridrow">
+	    	                 <input type="checkbox" onclick="clickCaseCheckbox(this)" aria-label="Select Court Name"
+	    	                  name="checkedCases" value="GV19013222-00"/>
+			    </td>
+			   	<td class="gridrow">
+			   		<a href="nameSearch.do?formAction=caseDetails&displayCaseNumber=GV19013222-00&localFipsCode=153&caseActive=true&clientSearchCounter=2" />
+						GV19013222-00
+					</a>
+			   	</td>
+				<td class="gridrow">
+					MONTCLAIR PROERTY OWNERS ASSOCIATION INC
+				</td>
+				<td class="gridrow">
+					OWNER01, SAMPLE
+				</td>
+				<td class="gridrow">
+					09/18/2019
+			  	</td>
+				<td class="gridrow">
+					11:00 AM
+			  	</td>
+				<td class="gridrow">
+					Case Dismissed
+				</td>
+				<td class="gridrow">
+					Warrant In Debt
+				</td>
+			</tr>
+			<tr class="evenRow">
+			    <td class="gridrow">
+	    	                 <input type="checkbox" onclick="clickCaseCheckbox(this)" aria-label="Select Court Name"
+	    	                  name="checkedCases" value="GV19013223-00"/>
+			    </td>
+			   	<td class="gridrow">
+			   		<a href="nameSearch.do?formAction=caseDetails&displayCaseNumber=GV19013223-00&localFipsCode=153&caseActive=true&clientSearchCounter=2" />
+						GV19013223-00
+					</a>
+			   	</td>
+				<td class="gridrow">
+					MONTCLAIR PROERTY OWNERS ASSOCIATION INC
+				</td>
+				<td class="gridrow">
+					OWNER02, SAMPLE
+				</td>
+				<td class="gridrow">
+					09/18/2019
+			  	</td>
+				<td class="gridrow">
+					11:00 AM
+			  	</td>
+				<td class="gridrow">
+					Plaintiff
+				</td>
+				<td class="gridrow">
+					Warrant In Debt
+				</td>
+			</tr>
+			<tr class="oddRow">
+			    <td class="gridrow">
+	    	                 <input type="checkbox" onclick="clickCaseCheckbox(this)" aria-label="Select Court Name"
+	    	                  name="checkedCases" value="GV23011788-00"/>
+			    </td>
+			   	<td class="gridrow">
+			   		<a href="nameSearch.do?formAction=caseDetails&displayCaseNumber=GV23011788-00&localFipsCode=153&caseActive=true&clientSearchCounter=2" />
+						GV23011788-00
+					</a>
+			   	</td>
+				<td class="gridrow">
+					MONTCLAIR PROPERT OWNERS ASSOCIATION INC
+				</td>
+				<td class="gridrow">
+					OWNER03, SAMPLE
+				</td>
+				<td class="gridrow">
+					10/19/2023
+			  	</td>
+				<td class="gridrow">
+					11:00 AM
+			  	</td>
+				<td class="gridrow">
+					Plaintiff
+				</td>
+				<td class="gridrow">
+					Warrant In Debt
+				</td>
+			</tr>
+			<tr class="evenRow">
+			    <td class="gridrow">
+	    	                 <input type="checkbox" onclick="clickCaseCheckbox(this)" aria-label="Select Court Name"
+	    	                  name="checkedCases" value="GV23011788-01"/>
+			    </td>
+			   	<td class="gridrow">
+			   		<a href="nameSearch.do?formAction=caseDetails&displayCaseNumber=GV23011788-01&localFipsCode=153&caseActive=true&clientSearchCounter=2" />
+						GV23011788-01
+					</a>
+			   	</td>
+				<td class="gridrow">
+					MONTCLAIR PROPERT OWNERS ASSOCIATION INC
+				</td>
+				<td class="gridrow">
+					OWNER03, SAMPLE
+				</td>
+				<td class="gridrow">
+					07/21/2025
+			  	</td>
+				<td class="gridrow">
+					11:00 AM
+			  	</td>
+				<td class="gridrow">
+					Closed
+				</td>
+				<td class="gridrow">
+					Garnishment
+				</td>
+			</tr>
+			<tr class="oddRow">
+			    <td class="gridrow">
+	    	                 <input type="checkbox" onclick="clickCaseCheckbox(this)" aria-label="Select Court Name"
+	    	                  name="checkedCases" value="GV23011799-00"/>
+			    </td>
+			   	<td class="gridrow">
+			   		<a href="nameSearch.do?formAction=caseDetails&displayCaseNumber=GV23011799-00&localFipsCode=153&caseActive=true&clientSearchCounter=2" />
+						GV23011799-00
+					</a>
+			   	</td>
+				<td class="gridrow">
+					MONTCLAIR PROPERT OWNERS ASSOCIATION INC
+				</td>
+				<td class="gridrow">
+					OWNER04, SAMPLE
+				</td>
+				<td class="gridrow">
+					10/19/2023
+			  	</td>
+				<td class="gridrow">
+					11:00 AM
+			  	</td>
+				<td class="gridrow">
+					Plaintiff
+				</td>
+				<td class="gridrow">
+					Warrant In Debt
+				</td>
+			</tr>
+			<tr class="evenRow">
+			    <td class="gridrow">
+	    	                 <input type="checkbox" onclick="clickCaseCheckbox(this)" aria-label="Select Court Name"
+	    	                  name="checkedCases" value="GV23011838-00"/>
+			    </td>
+			   	<td class="gridrow">
+			   		<a href="nameSearch.do?formAction=caseDetails&displayCaseNumber=GV23011838-00&localFipsCode=153&caseActive=true&clientSearchCounter=2" />
+						GV23011838-00
+					</a>
+			   	</td>
+				<td class="gridrow">
+					MONTCLAIR PROPERTY OWNERS ASOOCIATION, INC.
+				</td>
+				<td class="gridrow">
+					OWNER05, SAMPLE
+				</td>
+				<td class="gridrow">
+					02/29/2024
+			  	</td>
+				<td class="gridrow">
+					01:30 PM
+			  	</td>
+				<td class="gridrow">
+					Plaintiff
+				</td>
+				<td class="gridrow">
+					Warrant In Debt
+				</td>
+			</tr>
+			<tr class="oddRow">
+			    <td class="gridrow">
+	    	                 <input type="checkbox" onclick="clickCaseCheckbox(this)" aria-label="Select Court Name"
+	    	                  name="checkedCases" value="GV23011839-00"/>
+			    </td>
+			   	<td class="gridrow">
+			   		<a href="nameSearch.do?formAction=caseDetails&displayCaseNumber=GV23011839-00&localFipsCode=153&caseActive=true&clientSearchCounter=2" />
+						GV23011839-00
+					</a>
+			   	</td>
+				<td class="gridrow">
+					MONTCLAIR PROPERTY OWNERS ASOOCIATION, INC.
+				</td>
+				<td class="gridrow">
+					OWNER06, SAMPLE
+				</td>
+				<td class="gridrow">
+					10/19/2023
+			  	</td>
+				<td class="gridrow">
+					11:00 AM
+			  	</td>
+				<td class="gridrow">
+					Plaintiff
+				</td>
+				<td class="gridrow">
+					Warrant In Debt
+				</td>
+			</tr>
+			<tr class="evenRow">
+			    <td class="gridrow">
+	    	                 <input type="checkbox" onclick="clickCaseCheckbox(this)" aria-label="Select Court Name"
+	    	                  name="checkedCases" value="GV23011839-01"/>
+			    </td>
+			   	<td class="gridrow">
+			   		<a href="nameSearch.do?formAction=caseDetails&displayCaseNumber=GV23011839-01&localFipsCode=153&caseActive=true&clientSearchCounter=2" />
+						GV23011839-01
+					</a>
+			   	</td>
+				<td class="gridrow">
+					MONTCLAIR PROPERTY OWNERS ASOOCIATION, INC.
+				</td>
+				<td class="gridrow">
+					OWNER06, SAMPLE
+				</td>
+				<td class="gridrow">
+					06/03/2024
+			  	</td>
+				<td class="gridrow">
+					11:00 AM
+			  	</td>
+				<td class="gridrow">
+					Closed
+				</td>
+				<td class="gridrow">
+					Garnishment
+				</td>
+			</tr>
+			<tr class="oddRow">
+			    <td class="gridrow">
+	    	                 <input type="checkbox" onclick="clickCaseCheckbox(this)" aria-label="Select Court Name"
+	    	                  name="checkedCases" value="GV24017760-00"/>
+			    </td>
+			   	<td class="gridrow">
+			   		<a href="nameSearch.do?formAction=caseDetails&displayCaseNumber=GV24017760-00&localFipsCode=153&caseActive=true&clientSearchCounter=2" />
+						GV24017760-00
+					</a>
+			   	</td>
+				<td class="gridrow">
+					MONTCLAIR PROPERTY OWNERS ASSCIATION INC
+				</td>
+				<td class="gridrow">
+					OWNER07, SAMPLE
+				</td>
+				<td class="gridrow">
+					02/20/2025
+			  	</td>
+				<td class="gridrow">
+					11:00 AM
+			  	</td>
+				<td class="gridrow">
+					Plaintiff
+				</td>
+				<td class="gridrow">
+					Warrant In Debt
+				</td>
+			</tr>
+			<tr class="evenRow">
+			    <td class="gridrow">
+	    	                 <input type="checkbox" onclick="clickCaseCheckbox(this)" aria-label="Select Court Name"
+	    	                  name="checkedCases" value="GV25019026-00"/>
+			    </td>
+			   	<td class="gridrow">
+			   		<a href="nameSearch.do?formAction=caseDetails&displayCaseNumber=GV25019026-00&localFipsCode=153&caseActive=true&clientSearchCounter=2" />
+						GV25019026-00
+					</a>
+			   	</td>
+				<td class="gridrow">
+					MONTCLAIR PROPERTY OWNERS ASSCIATION INC
+				</td>
+				<td class="gridrow">
+					OWNER06, SAMPLE
+				</td>
+				<td class="gridrow">
+					11/06/2025
+			  	</td>
+				<td class="gridrow">
+					11:00 AM
+			  	</td>
+				<td class="gridrow">
+					Plaintiff
+				</td>
+				<td class="gridrow">
+					Warrant In Debt
+				</td>
+			</tr>
+			<tr class="oddRow">
+			    <td class="gridrow">
+	    	                 <input type="checkbox" onclick="clickCaseCheckbox(this)" aria-label="Select Court Name"
+	    	                  name="checkedCases" value="GV16014977-00"/>
+			    </td>
+			   	<td class="gridrow">
+			   		<a href="nameSearch.do?formAction=caseDetails&displayCaseNumber=GV16014977-00&localFipsCode=153&caseActive=true&clientSearchCounter=2" />
+						GV16014977-00
+					</a>
+			   	</td>
+				<td class="gridrow">
+					OWNER08, SAMPLE
+				</td>
+				<td class="gridrow">
+					MONTCLAIR PROPERTY OWNERS ASSOC
+				</td>
+				<td class="gridrow">
+					12/14/2016
+			  	</td>
+				<td class="gridrow">
+					11:00 AM
+			  	</td>
+				<td class="gridrow">
+					Non-suit
+				</td>
+				<td class="gridrow">
+					Warrant In Debt
+				</td>
+			</tr>
+			<tr class="evenRow">
+			    <td class="gridrow">
+	    	                 <input type="checkbox" onclick="clickCaseCheckbox(this)" aria-label="Select Court Name"
+	    	                  name="checkedCases" value="GV11004738-04"/>
+			    </td>
+			   	<td class="gridrow">
+			   		<a href="nameSearch.do?formAction=caseDetails&displayCaseNumber=GV11004738-04&localFipsCode=153&caseActive=true&clientSearchCounter=2" />
+						GV11004738-04
+					</a>
+			   	</td>
+				<td class="gridrow">
+					MONTCLAIR PROPERTY OWNERS ASSOCATION INC
+				</td>
+				<td class="gridrow">
+					OWNER09, SAMPLE
+				</td>
+				<td class="gridrow">
+					03/18/2019
+			  	</td>
+				<td class="gridrow">
+					11:00 AM
+			  	</td>
+				<td class="gridrow">
+					Closed
+				</td>
+				<td class="gridrow">
+					Garnishment
+				</td>
+			</tr>
+			<tr class="oddRow">
+			    <td class="gridrow">
+	    	                 <input type="checkbox" onclick="clickCaseCheckbox(this)" aria-label="Select Court Name"
+	    	                  name="checkedCases" value="GV11004738-05"/>
+			    </td>
+			   	<td class="gridrow">
+			   		<a href="nameSearch.do?formAction=caseDetails&displayCaseNumber=GV11004738-05&localFipsCode=153&caseActive=true&clientSearchCounter=2" />
+						GV11004738-05
+					</a>
+			   	</td>
+				<td class="gridrow">
+					MONTCLAIR PROPERTY OWNERS ASSOCATION INC
+				</td>
+				<td class="gridrow">
+					OWNER09, SAMPLE
+				</td>
+				<td class="gridrow">
+					02/17/2021
+			  	</td>
+				<td class="gridrow">
+					01:00 PM
+			  	</td>
+				<td class="gridrow">
+					Closed
+				</td>
+				<td class="gridrow">
+					Interrogatory/Judge
+				</td>
+			</tr>
+			<tr class="evenRow">
+			    <td class="gridrow">
+	    	                 <input type="checkbox" onclick="clickCaseCheckbox(this)" aria-label="Select Court Name"
+	    	                  name="checkedCases" value="GV11004738-06"/>
+			    </td>
+			   	<td class="gridrow">
+			   		<a href="nameSearch.do?formAction=caseDetails&displayCaseNumber=GV11004738-06&localFipsCode=153&caseActive=true&clientSearchCounter=2" />
+						GV11004738-06
+					</a>
+			   	</td>
+				<td class="gridrow">
+					MONTCLAIR PROPERTY OWNERS ASSOCATION INC
+				</td>
+				<td class="gridrow">
+					OWNER09, SAMPLE
+				</td>
+				<td class="gridrow">
+					02/17/2021
+			  	</td>
+				<td class="gridrow">
+					01:00 PM
+			  	</td>
+				<td class="gridrow">
+					Case Dismissed
+				</td>
+				<td class="gridrow">
+					Show Cause
+				</td>
+			</tr>
+			<tr class="oddRow">
+			    <td class="gridrow">
+	    	                 <input type="checkbox" onclick="clickCaseCheckbox(this)" aria-label="Select Court Name"
+	    	                  name="checkedCases" value="GV21009984-00"/>
+			    </td>
+			   	<td class="gridrow">
+			   		<a href="nameSearch.do?formAction=caseDetails&displayCaseNumber=GV21009984-00&localFipsCode=153&caseActive=true&clientSearchCounter=2" />
+						GV21009984-00
+					</a>
+			   	</td>
+				<td class="gridrow">
+					MONTCLAIR PROPERTY OWNERS ASSOCATION INC
+				</td>
+				<td class="gridrow">
+					OWNER04, SAMPLE
+				</td>
+				<td class="gridrow">
+					12/28/2021
+			  	</td>
+				<td class="gridrow">
+					11:00 AM
+			  	</td>
+				<td class="gridrow">
+					Plaintiff
+				</td>
+				<td class="gridrow">
+					Warrant In Debt
+				</td>
+			</tr>
+			<tr class="evenRow">
+			    <td class="gridrow">
+	    	                 <input type="checkbox" onclick="clickCaseCheckbox(this)" aria-label="Select Court Name"
+	    	                  name="checkedCases" value="GV21001050-00"/>
+			    </td>
+			   	<td class="gridrow">
+			   		<a href="nameSearch.do?formAction=caseDetails&displayCaseNumber=GV21001050-00&localFipsCode=153&caseActive=true&clientSearchCounter=2" />
+						GV21001050-00
+					</a>
+			   	</td>
+				<td class="gridrow">
+					MONTCLAIR PROPERTY OWNERS ASSOCIAITON INC
+				</td>
+				<td class="gridrow">
+					OWNER10, SAMPLE
+				</td>
+				<td class="gridrow">
+					04/06/2021
+			  	</td>
+				<td class="gridrow">
+					11:00 AM
+			  	</td>
+				<td class="gridrow">
+					Plaintiff
+				</td>
+				<td class="gridrow">
+					Warrant In Debt
+				</td>
+			</tr>
+			<tr class="oddRow">
+			    <td class="gridrow">
+	    	                 <input type="checkbox" onclick="clickCaseCheckbox(this)" aria-label="Select Court Name"
+	    	                  name="checkedCases" value="GV21001050-01"/>
+			    </td>
+			   	<td class="gridrow">
+			   		<a href="nameSearch.do?formAction=caseDetails&displayCaseNumber=GV21001050-01&localFipsCode=153&caseActive=true&clientSearchCounter=2" />
+						GV21001050-01
+					</a>
+			   	</td>
+				<td class="gridrow">
+					MONTCLAIR PROPERTY OWNERS ASSOCIAITON INC
+				</td>
+				<td class="gridrow">
+					OWNER10, SAMPLE
+				</td>
+				<td class="gridrow">
+					12/13/2021
+			  	</td>
+				<td class="gridrow">
+					11:00 AM
+			  	</td>
+				<td class="gridrow">
+					Closed
+				</td>
+				<td class="gridrow">
+					Garnishment
+				</td>
+			</tr>
+			<tr class="evenRow">
+			    <td class="gridrow">
+	    	                 <input type="checkbox" onclick="clickCaseCheckbox(this)" aria-label="Select Court Name"
+	    	                  name="checkedCases" value="GV21001050-02"/>
+			    </td>
+			   	<td class="gridrow">
+			   		<a href="nameSearch.do?formAction=caseDetails&displayCaseNumber=GV21001050-02&localFipsCode=153&caseActive=true&clientSearchCounter=2" />
+						GV21001050-02
+					</a>
+			   	</td>
+				<td class="gridrow">
+					MONTCLAIR PROPERTY OWNERS ASSOCIAITON INC
+				</td>
+				<td class="gridrow">
+					OWNER10, SAMPLE
+				</td>
+				<td class="gridrow">
+					05/09/2022
+			  	</td>
+				<td class="gridrow">
+					11:00 AM
+			  	</td>
+				<td class="gridrow">
+					Closed
+				</td>
+				<td class="gridrow">
+					Garnishment
+				</td>
+			</tr>
+			<tr class="oddRow">
+			    <td class="gridrow">
+	    	                 <input type="checkbox" onclick="clickCaseCheckbox(this)" aria-label="Select Court Name"
+	    	                  name="checkedCases" value="GV21001050-03"/>
+			    </td>
+			   	<td class="gridrow">
+			   		<a href="nameSearch.do?formAction=caseDetails&displayCaseNumber=GV21001050-03&localFipsCode=153&caseActive=true&clientSearchCounter=2" />
+						GV21001050-03
+					</a>
+			   	</td>
+				<td class="gridrow">
+					MONTCLAIR PROPERTY OWNERS ASSOCIAITON INC
+				</td>
+				<td class="gridrow">
+					OWNER10, SAMPLE
+				</td>
+				<td class="gridrow">
+					10/19/2022
+			  	</td>
+				<td class="gridrow">
+					11:00 AM
+			  	</td>
+				<td class="gridrow">
+					Closed
+				</td>
+				<td class="gridrow">
+					Garnishment
+				</td>
+			</tr>
+</table>
+			</td>
+		</tr>
+			<tr>
+			    <td align="center" nowrap="nowrap">
+			        <span class="floatright" >
+							<input type="submit" onclick="submitForm('next');" class="submitBox disableOnBack" value="Next" title="Next" />
+					</span>
+			           <input type="submit" class="submitBox disableOnBack" onclick="submitForm('caseDetails');" value="Display Case Details" title="Display Case Details"/>
+				</td>
+			</tr>
+	</table>
+	<input type="hidden" name="firstRowName" value="MONTCLAIR PLAZA LLC">
+    <input type="hidden" name="firstRowCaseNumber" value="GV25026738-00">
+    <input type="hidden" name="lastRowName" value="MONTCLAIR PROPERTY OWNERS ASSOCIAITON INC">
+    <input type="hidden" name="lastRowCaseNumber" value="GV21001050-03">
+</form>
+			        			 </main>
+			      			</td>
+			    		</tr>
+			    	</table>
+	</td>
+	</tr>
+	<tr>
+	<td align="center" valign="bottom" nowrap="nowrap">
+<!-- Begin gooter.jsp -->
+<footer>
+	<table width="100%" cellpadding="0" cellspacing="0" border="0">
+		<tr>
+		    <td class="footer">
+		        <a href="http://www.courts.state.va.us/main.htm" class="breadcrumbtoplinks" aria-describedby="desc-home">Home</a> <span id="desc-home" class="visually-hidden">Link to the homepage of the Virginia Judicial System.</span>|
+			    <a href="http://www.courts.state.va.us/courts/home.html" class="breadcrumbtoplinks" aria-describedby="desc-court-system">Virginia's Court System</a> <span id="desc-court-system" class="visually-hidden">Link to Virginia's Court System</span>|
+			    <a href="http://www.courts.state.va.us/online/home.html " class="breadcrumbtoplinks" aria-describedby="desc-online-services">Online Services</a> <span id="desc-online-services" class="visually-hidden">Link to Online Services</span>|
+			    <a href="http://www.courts.state.va.us/caseinfo/home.html" class="breadcrumbtoplinks" aria-describedby="desc-case-status">Case Status and Information</a> <span id="desc-case-status" class="visually-hidden">Link to Case Status and Information</span>|
+			    <a href="http://www.courts.state.va.us/courtadmin/home.html " class="breadcrumbtoplinks" aria-describedby="desc-court-administration">Court Administration</a> <span id="desc-court-administration" class="visually-hidden">Link to Court Administration</span> |
+			    <a href="http://www.courts.state.va.us/directories/home.html" class="breadcrumbtoplinks" aria-describedby="desc-directories">Directories</a> <span id="desc-directories" class="visually-hidden">Link to Directories</span>|
+			    <a href="http://www.courts.state.va.us/forms/home.html " class="breadcrumbtoplinks" aria-describedby="desc-form">Forms</a> <span id="desc-form" class="visually-hidden">Link to Forms</span>|
+			    <a href="http://www.courts.state.va.us/agencies/home.html " class="breadcrumbtoplinks" aria-describedby="desc-judicial-branch-agencies">Judicial Branch Agencies</a> <span id="desc-judicial-branch-agencies" class="visually-hidden">Link to Judicial Branch Agencies</span>|
+			    <a href="http://www.courts.state.va.us/programs/home.html " class="breadcrumbtoplinks" aria-describedby="desc-programs">Programs</a> <span id="desc-programs" class="visually-hidden">Link to Programs</span>
+		    </td>
+		</tr>
+		<tr>
+		    <td class="labelBuildNumber">
+				Build #: 6.4.1.2
+		    </td>
+		</tr>
+	</table>
+</footer>
+<script language="Javascript" type="text/javascript">
+	if (searchCounter >=  sessionStorage.searchCounter || sessionStorage.searchCounter == null) {
+		sessionStorage.searchCounter = searchCounter;
+		$(".disableOnBack").removeAttr("disabled");
+		$("input[type=checkbox]").removeAttr("disabled");
+	} else {
+		disableElements();
+	}
+	function disableElements() {
+		//Any button with the cssClass disableOnBack will be disabled
+		$(".disableOnBack").attr("disabled", "disabled").attr("title", "Action disabled. Please conduct a new search.");
+		//All checkboxes will be disabled
+		$("input[type=checkbox]").attr("disabled", "disabled").attr("title", "Action disabled. Please conduct a new search.");
+		//Any link for Mark/Unmark for payment will be disabled
+		$("a:contains('Mark For Payment')").addClass("disabledLink").attr("onclick", "return false;").attr("title", "Action disabled. Please conduct a new search.");
+		$("a:contains('Unmark For Payment')").addClass("disabledLink").attr("onclick", "return false;").attr("title", "Action disabled. Please conduct a new search.");
+		//Login link is disabled
+		$("a:contains('Log In')").removeClass("popupLink").addClass("disabledLink").removeAttr("href").attr("onclick", "return false;").attr("title", "Action disabled. Please conduct a new search.");
+	}
+</script>
+<!-- End footer.jsp -->
+	</td>
+	</tr>
+	</table>
+		<table align="center" width="100%" style="border:0px">
+			<tr>
+				<td>
+			    </td>
+			 </tr>
+			 <tr>
+      			<td colspan="2" >
+      			</td>
+    		</tr>
+		</table>
+		<script type="text/javascript">
+		var courtNamesHiddenObjects = document.getElementsByName("courtName");
+        var courtFipsHiddenObjects = document.getElementsByName("courtFips");
+        var courtNames = new Array();
+        var courtFips = new Array();
+        $.browser.chrome = /chrom(e|ium)/.test(navigator.userAgent.toLowerCase());
+		$(document).ready(function(){
+       	   //var arr = new Array("This is the longest name I have ever seen", "Supreme Court of Virginia", "Accomack County Circuit", "Albemarle County Circuit", "Alleghany County Circuit", "Amelia County Circuit", "ruby");
+           for(var i=0; i<courtNamesHiddenObjects.length; i++){
+              courtNames[i] = courtNamesHiddenObjects[i].value;
+              courtFips[i] = courtFipsHiddenObjects[i].value;
+           }
+			$("#txtcourts1").autocomplete({
+		    	source: courtNames,
+		    	focus: function( event, ui ) {
+		    		if(!$.browser.chrome){	// added this if for fixing prod00042600
+		    			$( "#txtcourts1" ).val( ui.item.label );
+		    		}
+		    		return false;
+     			 },
+				close: function(event, ui) {
+				            selectCourt();
+				            $("#txtcourts1").selectRange(0,0);
+				            }
+			});
+			$("#txtcourts1").bind("blur",function(){
+				selectCourt();
+	         });
+			$("#btndropdown1").bind("click",function(){
+				if ($("#txtcourts1").autocomplete("widget").is(":visible")) {
+	                  $("#txtcourts1").autocomplete("close");
+	                  return false;
+	               }
+				  else{
+				  		$("#txtcourts1").autocomplete("option","minLength","0");
+						$("#txtcourts1").autocomplete("search","");
+					  }
+			});
+            /*This is the function for hiding the dropdown options when user clicks anywhere in the body*/
+			$("body").bind('click', function(event){
+	     			if (event.target.id != "btndropdown1")
+	             	{
+						$("#txtcourts1").autocomplete("close");
+					}
+			});
+	       	$.fn.selectRange = function(start, end) {
+			    var e = document.getElementById($(this).attr('id'));
+			    if (!e) return;
+			    else if (e.setSelectionRange) { e.focus(); e.setSelectionRange(start, end); }
+			     else if (e.createTextRange) {
+			    	 var range = e.createTextRange();
+			    	 range.collapse(true);
+			    	 range.moveEnd('character', end);
+			    	 range.moveStart('character',
+			    			 start);
+			    	 range.select(); }
+			    else if (e.selectionStart) { e.selectionStart = start; e.selectionEnd = end; }
+			};
+	       	 $("#tree").treeview();
+	    });
+    	function selectCourt(){
+    	    var courtName = document.getElementById("txtcourts1").value;
+    	    if(courtName.length > 0){
+    	    	courtName = trim(courtName);
+    	    }
+    	    var selectedFips = '';
+    	    //Get fips code for the selected court
+    	    for(var i=0; i<courtNames.length; i++){
+    	       if(courtName == trim(courtNames[i])){
+    	          selectedFips = courtFips[i];
+    	          break;
+    	       }
+    	    }
+    	    if (selectedFips == ''){
+        	    courtName = "";
+    	    }
+    	  /*   var welcomePageMarker = document.getElementById("welcomePageMarker");
+    	    if(welcomePageMarker != null){ //In welcome page who does not have a form
+    	       //Update searchFipsCode in header
+				var headerFipsCodeInput = document.getElementById("headerCourtName");
+				if(headerFipsCodeInput != null){
+					headerFipsCodeInput.innerHTML = courtName;
+				}
+				//Update searchFipsCode parameters on the side bar
+				var moduleLinks = document.getElementsByName("moduleLink");
+				for(var i=0; i<moduleLinks.length; i++){
+					var link = moduleLinks[i];
+					var hrefStr = link.href;
+					//When searchFipsCode parameter value is not set or set to other fips code,
+					//change it to the selected one.
+					//Here searchFipsCode is always the last parameter.
+					if(hrefStr.indexOf(selectedFips) < 0){
+						var indexOfLastEqualSign = hrefStr.lastIndexOf("=");
+						hrefStr = hrefStr.substring(0, indexOfLastEqualSign + 1);
+						hrefStr = hrefStr + selectedFips;
+						link.href = hrefStr;
+					}
+				}
+    	    } */
+    	   // else{
+    	    	//In other pages who have a form
+				//Update searchFipsCode hidden input in form
+				var searchFipsCodeInput = document.getElementsByName("searchFipsCode")[0];
+				if(searchFipsCodeInput != null){
+				   searchFipsCodeInput.value = selectedFips;
+				}
+				document.getElementById('selectedCourtsName').value=courtName;
+				document.getElementById('selectedCourtsFipCode').value=selectedFips;
+				var newFipCode= document.getElementById('selectedCourtsFipCode').value;
+				var oldFipCode= document.getElementById('sessionCourtsFipCode').value;
+				if( newFipCode != oldFipCode && newFipCode !== null && newFipCode != 'undefined'){
+			//	alert('submitting now '+'selectedFips '+selectedFips + ' courtName '+courtName +" previous fip code " + document.getElementById('sessionCourtsFipCode').value);
+				 document.getElementById("changeCourtForm").submit();
+				}
+			//}
+        }
+  		</script>
+	</body>
+	<form name="changeCourtForm" id="changeCourtForm" method="post" action="/gdcourts/changeCourt.do">
+	 <input type="hidden" name="selectedCourtsName" id="selectedCourtsName" value="Prince William General District Court"/>
+	 <input type="hidden" name="selectedCourtsFipCode" id="selectedCourtsFipCode" value='153'/>
+	<input type="hidden" name="sessionCourtsFipCode" id="sessionCourtsFipCode" value='153'/>
+	</form>
+	<script language="javascript">
+	//On back, if selectedCourtsName value has changed, put back the textbox value in the hidden value
+	if($("#selectedCourtsName").val() != $("#txtcourts1").val()){
+		$("#selectedCourtsName").val($("#txtcourts1").val());
+		$("#selectedCourtsFipCode").val($("#sessionCourtsFipCode").val());
+	}
+	var obj = document.getElementById("curentFipsCode");
+	if(obj !== null){
+		var formObj=document.getElementById("changeCourtForm");
+		if(formObj !== null){
+			obj.value= formObj.elements["sessionCourtsFipCode"].value;
+		}
+	}
+	function makeAriaLabel(text) {
+		return text.split('').join(' ');
+	}
+	function applyAriaLabels() {
+	    document.querySelectorAll(".case-number-read").forEach(function (el) {
+	        // For <input>, use value instead of textContent
+	        const text = (el.value || el.textContent || "").trim();
+	        el.setAttribute("aria-label", makeAriaLabel(text));
+	    });
+	}
+	document.addEventListener("DOMContentLoaded", applyAriaLabels);
+</script>
+</html>

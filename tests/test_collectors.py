@@ -19,6 +19,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
+from unittest import mock
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -1423,6 +1424,780 @@ class TestCourtPartyGate(unittest.TestCase):
                      "Marys Lake Estates Homeowners Associates, Inc.", "Sumner Townhomes Fee Owner LLC"):
             self.assertTrue(has_business_form(name), name)
             self.assertFalse(la(name), name)
+        # Maryland's statutory condominium form, with and without normalize()'s stop words
+        for name in ("Council of Unit Owners of Fairmont 1001", "COUNCIL OF CO-OWNERS OF PRINCE PLACE AT",
+                     "The Council of Unit Owners of Treover, a Condominium, Inc.",
+                     "Board of Directors of Woodview Village"):
+            self.assertTrue(la(name), name)
+
+
+class TestMdCaseSearchParsing(unittest.TestCase):
+    """Maryland Judiciary Case Search adapter — no network. The fixture is
+    real party rows from the portal's /api-caselist/v1/cases (individuals in
+    captions replaced by Doe/Roe): what a name query and each statewide
+    sweep keep, drop and merge; the query prefix and match core derived
+    from a registry name; the date-window split at the 600-row cap; and
+    the 403 / no-results / 429 answers."""
+
+    @classmethod
+    def setUpClass(cls):
+        try:
+            from hoaspy.collect.courts.court_portals import md_casesearch as md
+        except Exception as exc:
+            raise unittest.SkipTest(f"md_casesearch import failed: {exc}")
+        cls.md = md
+        cls.rows = json.loads((ROOT / "tests" / "fixtures" / "md_casesearch_rows.json").read_text())
+
+    def _shape(self, queried, known=None):
+        md = self.md
+        sweep = queried.lower() in md.SWEEPS
+        return md.shape(self.rows, queried, "" if sweep else md.match_core(queried), sweep, known)
+
+    def test_query_prefix_and_match_core(self):
+        md = self.md
+        # distinctive core as the prefix; a one-word core takes the next word along
+        self.assertEqual(md.query_for("Waters Edge At North Lake Condominium, Inc."), "Waters Edge At North Lake")
+        self.assertEqual(md.query_for("Grosvenor Homeowners Association, Inc."), "Grosvenor Homeowners")
+        self.assertEqual(md.query_for("FAIRHAVEN RESIDENTS ASSOCIATION INC"), "FAIRHAVEN RESIDENTS")
+        self.assertEqual(md.query_for("The Villages of Urbana HOA"), "Villages of Urbana")
+        # a Maryland form is searched whole, and matched on the community inside it
+        self.assertEqual(md.query_for("HOMEOWNERS ASSOCIATION OF WEXFORD INC"), "HOMEOWNERS ASSOCIATION OF WEXFORD")
+        self.assertEqual(md.match_core("HOMEOWNERS ASSOCIATION OF WEXFORD INC"), "WEXFORD")
+        self.assertEqual(md.match_core("Council of Unit Owners of Fairmont 1001"), "FAIRMONT 1001")
+        self.assertEqual(md.match_core("Grosvenor Homeowners Association, Inc."), "GROSVENOR")
+        self.assertEqual(md.match_core("Waters Edge At North Lake Condominium"), "WATERS EDGE AT NORTH LAKE")
+        self.assertEqual(md.query_for("   "), "")
+
+    def test_name_query_keeps_the_association_and_drops_lookalikes(self):
+        recs = self._shape("Wexford Homeowners Association, Inc.")
+        by = {r["docket_number"]: r for r in recs}
+        self.assertIn("06-01-0014065-1993", by)
+        self.assertIn("06-01-0006161-1999", by)                 # "WEXFORD HOMEOWNERS ASSOC."
+        self.assertIn("08-04-0002140-2001", by)                 # another Wexford community, kept under its own name
+        self.assertEqual(by["08-04-0002140-2001"]["associations"], ["WEXFORD GARDEN CONDOMINIUM"])
+        self.assertNotIn("02-02-0000956-2004", by)              # Wexford Health Sources
+        self.assertNotIn("236720V", by)                         # Wexford Bancgroup LLC
+        r = by["06-01-0014065-1993"]
+        self.assertEqual(r["state"], "MD")
+        self.assertEqual(r["court"], "Rockville District Court")
+        self.assertEqual(r["county"], "Montgomery")
+        self.assertEqual(r["date_filed"], "1993-06-16")
+        self.assertEqual(r["association_role"], ["plaintiff"])
+        self.assertEqual(r["source"], "md_casesearch")
+        self.assertEqual(r["queries"], ["Wexford Homeowners Association, Inc."])
+        self.assertEqual(r["url"], "https://casesearch.courts.state.md.us/casesearch/case-detail-page?caseId=060100140651993")
+        for k in ("case_name", "court", "docket_number", "date_filed", "date_terminated",
+                  "nature_of_suit", "cause", "url", "state", "associations", "case_data_id"):
+            self.assertIn(k, r)
+
+    def test_homeowners_sweep_keeps_the_form_drops_the_trade(self):
+        recs = self._shape("homeowners")
+        by = {r["docket_number"]: r for r in recs}
+        self.assertEqual(by["10-01-0000118-2014"]["associations"], ["HOMEOWNERS' ASSN. OF WOODLAND VILLAGE"])
+        self.assertIn("07-02-0005879-2014", by)                 # Homeowners of Dorchester Assoc
+        # the same case under two party rows -> one record carrying both roles
+        self.assertEqual(by["10-01-0002660-2006"]["association_role"], ["defendant", "plaintiff"])
+        # c/o manager tail dropped from the association name
+        self.assertEqual(by["D-09-CV-18-001661"]["associations"], ["HOMEOWNERS ASSOCIATION OF WEXFORD, INC"])
+        for cn in ("10121V",            # Homeowners Loan Corp
+                   "08-C-11-001431",    # Homeowners Association Dispute Review Board
+                   "11-01-0001445-1992",  # bare "HOMEOWNERS ASSOCIATION INC" names no community
+                   "79785V",            # title & escrow company
+                   "03-C-97-000347"):   # "… Ltd" is a business form
+            self.assertNotIn(cn, by, cn)
+        self.assertEqual(by["10-01-0002660-2006"]["county"], "Howard")
+
+    def test_council_sweep_drops_the_bare_form(self):
+        recs = self._shape("council of unit owners")
+        by = {r["docket_number"]: r for r in recs}
+        self.assertNotIn("D-08-CV-26-027427", by)               # "COUNCIL OF UNIT OWNERS" alone
+        self.assertNotIn("24-L-86-002287", by)
+        self.assertIn("D-05-CV-25-007501", by)
+        self.assertEqual(by["C-15-JG-25-013454"]["associations"],
+                         ["COUNCIL OF UNIT OWNERS OF MILESTONE II TOWNHOUSE CONDOMINIUM"])
+        self.assertIn("D-06-CV-26-021560", by)                  # Mill's Choice: CHOICE is a name here
+        self.assertEqual(by["D-05-CV-26-008780"]["association_role"], ["other"])
+        self.assertEqual(by["D-05-CV-25-007501"]["county"], "Prince George's")
+
+    def test_board_sweep_needs_a_marker_or_a_held_community(self):
+        by = {r["docket_number"]: r for r in self._shape("board of directors of")}
+        self.assertIn("06-02-0027850-2001", by)                 # … of Avonshire HOA Inc
+        self.assertNotIn("05-02-0016405-2001", by)              # … of Woodview Village: no marker, not held
+        self.assertNotIn("C-24-CV-25-003764", by)               # … of Rebound, Inc.
+        self.assertNotIn("C-24-CV-25-004842", by)               # … of a church
+        by = {r["docket_number"]: r for r in self._shape("board of directors of", known={"WOODVIEW VILLAGE"})}
+        self.assertIn("05-02-0016405-2001", by)
+        self.assertEqual(by["06-02-0027850-2001"]["county"], "Montgomery")   # "Silver Spring District Court 02"
+
+    def test_titles_and_counties(self):
+        md = self.md
+        self.assertEqual(md.county_of("Howard County District Court"), "Howard")
+        self.assertEqual(md.county_of("Prince George's County Circuit Court"), "Prince George's")
+        self.assertEqual(md.county_of("Saint Mary's County District Court"), "St. Mary's")
+        self.assertEqual(md.county_of("Civil District Court"), "Baltimore City")
+        self.assertEqual(md.county_of("Baltimore City Circuit Court"), "Baltimore City")
+        self.assertEqual(md.county_of("Upper Marlboro District Court"), "Prince George's")
+        self.assertEqual(md.county_of("Bel-Air District Court"), "Harford")
+        self.assertEqual(md.county_of("Somewhere Else"), "")
+        self.assertEqual(md.case_url("D-101-CV-26-013077"),
+                         "https://casesearch.courts.state.md.us/casesearch/case-detail-page?caseId=D101CV26013077")
+        # a null caption falls back to the association; newlines in captions collapse
+        rows = [{"caseNumber": "1V", "fullName": "COUNCIL OF UNIT OWNERS OF ZED CONDOMINIUM", "partyTypeDisplay": "Plaintiff",
+                 "locationName": "Rockville District Court", "caseType": "Contract", "caseStatus": "Open",
+                 "filingDate": "01/02/2020", "title": None},
+                {"caseNumber": "2V", "fullName": "COUNCIL OF UNIT OWNERS OF ZED CONDOMINIUM", "partyTypeDisplay": "AKA",
+                 "locationName": "Rockville District Court", "caseType": "Contract", "caseStatus": "Open",
+                 "filingDate": "01/02/2020", "title": "COUNCIL OF UNIT OWNERS OF ZED\nvs\nSOMEONE"}]
+        recs = {r["docket_number"]: r for r in md.shape(rows, "council of unit owners", "", True)}
+        self.assertEqual(recs["1V"]["case_name"], "COUNCIL OF UNIT OWNERS OF ZED CONDOMINIUM")
+        self.assertEqual(recs["2V"]["case_name"], "COUNCIL OF UNIT OWNERS OF ZED vs SOMEONE")
+        self.assertEqual(recs["2V"]["association_role"], ["other"])
+
+    def test_capped_windows_are_split_by_filing_date(self):
+        """A 600-row answer means the portal truncated: the window is halved
+        until every half is under the cap, and a single capped day is kept
+        (and noted) rather than split forever."""
+        import datetime as dt
+        md = self.md
+        c = md.Client.__new__(md.Client)
+        c.pace = 0
+        c.capped = []
+        calls = []
+
+        def fake_query(prefix, d0=None, d1=None):
+            calls.append((d0, d1))
+            days = (d1 - d0).days + 1
+            n = md.CAP if days > 10 or d0 == dt.date(2020, 1, 1) else 3
+            return [{"caseNumber": f"{d0}-{i}", "fullName": "COUNCIL OF UNIT OWNERS OF Y CONDOMINIUM",
+                     "partyTypeDisplay": "Plaintiff", "locationName": "Towson District Court", "caseType": "Contract",
+                     "caseStatus": "Open", "filingDate": "01/01/2020", "title": "x vs y"} for i in range(n)]
+        c._query = fake_query
+        rows = c._rows("council of unit owners", dt.date(2020, 1, 1), dt.date(2020, 2, 9))
+        self.assertGreater(len(calls), 4)
+        self.assertEqual(calls[0], (dt.date(2020, 1, 1), dt.date(2020, 2, 9)))     # whole window first
+        self.assertTrue(all(d0 <= d1 for d0, d1 in calls))
+        leaves = [(d0, d1) for d0, d1 in calls if (d1 - d0).days + 1 <= 10]
+        self.assertTrue(leaves and all(d1.toordinal() - d0.toordinal() < 10 for d0, d1 in leaves))
+        self.assertEqual(c.capped, ["council of unit owners 2020-01-01"])
+        self.assertTrue(any(r["caseNumber"].startswith("2020-01-01") for r in rows))
+
+    def test_portal_answers(self):
+        md = self.md
+        from hoaspy.collect.courts.court_portals import RateLimited
+
+        class Resp:
+            def __init__(self, code, body=None, headers=None):
+                self.status_code, self._body, self.headers = code, body, headers or {}
+                self.text = json.dumps(body) if body is not None else ""
+            def json(self):
+                if self._body is None:
+                    raise ValueError("no json")
+                return self._body
+            def raise_for_status(self):
+                if self.status_code >= 400:
+                    raise AssertionError("unexpected")
+
+        c = md.Client("msal=x; datadome=abc123")
+        self.assertEqual(c.s.headers["Cookie"], "datadome=abc123")
+        self.assertEqual(md.Client("abc123").s.headers["Cookie"], "datadome=abc123")
+        with self.assertRaises(ValueError):
+            md.Client("")
+        # the cookie file may name the browser the cookie came from; the client hints follow it
+        linux = md.Client("datadome=abc123\nUser-Agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 "
+                          "(KHTML, like Gecko) Chrome/152.0.0.0 Safari/537.36\n")
+        self.assertEqual(linux.s.headers["Cookie"], "datadome=abc123")
+        self.assertIn("X11; Linux", linux.s.headers["User-Agent"])
+        self.assertEqual(linux.s.headers["sec-ch-ua-platform"], '"Linux"')
+        self.assertIn('v="152"', linux.s.headers["sec-ch-ua"])
+        self.assertEqual(c.s.headers["sec-ch-ua-platform"], '"macOS"')
+
+        class S:
+            def __init__(self, resp):
+                self.resp = resp
+            def post(self, *a, **k):
+                return self.resp
+        c.s = S(Resp(403, {"url": "https://geo.captcha-delivery.com/captcha/?x"}))
+        with self.assertRaises(PermissionError):
+            c._query("wexford")
+        c.s = S(Resp(400, {"code": 404, "error": "CaseSearch will only display results for cases that exist"}))
+        self.assertEqual(c._query("zzzz"), [])
+        c.s = S(Resp(429, headers={"Retry-After": "120"}))
+        with self.assertRaises(RateLimited) as cm:
+            c._query("wexford")
+        self.assertEqual(cm.exception.retry_after, 120)
+        c.s = S(Resp(200, [{"caseNumber": "1"}]))
+        self.assertEqual(c._query("wexford"), [{"caseNumber": "1"}])
+
+    def test_browser_transport_reloads_once_on_a_refusal(self):
+        """A `cdp:` line in the cookie file sends every search through a real
+        Chrome tab as the page's own fetch(); a 403 reloads the portal page
+        once (the device check passes again) and retries, a second 403 stops
+        the run resumably, and the usual answers are parsed the same way."""
+        md = self.md
+
+        class FakeTab:
+            def __init__(self, endpoint):
+                self.endpoint, self.answers, self.reloads, self.posted = endpoint, [], 0, []
+            def ready(self, reload=False):
+                self.reloads += reload
+            def post(self, body):
+                self.posted.append(body)
+                return self.answers.pop(0)
+
+        real = md._Tab
+        md._Tab = FakeTab
+        try:
+            c = md.Client("cdp: http://127.0.0.1:9612\n", pace=0)
+            self.assertEqual(c.tab.endpoint, "http://127.0.0.1:9612")
+            self.assertEqual(c.s.headers["Cookie"], "datadome=")
+            c.tab.answers = [(403, '{"url": "https://geo.captcha-delivery.com/captcha/?x"}', ""),
+                             (200, '[{"caseNumber": "1"}]', "")]
+            self.assertEqual(c._query("wexford"), [{"caseNumber": "1"}])
+            self.assertEqual(c.tab.reloads, 1)
+            self.assertEqual(c.tab.posted[0]["businessName"], "wexford")
+            self.assertEqual(c.tab.posted[0]["caseType"], "CIVIL")
+            c.tab.answers = [(403, "{}", ""), (403, "{}", "")]
+            with self.assertRaises(PermissionError):
+                c._query("wexford")
+            c.tab.answers = [(400, '{"code": 404, "error": "no cases"}', "")]
+            self.assertEqual(c._query("zzz"), [])
+            c.tab.answers = [(429, "", "90")]
+            from hoaspy.collect.courts.court_portals import RateLimited
+            with self.assertRaises(RateLimited) as cm:
+                c._query("wexford")
+            self.assertEqual(cm.exception.retry_after, 90)
+            c.tab.answers = [(500, "boom", "")]
+            with self.assertRaises(RuntimeError):
+                c._query("wexford")
+        finally:
+            md._Tab = real
+        # the fetch the tab runs is same-origin, credentialed and JSON
+        js = md._FETCH_JS % ('"/api"', '"{}"')
+        self.assertIn('credentials: "include"', js)
+        self.assertIn('method: "POST"', js)
+
+    def test_driver_names_include_irs_roster_and_sweeps(self):
+        """get_state_courts queries the IRS exempt-organization roster too, and
+        appends an adapter's SWEEPS after the names unless --no-sweeps or
+        --names FILE is given."""
+        from hoaspy.collect.courts import get_state_courts as gsc
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            (root / "records").mkdir()
+            (root / "records" / "irs_exempt_orgs.jsonl").write_text(json.dumps(
+                {"state": "MD", "name": "FAIRHAVEN RESIDENTS ASSOCIATION INC"}) + "\n")
+            (root / "records" / "state_registries.jsonl").write_text(json.dumps(
+                {"state": "MD", "name": "Grosvenor Homeowners Association, Inc."}) + "\n"
+                + json.dumps({"state": "VA", "name": "Not Mine Homeowners Association"}) + "\n")
+            old = gsc.ROOT
+            gsc.ROOT = root
+            try:
+                names = gsc.association_names("MD")
+                self.assertEqual(names, ["Grosvenor Homeowners Association, Inc.",
+                                         "FAIRHAVEN RESIDENTS ASSOCIATION INC"])
+
+                class Args:
+                    names = None; limit = None; no_sweeps = False
+                class Mod:
+                    STATE = "MD"; SWEEPS = ("council of unit owners", "homeowners")
+                self.assertEqual(gsc.portal_names(Mod, Args), names + ["council of unit owners", "homeowners"])
+                Args.no_sweeps = True
+                self.assertEqual(gsc.portal_names(Mod, Args), names)
+                Args.names = root / "names.txt"
+                Args.names.write_text("Only This One\n")
+                self.assertEqual(gsc.portal_names(Mod, Args), ["Only This One"])
+            finally:
+                gsc.ROOT = old
+
+
+class TestVaGdcParsing(unittest.TestCase):
+    """Virginia General District Court civil name search (va_gdc), against a
+    captured result page and case-detail page (`tests/fixtures/va_gdc_*.html`,
+    real markup; the individuals named in them are replaced with placeholders).
+    No network, no browser: the CDP session is stubbed."""
+
+    NAME = "MONTCLAIR PROPERTY OWNERS ASSOCIATION INC"
+
+    @classmethod
+    def setUpClass(cls):
+        from hoaspy.collect.courts.court_portals import va_gdc
+        cls.va = va_gdc
+        cls.results = (ROOT / "tests" / "fixtures" / "va_gdc_results.html").read_text()
+        cls.detail = (ROOT / "tests" / "fixtures" / "va_gdc_detail.html").read_text()
+
+    def test_query_levels(self):
+        q = self.va.query_levels
+        # one-word core: never searched bare — first letter of the association word, then narrower
+        self.assertEqual(q(self.NAME), [["MONTCLAIR P"], ["MONTCLAIR PROP", "MONTCLAIR POA"]])
+        self.assertEqual(q("SALISBURY HOMEOWNERS ASSOCIATION"), [["SALISBURY H"], ["SALISBURY HOME", "SALISBURY HOA"]])
+        # two-word core goes in bare first
+        self.assertEqual(q("LAKE MONTICELLO OWNERS ASSOCIATION"),
+                         [["LAKE MONTICELLO"], ["LAKE MONTICELLO O"], ["LAKE MONTICELLO OWNE"]])
+        self.assertEqual(q("THE GINTER PARK RESIDENTS ASSOCIATION")[0], ["GINTER PARK"])
+        # no usable core: the whole name, cut to the field's 30 characters
+        self.assertEqual(q("PROPERTY OWNERS OF SHENANDOAH FARMS INC"), [["PROPERTY OWNERS OF SHENANDOAH"]])
+        self.assertEqual(q("COMMUNITY ASSOCIATIONS INSTITUTE"), [["COMMUNITY ASSOCIATIONS INSTITU"]])
+        self.assertEqual(q("CAMERON MEWS LTD"), [["CAMERON MEWS"]])
+        for name in (self.NAME, "BROYHILLS ADDITION TO LAKEVALE ESTATES COMMUNITY ASSOCIATION"):
+            for level in q(name):
+                for prefix in level:
+                    self.assertLessEqual(len(prefix), self.va.MAX_QUERY)
+        self.assertEqual(self.va.query_name(self.NAME), "MONTCLAIR P")
+
+    def test_party_matches(self):
+        ok = self.va.party_matches
+        for party in ("MONTCLAIR PROERTY OWNERS ASSOCIATION INC", "MONTCLAIR PROPERT OWNERS ASSOCIATION INC",
+                      "MONTCLAIR PROPERTY OWNERS ASOOCIATION, INC.", "MONTCLAIR PROPERTY OWNERS ASSCIATION INC",
+                      "MONTCLAIR PROPERTY OWNERS ASSOCIAITON INC", "MONTCLAIR PROPERTY OWNERS ASSOC",
+                      "MONTCLAIR POA", "MONTCLAIR PROPERTY OWNERS ASSOC (GARNISHEE)"):
+            self.assertTrue(ok(party, self.NAME), party)
+        for party in ("MONTCLAIR PLAZA LLC", "MONTCLAIR PARK HOA", "MONTCLAIR", "MONTCLAIR PROPERTIES LLC",
+                      "MONTCLAIR CONDOMINIUM UNIT OWNERS ASSOC", "OWNER01, SAMPLE"):
+            self.assertFalse(ok(party, self.NAME), party)
+        lm = "LAKE MONTICELLO OWNERS ASSOCIATION"
+        for party in ("LAKE MONTICELLO OWNER'S ASN", "LAKE MONTICELLO OWNERS' ASSN.", "LAKE MONTICELLO OWNERS'S ASSN"):
+            self.assertTrue(ok(party, lm), party)
+        for party in ("LAKE MONTICELLO VOLUNTEER FIRE DEPT", "LAKE MONTICELLO"):
+            self.assertFalse(ok(party, lm), party)
+        # an association of another kind that shares the core is someone else
+        self.assertFalse(ok("FOREST HILLS CONDOMINIUM ASSOC", "FOREST HILLS COMMUNITY ASSOCIATION"))
+        self.assertTrue(ok("FOREST HILLS COMM ASSN", "FOREST HILLS COMMUNITY ASSOCIATION"))
+        self.assertFalse(ok("VERONA CIVIC ASSOC", "VERONA COMMUNITY ASSOCIATION"))
+        self.assertFalse(ok("SALISBURY HEIGHTS HOA", "SALISBURY HOMEOWNERS ASSOCIATION"))
+        self.assertTrue(ok("SALISBURY HOME OWNERS ASSOC", "SALISBURY HOMEOWNERS ASSOCIATION"))
+        self.assertFalse(ok("VILLAGE GREEN APARTMENTS LLC", "VILLAGE GREEN COMMUNITY ASSOCIATION"))
+        # an extra word after the core names a neighbouring association, not ours
+        cg = "COURTHOUSE GREEN PROPERTY OWNERS ASSOCIATION"
+        self.assertFalse(ok("COURTHOUSE GREEN FIRST HOMES ASSOCIATION INC", cg))
+        for party in ("COURTHOUSE GREEN PROPERTY OWNERS ASSOCIATION", "COURTHOUSE GREEN POA",
+                      "COURTHOUSE GREEN PEOPERTY OWNERS ASSOC"):
+            self.assertTrue(ok(party, cg), party)
+        self.assertFalse(ok("COURTHOUSE GREEN OWNERS ASSOCIATION", cg))
+        # words after the association words are part of who it is
+        rs = "WINTERGREEN PROPERTY OWNERS VOLUNTEER RESCUE SQUAD INC"
+        self.assertFalse(ok("WINTERGREEN PROPERTY OWNERS ASSOCIATION", rs))
+        self.assertFalse(ok("WINTERGREEN PROPERTY OWNERS", rs))
+        self.assertTrue(ok("WINTERGREEN PROPERTY OWNERS VOL RESCUE SQUAD", rs))
+        self.assertFalse(ok("FAIR HARBOR PROPERTY OWNERS ASSOCIATION", "FAIR HARBOR PROPERTY OWNERS SWIM ASSOCIATION"))
+        self.assertTrue(ok("AQUIA HARBOUR PROPERTY OWNERS", "AQUIA HARBOUR PROPERTY OWNERS ASSOCIATION INC"))
+        # the IRS file runs a care-of name on after INC
+        self.assertTrue(ok("BELLAIR OWNERS ASSOCIATION", "BELLAIR OWNERS ASSOCIATION INC RALPH L FEIL"))
+        self.assertEqual(self.va.query_levels("BELLAIR OWNERS ASSOCIATION INC RALPH L FEIL")[0], ["BELLAIR O"])
+        # the kind is recognised through a clerk's misspelling too
+        for party, name in (("LAKE LAND OR POPERTY OWNERS ASSOCIATION", "LAKE LAND OR PROPERTY OWNERS ASSOC"),
+                            ("LITTLE ROCKY RUN HOWEOWNERS ASSOCIATION", "LITTLE ROCKY RUN HOMEOWNERS ASSOCIATION")):
+            self.assertTrue(ok(party, name), party)
+        self.assertFalse(ok("STONE RIDGE TOWNES HOMEOWNERS ASSOCIATION INC", "STONE RIDGE ASSOCIATION INC"))
+        self.assertFalse(ok("TIMBERLAKE COMMONS HOMEOWNERS ASSOCIATION", "TIMBERLAKE COMMUNITY ASSOCIATION"))
+        self.assertTrue(ok("TIMBERLAKE COMMINITY ASSOC", "TIMBERLAKE COMMUNITY ASSOCIATION"))
+        self.assertFalse(ok("HARTSHORN COMMUNITY ASSOCIATION", "HARTSHORN COMMUNITY COUNCIL"))
+        # a party that does not say what kind of association it is cannot stand in for one that does
+        self.assertFalse(ok("VILLAGE GREEN OWNERS ASSOCIATION", "VILLAGE GREEN COMMUNITY ASSOCIATION"))
+        self.assertTrue(ok("LAKE MONTICELLO ASSOCIATION", "LAKE MONTICELLO OWNERS ASSOCIATION"))
+        # sister associations in one development differ only by kind
+        sr = "SUGARLAND RUN HOMEOWNERS ASSOCIATIO INC"
+        self.assertTrue(ok("SUGARLAND RUN HOMEOWNERS ASSOCIATION INC", sr))
+        self.assertTrue(ok("SUGARLAND RUN HOA", sr))
+        for party in ("SUGARLAND RUN TOWNHOUSE OWNERS ASSOCIATION", "SUGARLAND RUN TOWNHOUSE OWNERS"):
+            self.assertFalse(ok(party, sr), party)
+        self.assertFalse(ok("SUDLEY PLACE HOA", "SUDLEY PLACE TOWNHOUSE ASSOCIATION"))
+        self.assertFalse(ok("CAMPUS EAST TOWNHOMES", "CAMPUS EAST COMMUNITY ASSOCIATION"))
+        self.assertTrue(ok("BURKE TOWNHOUISE HOMEOWNERS ASSOCIATION", "BURKE TOWNHOUSE HOMEOWNERS ASSOCIATION"))
+        self.assertTrue(ok("DANBURY FOREST COMMUNNITY ASSOCIATION", "DANBURY FOREST COMMUNITY ASSOCIATION"))
+        # names with no association word match letter for letter (or clerk-truncated) only
+        self.assertTrue(ok("KINGSTOWNE RESIDENTIAL OWNERS CORP", "KINGSTOWNE RESIDENTIAL OWNERS CORPORATION"))
+        self.assertTrue(ok("CAMERON MEWS LTD", "CAMERON MEWS LTD"))
+        self.assertFalse(ok("CAMERON MEWS LLC", "CAMERON MEWS LTD"))
+        # "ASSOCIATES" is a firm, not a misspelt association
+        self.assertFalse(ok("STONE RIDGE ASSOCIATES", "STONE RIDGE ASSOCIATION INC"))
+        self.assertTrue(ok("STONE RIDGE ASSOC", "STONE RIDGE ASSOCIATION INC"))
+
+    def test_parse_courts_keeps_civil_dockets_only(self):
+        courts = self.va.parse_courts(self.results)
+        self.assertEqual(courts, [("001", "Accomack General District Court"),
+                                  ("059", "Fairfax County General District Court"),
+                                  ("703", "Newport News-Civil General District Court"),
+                                  ("710", "Norfolk General District Court"),
+                                  ("153", "Prince William General District Court")])
+
+    def test_parse_results(self):
+        page = self.va.parse_results(self.results)
+        self.assertEqual(len(page["rows"]), self.va.PAGE_ROWS)
+        self.assertTrue(page["next"])
+        self.assertEqual(page["counter"], "2")
+        self.assertEqual(page["cursor"], {
+            "firstRowName": "MONTCLAIR PLAZA LLC", "firstRowCaseNumber": "GV25026738-00",
+            "lastRowName": "MONTCLAIR PROPERTY OWNERS ASSOCIAITON INC", "lastRowCaseNumber": "GV21001050-03"})
+        self.assertEqual(page["rows"][2], {
+            "number": "GV19013223-00", "plaintiff": "MONTCLAIR PROERTY OWNERS ASSOCIATION INC",
+            "defendant": "OWNER02, SAMPLE", "hearing_date": "2019-09-18", "result": "Plaintiff",
+            "type": "Warrant In Debt"})
+        empty = self.va.parse_results("<html><script>var searchCounter=7</script><table></table></html>")
+        self.assertEqual((empty["rows"], empty["next"], empty["counter"]), ([], False, "7"))
+
+    def test_fixture_names_no_private_individual(self):
+        """The fixtures ship in a public repo: every party that is not an
+        association or a company must be a placeholder."""
+        for row in self.va.parse_results(self.results)["rows"]:
+            for party in (row["plaintiff"], row["defendant"]):
+                self.assertRegex(party, r"MONTCLAIR|LLC$|^OWNER\d\d, SAMPLE$")
+        text = re.sub(r"<[^>]+>", "\n", re.search(r"<main>(.*?)</main>", self.detail, re.S).group(1))
+        people = {l.strip() for l in text.splitlines() if re.fullmatch(r"\s*[A-Z][A-Z0-9' -]+, [A-Z][A-Z .;]+\s*", l)}
+        self.assertEqual(people, {"OWNER02, SAMPLE"})
+
+    def test_parse_detail(self):
+        det = self.va.parse_detail(self.detail)
+        self.assertEqual(det["number"], "GV19013223-00")
+        self.assertEqual(det["date_filed"], "2019-07-29")
+        self.assertEqual(det["type"], "Warrant In Debt")
+        self.assertEqual(det["judgment"], {
+            "Judgment": "Plaintiff", "Principal Amount": "$605.00", "Costs": "$56.00", "Attorney Fees": "500.00",
+            "Interest Award": "10% FROM DOJ", "Is Judgment Satisfied": "Yes", "Date Satisfaction Filed": "04/18/2023"})
+
+    def test_build_records_one_per_case(self):
+        rows = self.va.parse_results(self.results)["rows"]
+        det = self.va.parse_detail(self.detail)
+        recs = self.va.build_records(self.NAME, "153", "Prince William General District Court", rows,
+                                     {det["number"]: det})
+        by = {r["docket_number"]: r for r in recs}
+        # 20 rows -> 12 cases: the LLC's case is dropped, later actions fold into their case
+        self.assertEqual(len(recs), 12)
+        self.assertNotIn("GV25026738-00", by)
+        r = by["GV19013223-00"]
+        self.assertEqual(r["case_name"], "MONTCLAIR PROERTY OWNERS ASSOCIATION INC v. OWNER02, SAMPLE")
+        self.assertEqual((r["date_filed"], r["cause"], r["nature_of_suit"]),
+                         ("2019-07-29", "Judgment for plaintiff", "Warrant In Debt"))
+        self.assertEqual(r["judgment"]["Principal Amount"], "$605.00")
+        self.assertEqual((r["source"], r["state"], r["court"], r["court_fips"], r["case_data_id"]),
+                         ("va_gdc", "VA", "Prince William General District Court", "153", "153-GV19013223"))
+        self.assertEqual((r["queries"], r["associations"], r["association_role"], r["url"]),
+                         ([self.NAME], ["MONTCLAIR PROERTY OWNERS ASSOCIATION INC"], ["plaintiff"], self.va.BASE))
+        # a warrant in debt and its three garnishments are one case with four actions
+        g = by["GV21001050-00"]
+        self.assertEqual([a["number"][-2:] for a in g["actions"]], ["00", "01", "02", "03"])
+        self.assertEqual([a["type"] for a in g["actions"]], ["Warrant In Debt"] + ["Garnishment"] * 3)
+        self.assertEqual((g["hearing_date"], g["filed_year"], g["date_filed"]), ("2022-10-19", 2021, ""))
+        # only later actions still online: the earliest one leads, no filing date is invented
+        late = by["GV11004738-04"]
+        self.assertEqual((late["nature_of_suit"], late["date_filed"], late["filed_year"], len(late["actions"])),
+                         ("Garnishment", "", 2011, 3))
+        # the association as defendant
+        d = by["GV16014977-00"]
+        self.assertEqual((d["association_role"], d["associations"], d["cause"]),
+                         (["defendant"], ["MONTCLAIR PROPERTY OWNERS ASSOC"], "Non-suit"))
+        # same docket shape as every other trial-court adapter
+        from hoaspy.collect.courts.court_portals._common import record
+        base = set(record(key="k", state="VA", case_name="a", court="c", docket_number="d",
+                          associations=["a"], url="u", queried="q"))
+        self.assertTrue(base <= set(r))
+        self.assertEqual(self.va.filed_year("GV99000001-00"), 1999)
+
+    def _client(self, pages):
+        """A Client whose _post serves canned pages: {prefix: [rows-per-page, …]}."""
+        c = self.va.Client(pace=0)
+        c.details = False
+        c.asked = []
+
+        def row(n, plaintiff):
+            return {"number": f"GV24{n:06d}-00", "plaintiff": plaintiff, "defendant": "OWNER01, SAMPLE",
+                    "hearing_date": "2024-05-01", "result": "Plaintiff", "type": "Warrant In Debt"}
+
+        def post(fips, query, action, cursor=None):
+            i = 0 if action == "newSearch" else cursor["page"] + 1
+            c.asked.append((query, i))
+            plan = pages.get(query, [])
+            party, count = plan[i] if i < len(plan) else ("", 0)
+            return {"rows": [row(i * 100 + k, party) for k in range(count)], "next": i + 1 < len(plan),
+                    "counter": "0", "cursor": {"page": i}}
+        c._post = post
+        return c
+
+    def test_flooded_prefix_is_narrowed(self):
+        name = "VILLAGE GREEN COMMUNITY ASSOCIATION"
+        noise, ours = ("VILLAGE GREEN APARTMENTS LLC", 20), ("VILLAGE GREEN COMMUNITY ASSOC", 20)
+        c = self._client({"VILLAGE GREEN": [noise] * 40, "VILLAGE GREEN C": [ours, ours]})
+        rows = c._court_rows("059", name)
+        self.assertEqual(len(rows), 40)
+        self.assertTrue(all(r["plaintiff"] == ours[0] for r in rows))
+        # gave up on the bare core after FLOOD_PAGES[0] pages, did not page through the apartments
+        self.assertEqual([q for q, _ in c.asked].count("VILLAGE GREEN"), self.va.FLOOD_PAGES[0])
+
+    def test_busy_association_is_paged_out_not_narrowed(self):
+        name = "LAKE MONTICELLO OWNERS ASSOCIATION"
+        ours = ("LAKE MONTICELLO OWNERS ASSN", 20)
+        c = self._client({"LAKE MONTICELLO": [ours] * 9})
+        rows = c._court_rows("065", name)
+        self.assertEqual(len(rows), 180)
+        self.assertEqual({q for q, _ in c.asked}, {"LAKE MONTICELLO"})
+
+    def test_search_reopens_a_timed_out_session(self):
+        c = self._client({"MONTCLAIR P": [("MONTCLAIR POA", 2)]})
+        opened = []
+
+        class Portal:
+            cdp = object()
+            courts = [("153", "Prince William General District Court"), ("059", "Fairfax County General District Court")]
+            def open(self):
+                opened.append(1)
+        c.portal = Portal()
+        real_post, calls = c._post, []
+
+        def flaky(fips, query, action, cursor=None):
+            calls.append(fips)
+            if len(calls) == 1:
+                raise self.va._SessionLost("status 200")
+            return real_post(fips, query, action, cursor)
+        c._post = flaky
+        with mock.patch.object(self.va.time, "sleep"):
+            recs = c.search(self.NAME)
+        self.assertEqual(opened, [1])
+        self.assertEqual(calls, ["153", "153", "059"])           # the interrupted court was redone
+        self.assertEqual(sorted({r["court_fips"] for r in recs}), ["059", "153"])
+        self.assertEqual(len(recs), 4)
+
+    def test_registered_with_the_driver(self):
+        from hoaspy.collect.courts import court_portals
+        mod = court_portals.registry()["va_gdc"]
+        self.assertEqual((mod.STATE, mod.NEEDS_COOKIE), ("VA", False))
+        self.assertTrue({"name", "url", "access", "coverage", "caveat"} <= set(mod.INFO))
+
+
+class TestPaUjsCaptionMatching(unittest.TestCase):
+    """Pennsylvania MDJ captions abbreviate the association ("Hemlock Farms
+    Community Assoc." in 331 of 411 cases, spelled out in 9), so pa_ujs
+    searches the name's leading words plus a stem and folds abbreviations
+    before comparing parties."""
+
+    @classmethod
+    def setUpClass(cls):
+        from hoaspy.collect.courts.court_portals import pa_ujs
+        cls.m = pa_ujs
+
+    def test_query_is_leading_words_plus_stem(self):
+        q = self.m.query_name
+        for name, want in (
+                ("HEMLOCK FARMS COMMUNITY ASSOCIATION", "HEMLOCK FARMS Comm%"),
+                ("Lake Meade Property Owners Association, Inc.", "Lake Meade Prop%"),
+                ("LAKEVIEW CONDOMINIUM ASSOCIATION", "LAKEVIEW Condo%"),
+                ("WALTON WOODS HOME OWNERS ASSOCIATION", "WALTON WOODS HOME%"),
+                ("The Estates of Warwick Community Association, a Planned Community",
+                 "The Estates of Warwick Comm%"),
+                ("ELK MANOR ESTATES HOA INC", "ELK MANOR ESTATES H%"),
+                ("GREEN HOA", "GREEN HOA%"),
+                # distinguishing words after the generic ones, a generic word
+                # first, or none at all: searched whole
+                ("Rental Property Owners' Association of Lebanon County",
+                 "Rental Property Owners' Association of Lebanon County%"),
+                ("RESIDENTS ASSOCIATION LIMA ESTATES", "RESIDENTS ASSOCIATION LIMA ESTATES%"),
+                ("Townhome, Inc.", "Townhome%"),
+                ("HOMES FOR MANHEIM", "HOMES FOR MANHEIM%")):
+            self.assertEqual(q(name), want, name)
+
+    def test_party_matches_folds_caption_abbreviations(self):
+        ok = self.m.party_matches
+        name = "HEMLOCK FARMS COMMUNITY ASSOCIATION"
+        for party in ("Hemlock Farms Community Assoc.", "Hemlock Farms Comm Assoc",
+                      "Hemlock Farms Comm.Assoc.", "HEMLOCK FARMS COMMUNITY ASSOCI",
+                      "Hemlock Farms Community Assn.", "Hemlock Farms Community"):
+            self.assertTrue(ok(party, name), party)
+        for party in ("Hemlock Farms", "Hemlock Farms Realty", "Hemlock Farms Condo Assoc",
+                      "Hemlock Farms Community Services LLC", ""):
+            self.assertFalse(ok(party, name), party)
+        self.assertTrue(ok("Lake Meade Propertyowners", "LAKE MEADE PROPERTY OWNERS ASSOCIATION INC"))
+        self.assertTrue(ok("Elk Manor Estates Home Owner's Assn", "ELK MANOR ESTATES HOA INC"))
+        self.assertTrue(ok("Green H.O.A.", "GREEN HOA"))
+        self.assertTrue(ok("Hazelwood Green Property Owners Association",
+                           "HAZELWOOD GREEN PROPERTY OWNERS ASS OCIATION"), "IRS field break")
+        self.assertFalse(ok("Southpointe II Property Owners Assoc",
+                            "SOUTHPOINTE PROPERTY OWNERS ASSOCIATION INC"), "a different body")
+        self.assertFalse(ok("Townhome Associates", "Townhome, Inc."))
+        self.assertTrue(ok("Mh Townhomes LLC", "Mh Townhomes Llc"), "the roster's own spelling")
+
+    def test_search_keeps_matching_parties_under_the_queried_name(self):
+        row = dict.fromkeys(self.m.COLS, "")
+        hits = [dict(row, docket_number="MJ-60302-CV-0000123-2019", court_type="Magisterial District",
+                     caption="Hemlock Farms Community Assoc. v. Doe, Jane", case_status="Closed",
+                     filing_date="04/02/2019", county="Pike", court_office="MDJ-60-3-02"),
+                dict(row, docket_number="MJ-43202-CV-0000099-1997", court_type="Magisterial District",
+                     caption="Weseloh & Co. v. Hemlock Farms Comm Assoc, et al", filing_date="07/09/1997",
+                     county="Monroe", court_office="MDJ-43-2-02"),
+                dict(row, docket_number="MJ-60302-CV-0000007-2020", court_type="Magisterial District",
+                     caption="Hemlock Farms Realty v. Roe, Sam", filing_date="01/09/2020")]
+        client = self.m.Client()
+        asked = []
+        client._post = lambda q: asked.append(q) or hits
+        recs = client.search("HEMLOCK FARMS COMMUNITY ASSOCIATION")
+        self.assertEqual(asked, ["HEMLOCK FARMS Comm%"])
+        self.assertEqual([r["docket_number"] for r in recs],
+                         ["MJ-60302-CV-0000123-2019", "MJ-43202-CV-0000099-1997"])
+        self.assertEqual([r["association_role"] for r in recs], [["plaintiff"], ["defendant"]])
+        # the queried name, not the caption's abbreviation, is what build_site joins on
+        self.assertEqual(recs[1]["associations"], ["HEMLOCK FARMS COMMUNITY ASSOCIATION"])
+        self.assertIn("Hemlock Farms Comm Assoc", recs[1]["case_name"])
+        self.assertEqual(recs[0]["date_filed"], "2019-04-02")
+        self.assertEqual(recs[0]["nature_of_suit"], "Magisterial District — Civil")
+
+
+class TestOhSupremeParsing(unittest.TestCase):
+    """Supreme Court of Ohio docket adapter (`oh_supreme`) against six real
+    cases captured from `Ajax.ashx` (`tests/fixtures/oh_supreme_cases.json`:
+    search rows plus GetCaseDetails answers, dockets and attorneys trimmed,
+    individuals replaced by Doe/Roe placeholders) — no network. Guards the phrase built from a roster name, the gate that
+    tells a community association from an insurer / developer / person
+    wearing the words, the record shape (level, county, lower court, roles,
+    disposition, deep link) and the 1,000-row cap split."""
+
+    @classmethod
+    def setUpClass(cls):
+        try:
+            from hoaspy.collect.courts.court_portals import oh_supreme
+        except Exception as exc:
+            raise unittest.SkipTest(f"oh_supreme import failed: {exc}")
+        cls.m = oh_supreme
+        cls.fx = json.loads((ROOT / "tests" / "fixtures" / "oh_supreme_cases.json").read_text())
+
+    def test_adapter_is_registered_and_anonymous(self):
+        from hoaspy.collect.courts import court_portals
+        self.assertIs(court_portals.registry()["oh_supreme"], self.m)
+        self.assertEqual((self.m.STATE, self.m.NEEDS_COOKIE, self.m.LEVEL), ("OH", False, "supreme"))
+        for k in ("name", "url", "access", "coverage", "caveat"):
+            self.assertTrue(self.m.INFO[k], k)
+
+    def test_query_phrase_from_a_roster_name(self):
+        q = self.m.query_for
+        self.assertEqual(q("WELLINGTON HILLS HOMEOWNERS ASSOCIATION"), "WELLINGTON HILLS")
+        self.assertEqual(q("APPLE VALLEY PROP OWNERS ASSN INC"), "APPLE VALLEY")
+        self.assertEqual(q("THE MILLS CREEK-EAST ASSOCIATION"), "MILLS CREEK-EAST")
+        self.assertEqual(q("ZOAR COMMUNITY ASSOCIATION"), "ZOAR COMMUNITY")     # one-word core
+        self.assertEqual(q("COMMUNITY ASSOCIATIONS INSTITUTE"), "COMMUNITY ASSOCIATIONS INSTITUTE")
+        # the clerk writes "and" where the roster writes "&": both are searched
+        self.assertEqual(self.m.phrases_for("HILLS & DALES HOME OWNERS ASSOCIATION"),
+                         ["HILLS & DALES", "HILLS and DALES"])
+        self.assertEqual(self.m.phrases_for("Hills and Dales Owners Association"),
+                         ["Hills and Dales", "Hills & Dales"])
+        self.assertEqual(self.m.phrases_for("WELLINGTON HILLS HOMEOWNERS ASSOCIATION"), ["WELLINGTON HILLS"])
+        self.assertEqual(self.m.case_url("2026-0797"),
+                         "https://www.supremecourt.ohio.gov/clerk/ecms/#/caseinfo/2026/0797")
+
+    def test_named_query_keeps_only_the_same_community(self):
+        ok = self.m.same_community
+        self.assertTrue(ok("Hills and Dales Owners Association", "HILLS & DALES HOME OWNERS ASSOCIATION"))
+        self.assertTrue(ok("Apple Valley Property Owners Association, Inc.", "APPLE VALLEY PROP OWNERS ASSN INC"))
+        self.assertTrue(ok("Candlewood Lake Association, Inc., et al.", "CANDLEWOOD LAKE ASSOCIATION INC"))
+        self.assertTrue(ok("Edgewater Home Owners' Assn", "EDGEWATER HOMEOWNERS ASSOCIATION"))
+        # one-word core: the next word must agree too
+        self.assertFalse(ok("Edgewater Condominium Association", "EDGEWATER HOMEOWNERS ASSOCIATION"))
+        self.assertFalse(ok("Smith Overlook Condominium Association", "OVERLOOK ASSOCIATION"))
+        self.assertFalse(ok("Wellington Hills LLC", "WELLINGTON HILLS HOMEOWNERS ASSOCIATION"))
+        self.assertFalse(ok("Wellington Hills", "WELLINGTON HILLS HOMEOWNERS ASSOCIATION"))
+
+    def test_sweep_gate_keeps_communities_only(self):
+        cn = self.m.community_name
+        for party, want in (
+                ("Cobblestone Lane Condominium Association, Inc.", "Cobblestone Lane Condominium Association, Inc."),
+                ("Green Cove Resort I Owners' Association", "Green Cove Resort I Owners' Association"),
+                ("Marine Towers East Condominum Owners' Association, Inc.",
+                 "Marine Towers East Condominum Owners' Association, Inc."),
+                ("East Bank at Hayden Falls Condominium Association", "East Bank at Hayden Falls Condominium Association"),
+                ("Lake Mohawk Property Owners Associated, Incorporated", "Lake Mohawk Property Owners Associated, Incorporated"),
+                ("Eagle Ridge Subdivision Property Owners Association, Incorporated, et al.",
+                 "Eagle Ridge Subdivision Property Owners Association, Incorporated"),
+                ("Board of Directors of The Chelsea Condominium", "Chelsea Condominium"),
+                ("Ottawa Street Condominium Association Board of Trustees", "Ottawa Street Condominium Association"),
+                ("Officers of Homeowners' Association of Tweed Lakes, Inc.", "Homeowners' Association of Tweed Lakes, Inc."),
+                ("Mary Doe-Roe, President, Lost Hollow Property Owners Association Board of Directors",
+                 "Lost Hollow Property Owners Association")):
+            self.assertEqual(cn(party), want, party)
+        for party in ("Auto-Owners Insurance Company", "Home Owners Insurance Company", "Owners Ins Co",
+                      "East Bank Condominiums II, LLC", "The Condominiums at Stonebridge, Ltd.",
+                      "US Bank Trust, National Association, as Trustee of American Homeowner Preservation Trust Series 2014A",
+                      "Omni Community Association Managers, LLC", "Athens Cty Property Owners Assn Inc",
+                      "Affected Property Owners", "Property Owners", "Lot Owners", "Highland Park Owners Inc",
+                      "Independence Homeowners-Citizens", "Woodside Terrace Mobile Home Owners",
+                      "Pat Condo", "Stratford Chase Townhouses", "Heather Lake Association",
+                      "Blanchard Valley Farmers Cooperative, Inc.", "John R. Doe, c/o A. Richard Doe, POA"):
+            self.assertEqual(cn(party), "", party)
+
+    def test_shape_builds_the_docket_record(self):
+        d = self.fx["details"]
+        r = self.m.shape(d["2026-0797"], "condo", True)
+        self.assertEqual(r["case_name"], "John A. Doe v. Cobblestone Lane Condominium Association, Inc.")
+        self.assertEqual((r["court"], r["docket_number"], r["date_filed"], r["date_terminated"]),
+                         ("Supreme Court of Ohio", "2026-0797", "2026-06-24", "2026-09-15"))
+        self.assertEqual((r["nature_of_suit"], r["cause"], r["state"], r["source"], r["level"]),
+                         ("Jurisdictional Appeal", "Disposed", "OH", "oh_supreme", "supreme"))
+        self.assertEqual(r["associations"], ["Cobblestone Lane Condominium Association, Inc."])
+        self.assertEqual(r["association_role"], ["appellant"])
+        self.assertEqual((r["county"], r["lower_court"], r["lower_court_case"]),
+                         ("Summit", "9th District Court of Appeals", ["31501"]))
+        self.assertEqual(r["url"], "https://www.supremecourt.ohio.gov/clerk/ecms/#/caseinfo/2026/0797")
+        self.assertTrue(r["disposition"].startswith("Jurisdiction declined."))
+        self.assertNotIn("<", r["disposition"])
+        self.assertEqual(r["queries"], ["condo"])
+        for k in ("case_name", "court", "docket_number", "date_filed", "date_terminated",
+                  "nature_of_suit", "cause", "state", "associations", "url"):
+            self.assertIn(k, r, k)                       # what build_site.add_courts reads
+
+    def test_shape_original_action_has_no_county_or_lower_court(self):
+        r = self.m.shape(self.fx["details"]["2017-0797"], "property owners", True)
+        self.assertEqual(r["associations"], ["Lost Hollow Property Owners Association"])
+        self.assertEqual(r["association_role"], ["respondent"])
+        self.assertEqual(r["nature_of_suit"], "Original Action in Mandamus")
+        for k in ("county", "lower_court", "lower_court_case"):
+            self.assertNotIn(k, r)
+
+    def test_shape_drops_people_insurers_developers_and_bystanders(self):
+        d = self.fx["details"]
+        self.assertIsNone(self.m.shape(d["1990-2459"], "condo", True))          # Pat Condo
+        self.assertIsNone(self.m.shape(d["1995-0135"], "owners", True))         # Auto-Owners Insurance
+        r = self.m.shape(d["2010-2092"], "condo", True)                         # the LTD is the developer
+        self.assertEqual(r["associations"], ["The Condominiums at Stonebridge Owners' Association"])
+        r = self.m.shape(d["2002-0152"], "homeowner", True)                     # the Alias row is not a party
+        self.assertEqual(r["associations"], ["Hickory Creek Homeowners Association"])
+        # an association that only files as a friend of the court is not in the dispute
+        amicus = json.loads(json.dumps(d["1995-0135"]))
+        amicus["Parties"].append({"Name": "Rubicon Mill Condominium Association", "ProSe": False,
+                                  "Type": "Amicus Curiae on behalf of Appellant", "Attorneys": []})
+        self.assertIsNone(self.m.shape(amicus, "condo", True))
+
+    def test_shape_named_query_matches_the_roster_name(self):
+        d = self.fx["details"]["2026-0797"]
+        r = self.m.shape(d, "COBBLESTONE LANE CONDOMINIUM ASSOCIATION", False)
+        self.assertEqual(r["associations"], ["Cobblestone Lane Condominium Association, Inc."])
+        self.assertIsNone(self.m.shape(d, "COBBLESTONE CHASE HOMEOWNERS ASSOCIATION", False))
+
+    def test_client_splits_a_capped_search_and_caches_details(self):
+        import datetime as dt
+        m, fx = self.m, self.fx
+        calls = []
+        full = [dict(fx["search"][0], CaseNumber=f"1990-{i:04d}") for i in range(m.CAP)]
+
+        def fake_call(**form):
+            calls.append(form)
+            if form["action"] == "GetCaseDetails":
+                return fx["details"].get(f'{form["paramCaseYear"]}-{form["paramCaseNumber"]}', "Too many results")
+            if form["paramPartyEntityName"] == "big" and form["paramCaseFiledFrom"] == "01-01-1980":
+                # the whole range hits the cap; the first half-window holds one row
+                whole = form["paramCaseFiledTo"] == dt.date.today().strftime("%m-%d-%Y")
+                return full if whole else fx["search"][:1]
+            if form["paramPartyEntityName"] == "big":
+                return fx["search"][1:2]
+            return fx["search"]
+
+        c = m.Client(pace=0)
+        c._call = fake_call
+        rows = c._search("big", m.FIRST_DAY, dt.date.today())
+        self.assertEqual([r["CaseNumber"] for r in rows], ["2026-0797", "2017-0797"])
+        self.assertEqual(len([f for f in calls if f["action"] == "CaseSearch"]), 3)
+        self.assertEqual(c.capped, [])
+        recs = c.search("condo")
+        self.assertEqual(sorted(r["docket_number"] for r in recs),
+                         ["2002-0152", "2010-2092", "2017-0797", "2026-0797"])
+        n = len([f for f in calls if f["action"] == "GetCaseDetails"])
+        self.assertEqual(n, len(fx["search"]))
+        c.search("COBBLESTONE LANE CONDOMINIUM ASSOCIATION")       # same cases: details come from the cache
+        self.assertEqual(len([f for f in calls if f["action"] == "GetCaseDetails"]), n)
+        self.assertEqual(c.search(""), [])
 
 
 
