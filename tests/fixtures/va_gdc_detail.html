@@ -1,0 +1,781 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html lang="en">
+	<head>
+		<META http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
+		<META name="GENERATOR" content="IBM Software Development Platform">
+		<META http-equiv="Content-Style-Type" content="text/css">
+		<link rel="stylesheet" href="cjistemp/styles/style.css?v=6.4.1.2"  type="text/css">
+		<link rel="stylesheet" type="text/css" href="cjistemp/styles/style.css?v=09302026">
+		<link rel="stylesheet" href="cjistemp/styles/jquery/jquery.treeview.css"  type="text/css">
+		<link rel="stylesheet"	href="cjistemp/scripts/ui-lightness/jquery-ui-1.8.13.custom.css" type="text/css">
+        <script type="text/javascript" src="cjistemp/scripts/cjis.js?v=09302026"></script>
+		<script type="text/javascript" src="cjistemp/scripts/jquery/jquery.js?v=09302026"></script>
+		<script type="text/javascript" src="cjistemp/scripts/jquery/jquery.treeview.js?v=09302026"></script>
+		<script type="text/javascript" src="cjistemp/scripts/jquery/jquery-ui-1.8.13.custom.min.js?v=09302026"></script>
+		<title>
+			GENERAL DISTRICT COURT ONLINE CASE INFORMATION SYSTEM
+		</title>
+		 <script type="text/javascript">
+		 var childWindow = null;
+		 $(window).unload(function() {
+			 if (childWindow)
+                 childWindow.close();
+         });
+		  $(document).ready(function(){
+			 $('#newWindow').click(function (event){
+				 if($(this).hasClass("popupLink")){
+					 var w=500;
+					 var h=300;
+					 var left = (screen.width/2)-(w/2);
+					 var top = (screen.height/2)-(h/2);
+					 try{
+					 	var xAxisValue = window.screenX|| window.screenLeft || 0 ;
+					 	var yAxisValue = window.screenY || window.screenTop || 0;
+					 	left = xAxisValue + $(window).width()/2 - w/2;
+					 	top = yAxisValue + $(window).height()/2 - h/2;
+					 }
+					 catch(e){
+						left = (screen.width/2)-(w/2);
+						top = (screen.height/2)-(h/2);
+					 }
+					 var url = $(this).attr("href");
+					 var windowName = "Login";//$(this).attr("name");
+					 childWindow = window.open(url, windowName, 'toolbar=no, location=no, directories=no, status=no, menubar=no, scrollbars=no, resizable=no, copyhistory=no, width='+w+', height='+h+', top='+top+', left='+left);
+					 childWindow.focus();
+					 event.preventDefault();
+				 }
+			 });
+		 });
+		 </script>
+	</head>
+	<body onload="getClassName()">
+	<table align="center" width="100%" style="border:0px" cellpadding="0" cellspacing="0" role="presentation">
+	<tr>
+	<td>
+	<table align="center" width="100%" style="border:0px" cellpadding="0" cellspacing="0" role="presentation">
+						<tr>
+			      			<td colspan="2" align="center" valign="bottom" class="headerback" nowrap="nowrap">
+<script language="Javascript" type="text/javascript">
+	function hideHeader() {
+		document.getElementById("headerDiv").style.display = "none";
+	}
+	var searchCounter=2
+</script>
+<!-- <div class="headerback"></div>  -->
+<header>
+	<div class="headerimage"></div>
+</header>
+			      			</td>
+			    		</tr>
+			    		<tr>
+			    		    <td align="left" valign="top" nowrap="nowrap" class="navigationback" width="217px">
+<div class="contentwrapper">
+<nav role="navigation">
+	<table width="100%" border="0" cellspacing="0" cellpadding="0" >
+	  <tr>
+	    <td class="navigation" valign="top">
+	    	<div class="navigationtop"></div>
+	    	<div class="navigationback">
+	    		<div class="menu">
+	    		<div align="center">
+		    		<table cellpadding="0" cellspacing="0">
+						    <tr>
+							    <td style="text-align: -moz-center;" >
+							    	       <input type="hidden" name="courtName" value="Accomack General District Court" />
+							    	       <input type="hidden" name="courtName" value="Fairfax County General District Court" />
+							    	       <input type="hidden" name="courtName" value="Newport News-Civil General District Court" />
+							    	       <input type="hidden" name="courtName" value="Newport News-Criminal General District Court" />
+							    	       <input type="hidden" name="courtName" value="Newport News-Traffic General District Court" />
+							    	       <input type="hidden" name="courtName" value="Norfolk General District Court" />
+							    	       <input type="hidden" name="courtName" value="Norfolk General District-Criminal Division" />
+							    	       <input type="hidden" name="courtName" value="Prince William General District Court" />
+							    	       <input type="hidden" name="courtName" value="Richmond-Marsh Criminal/Traffic General District Court at Manchester" />
+							    	       <input type="hidden" name="courtFips" value="001" />
+							    	       <input type="hidden" name="courtFips" value="059" />
+							    	       <input type="hidden" name="courtFips" value="703" />
+							    	       <input type="hidden" name="courtFips" value="701" />
+							    	       <input type="hidden" name="courtFips" value="702" />
+							    	       <input type="hidden" name="courtFips" value="710" />
+							    	       <input type="hidden" name="courtFips" value="711" />
+							    	       <input type="hidden" name="courtFips" value="153" />
+							    	       <input type="hidden" name="courtFips" value="761" />
+							    	 <table cellpadding="0" cellspacing="0">
+						                <tr>
+							    	       <td><input type="text" name="selectedCourtName" title="Select Court Name" aria-label="Select Court Name" id="txtcourts1" value='Prince William General District Court'/></td>
+                                           <td><img src="cjistemp/images/dropdownarrow.jpg" alt="courtNameDropDown" id="btndropdown1" width="20" height="20" /></td>
+							    	    </tr>
+							    	 </table>
+							    </td>
+							 </tr>
+							 <tr>
+							 	<td>&nbsp;</td>
+							 </tr>
+					</table>
+				</div>
+				</div>
+				<div class="trafficcriminaltab">
+					<div class="navigationItems ">
+						<ul>
+								<li><span onclick="return checkCourtSelection();" id="desc-name-search-T"><a name="moduleLink" href="nameSearch.do?fromSidebar=true&formAction=searchLanding&searchDivision=T&searchFipsCode=153&localFipsCode=153" aria-describedby="desc-name-search-T" aria-label="Traffic/Criminal Name Search"> Name Search</a></span></li>
+								<li><span onclick="return checkCourtSelection();" id="desc-case-number-search-T"><a name="moduleLink" href="criminalCivilCaseSearch.do?fromSidebar=true&formAction=searchLanding&searchDivision=T&searchFipsCode=153&curentFipsCode=153" aria-describedby="desc-case-number-search-T" aria-label="Traffic/Criminal Case Number Search">Case Number Search</a></span></li>
+								<li><span onclick="return checkCourtSelection();" id="desc-hearing-date-search-T"><a name="moduleLink" href="caseSearch.do?fromSidebar=true&searchLanding=searchLanding&searchType=hearingDate&searchDivision=T&searchFipsCode=153&curentFipsCode=153" aria-describedby="desc-hearing-date-search-T" aria-label="Traffic/Criminal Hearing Date Search">Hearing Date Search</a></span></li>
+								<li><span onclick="return checkCourtSelection();" id="desc-service-search-T"><a name="moduleLink" href="caseSearch.do?fromSidebar=true&searchLanding=searchLanding&searchType=servicesName&searchDivision=T&searchFipsCode=153&curentFipsCode=153" aria-describedby="desc-service-search-T" aria-label="Traffic/Criminal Service/Process Search">Service/Process Search</a></span></li>
+						</ul>
+					</div>
+				</div>
+				<div class="civiltab">
+					<div class="navigationItems ">
+						<ul>
+							<li><span onclick="return checkCourtSelection();" id="desc-name-search-V"><a name="moduleLink" href="nameSearch.do?fromSidebar=true&formAction=searchLanding&searchDivision=V&searchFipsCode=153&localFipsCode=153" aria-describedby="desc-name-search-V" aria-label="Civil Name Search"> Name Search</a></span></li>
+							<li><span onclick="return checkCourtSelection();" id="desc-case-number-search-V"><a name="moduleLink" href="criminalCivilCaseSearch.do?fromSidebar=true&formAction=searchLanding&searchDivision=V&searchFipsCode=153&curentFipsCode=153" aria-describedby="desc-case-number-search-V" aria-label="Civil Case Number Search">Case Number Search</a></span></li>
+							<li><span onclick="return checkCourtSelection();"  id="desc-hearing-date-search-V"><a name="moduleLink" href="caseSearch.do?fromSidebar=true&searchLanding=searchLanding&searchType=hearingDate&searchDivision=V&searchFipsCode=153&curentFipsCode=153" aria-describedby="desc-hearing-date-search-V" aria-label="Civil Hearing Date Search">Hearing Date Search</a></span></li>
+							<li><span onclick="return checkCourtSelection();" id="desc-service-search-V"><a name="moduleLink" href="caseSearch.do?fromSidebar=true&searchLanding=searchLanding&searchType=servicesName&searchDivision=V&searchFipsCode=153&curentFipsCode=153"  aria-describedby="desc-service-search-V" aria-label="Civil Service/Process Search">Service/Process Search</a></span></li>
+		                </ul>
+					</div>
+				</div>
+	    	</div>
+	    </td>
+	  </tr>
+	</table>
+	</nav>
+</div>
+			      			</td>
+			      			<td align="left" valign="top" nowrap="nowrap" width="100%" >
+			        			<div class="goldenbar" role="region"  aria-label="Application Toolbar">
+			        				<div style="float:right">
+									 	<div style="display:inline">
+				        				&nbsp;<a href="welcomePage.do?" aria-label="Home"><img src="cjistemp/images/home.gif"  width="20" height="20" alt="Home" aria-describedby="home-desc"/></a>
+				        				<span id="home-desc" class="visually-hidden">Navigates to the homepage of the application.</span>&nbsp;
+				        				<a href="#" onclick="popitup('help.do'); return false;" aria-label="Help" >
+				        				<img src="cjistemp/images/help.gif"  width="20" height="20" alt="Help" aria-describedby="help-desc"/>
+				        				</a>
+				        				<span id="help-desc" class="visually-hidden">Help</span>
+				        				</div>
+				        			</div>
+			        				<div id="headerCourtName" style="text-align:center; vertical-align:middle;">
+			        					Prince William General District Court&nbsp;
+			        				</div>
+			        			</div>
+			        			<br/>
+			        			<main>
+	<!-- Begin civilCaseDetails.jsp -->
+<script>document.querySelector('title').textContent += " - Civil Case Details";</script>
+<form name="civilDetailForm" method="post" action="/gdcourts/civilDetail.do">
+    <input type="hidden" name="formAction" value="newSearch?ts=1790814511875">
+	<input type="hidden" name="searchFipsCode" value="">
+	<input type="hidden" name="searchDivision" value="">
+    <input type="hidden" name="searchType" value="caseNumber">
+    <input type="hidden" name="currentIndex" value="0">
+    <input type="hidden" name="maxSize" value="0">
+    <input type="hidden" name="className" id="className"/>
+    <input type="hidden" name="localFipsCode" value="153"/>
+	<div class="">
+		<table width="100%" border="0" cellpadding="4" cellspacing="2">
+			<tr>
+				<td class="pageheader">Civil Case Details</td>
+			</tr>
+	        <tr>
+				<td class="tableback">
+					<table width="100%" border="0" cellpadding="5" cellspacing="2">
+						<tr>
+							<td width="15%" id="togglecontrol" class="subheader" onclick="elapsedcollapse('toggleCase','imgelapsedCase')">
+								<span class="togglearrowdown" id="imgelapsedCase"></span>
+								<span>Case Information</span>
+							</td>
+						</tr>
+						<tr id="toggleCase" style="">
+							<td>
+								<table width="100%" border="0" cellpadding="5" cellspacing="0">
+									<tr>
+					                   	<td width="9%" class="labelgridtopleft" >Case Number&nbsp;:</td>
+					                   	<td width="41%" class="labelvaluegridtopright" >&nbsp;GV19013223-00</td>
+					                   	<td width="7%" class="labelgridtop" >Filed Date&nbsp;:</td>
+					                   	<td width="43%" class="labelvaluegridtopright" >&nbsp;07/29/2019</td>
+				                    </tr>
+				                    <tr>
+					                   	<td class="labelgridleft" >Case Type&nbsp;:</td>
+					                   	<td class="labelvaluegridright" >&nbsp;Warrant In Debt</td>
+					                   	<td class="labelgrid" >Debt Type&nbsp;:</td>
+					                   	<td class="labelvaluegridright" >&nbsp;</td>
+									</tr>
+								</table>
+							</td>
+						</tr>
+					</table>
+				</td>
+			</tr>
+			<tr>
+				<td height="5px"></td>
+			</tr>
+			<tr>
+				<td class="tableback">
+					<table width="100%" border="0" cellpadding="5" cellspacing="2">
+						<tr>
+							<td width="15%" id="togglecontrol" class="subheader" onclick="elapsedcollapse('toggleDef','imgelapsedDef')">
+								<span class="togglearrowdown" id="imgelapsedDef"></span>
+								<span>Plaintiff Information</span>
+							</td>
+						</tr>
+						<tr id="toggleDef" style="">
+							<td>
+								<table width="100%" border="0" cellpadding="5" cellspacing="0">
+				                    <tr>
+				                    	<td >
+<!-- Begin plaintiff.jsp -->
+<table width="100%" border="0" cellpadding="3" cellspacing="0" class="tableborder">
+	<tr class="gridheader">
+	    <td width="20%" class="subgridheader">Name</td>
+	    <td width="20%" class="subgridheader">DBA/TA</td>
+	    <td width="20%" class="subgridheader">Address</td>
+	    <td width="20%" class="subgridheader">&nbsp;&nbsp;Judgment</td>
+	    <td width="20%" class="subgridheader">Attorney</td>
+	</tr>
+		<tr class="gridrow">
+			<td>MONTCLAIR PROERTY OWNERS ASSOCIATION INC     </td>
+			<td>FIRSTSERVICE RESIDENTIAL</td>
+			<td>
+						ANYTOWN, VA 22000
+			</td>
+			<td>&nbsp;&nbsp;Plaintiff</td>
+			<td>NONE                          </td>
+		</tr>
+</table>
+<!-- End plaintiff.jsp -->
+				                    	</td>
+				                    </tr>
+								</table>
+							</td>
+						</tr>
+					</table>
+				</td>
+			</tr>
+			<tr>
+				<td height="5px"></td>
+			</tr>
+			<tr>
+				<td class="tableback">
+					<table width="100%" border="0" cellpadding="5" cellspacing="2">
+						<tr>
+							<td width="15%" id="togglecontrol" class="subheader" onclick="elapsedcollapse('togglePlaintiff','imgelapsedPlaintiff')">
+								<span class="togglearrowdown" id="imgelapsedPlaintiff"></span>
+								<span>Defendant Information</span>
+							</td>
+						</tr>
+						<tr id="togglePlaintiff" style="">
+							<td>
+								<table width="100%" border="0" cellpadding="5" cellspacing="0">
+				                    <tr>
+				                    	<td >
+<!-- Begin defendant.jsp -->
+<table width="100%" border="0" cellpadding="3" cellspacing="0" class="tableborder">
+	<tr class="gridheader">
+	    <td width="20%" class="subgridheader">Name</td>
+	    <td width="20%" class="subgridheader">DBA/TA</td>
+	    <td width="20%" class="subgridheader">Address</td>
+	    <td width="20%" class="subgridheader">&nbsp;&nbsp;Judgment</td>
+	    <td width="20%" class="subgridheader">Attorney</td>
+	</tr>
+		<tr class="gridrow">
+			<td>OWNER02, SAMPLE                             </td>
+			<td></td>
+			<td>
+						ANYTOWN, VA 22000
+			</td>
+			<td>&nbsp;&nbsp;Plaintiff</td>
+			<td>NONE                          </td>
+		</tr>
+</table>
+<!-- End defendant.jsp -->
+				                    	</td>
+				                    </tr>
+								</table>
+							</td>
+						</tr>
+					</table>
+				</td>
+			</tr>
+			<tr>
+				<td height="5px"></td>
+			</tr>
+			<tr>
+				<td class="tableback">
+					<table width="100%" border="0" cellpadding="5" cellspacing="2">
+						<tr>
+							<td width="15%" id="togglecontrol" class="subheader" onclick="elapsedcollapse('toggleHearing','imgelapsedHearing')">
+								<span class="togglearrowdown" id="imgelapsedHearing"></span>
+								<span>Hearing Information</span>
+							</td>
+						</tr>
+						<tr id="toggleHearing" style="">
+							<td>
+								<table width="100%" border="0" cellpadding="5" cellspacing="0">
+				                    <tr>
+				                    	<td >
+<!-- Begin hearing.jsp -->
+<table width="100%" border="0" cellpadding="3" cellspacing="0" class="tableborder">
+	<tr class="gridheader">
+	    <td width="20%" class="subgridheader">Date</td>
+	    <td width="20%" class="subgridheader">Time</td>
+	    <td width="20%" class="subgridheader">Result</td>
+	    <td width="20%" class="subgridheader">Hearing Type</td>
+	    <td width="20%" class="subgridheader" align="center">Courtroom</td>
+	</tr>
+		<tr class="gridrow">
+			<td>09/18/2019</td>
+			<td>11:00 AM</td>
+			<td>Default Judgment</td>
+			<td>Civil Hearing</td>
+			<td align="center">SEGA</td>
+		</tr>
+</table>
+<!-- End hearing.jsp -->
+				                    	</td>
+				                    </tr>
+								</table>
+							</td>
+						</tr>
+					</table>
+				</td>
+			</tr>
+			<tr>
+				<td height="5px"></td>
+			</tr>
+			<tr>
+				<td class="tableback">
+					<table width="100%" border="0" cellpadding="5" cellspacing="2">
+						<tr>
+							<td width="100%" id="togglecontrol" class="subheader" onclick="elapsedcollapse('toggleServices','imgelapsedServices')">
+								<span class="togglearrowup" id="imgelapsedServices"></span>
+								<span>Service/Process</span>
+							</td>
+						</tr>
+						<tr id="toggleServices" style="display: none">
+							<td>
+								<table width="100%" border="0" cellpadding="5" cellspacing="0">
+				                    <tr>
+				                    	<td >
+<!-- Begin service.jsp -->
+<table width="100%" border="0" cellpadding="3" cellspacing="0" class="tableborder">
+	<tr class="gridheader">
+	    <td width="22%" class="subgridheader">Person Served</td>
+	    <td width="22%" class="subgridheader">Process Type</td>
+	    <td width="10%" class="subgridheader">Date Issued</td>
+	    <td width="10%" class="subgridheader">Date Served</td>
+	    <td width="21%" class="subgridheader">Plaintiff</td>
+	    <td width="15%" class="subgridheader">How Served</td>
+	</tr>
+			<tr class="gridrow">
+				<td>OWNER02, SAMPLE                             </td>
+				<td>Warrant In Debt</td>
+				<td>07/29/2019</td>
+				<td></td>
+				<td>MONTCLAIR PROERTY OWNERS ASSOCIATION INC     </td>
+				<td></td>
+			</tr>
+</table>
+<!-- End service.jsp -->
+				                    	</td>
+				                    </tr>
+								</table>
+							</td>
+						</tr>
+					</table>
+				</td>
+			</tr>
+			<tr>
+				<td height="5px"></td>
+			</tr>
+			<tr>
+				<td class="tableback">
+					<table width="100%" border="0" cellpadding="5" cellspacing="2">
+						<tr>
+							<td width="100%" id="togglecontrol" class="subheader" onclick="elapsedcollapse('toggleReports','imgelapsedReports')">
+								<span class="togglearrowup" id="imgelapsedReports"></span>
+								<span>Reports</span>
+							</td>
+						</tr>
+						<tr id="toggleReports" style="display: none">
+							<td>
+								<table width="100%" border="0" cellpadding="5" cellspacing="0">
+				                    <tr>
+				                    	<td >
+<!-- Begin report.jsp -->
+<table width="100%" border="0" cellpadding="3" cellspacing="0" class="tableborder">
+	<tr class="gridheader">
+	    <td width="20%" class="subgridheader">Report Type</td>
+	    <td width="20%" class="subgridheader">Reporting Agency</td>
+	    <td width="20%" class="subgridheader">Date Ordered</td>
+	    <td width="20%" class="subgridheader">Date Due</td>
+	    <td width="20%" class="subgridheader">Date Received</td>
+	</tr>
+</table>
+<!-- End report.jsp -->
+				                    	</td>
+				                    </tr>
+								</table>
+							</td>
+						</tr>
+					</table>
+				</td>
+			</tr>
+					<tr>
+						<td height="5px"></td>
+					</tr>
+					<tr>
+						<td class="tableback">
+							<table width="100%" border="0" cellpadding="5" cellspacing="2">
+								<tr>
+									<td width="100%" id="togglecontrol" class="subheader" onclick="elapsedcollapse('toggleJudgment','imgelapsedJudgment')">
+										<span class="togglearrowdown" id="imgelapsedJudgment"></span>
+										<span>Judgment Information</span>
+									</td>
+								</tr>
+								<tr id="toggleJudgment" style="">
+									<td>
+										<table width="100%" border="0" cellpadding="5" cellspacing="0">
+											<tr>
+						                        <td width="16%" class="labelgridtopleft" >Judgment&nbsp;:</td>
+						                        <td width="22%" class="labelvaluegridtopright" >&nbsp;Plaintiff</td>
+						                       	<td width="14%" class="labelgridtop" >Costs&nbsp;:</td>
+						                       	<td width="10%" class="labelvaluegridtopright" >&nbsp;$56.00</td>
+						                       	<td width="19%" class="labelgridtop" >Attorney Fees&nbsp;:</td>
+						                       	<td width="20%" class="labelvaluegridtopright" >&nbsp;500.00</td>
+											</tr>
+											<tr>
+						                        <td class="labelgridleft" >Principal Amount&nbsp;:</td>
+						                        <td class="labelvaluegridright" >&nbsp;$605.00</td>
+						                        <td class="labelgrid" >Other Amount&nbsp;:</td>
+						                        <td class="labelvaluegridright" >&nbsp;</td>
+						                       	<td class="labelgrid" >Interest Award&nbsp;:</td>
+						                       	<td class="labelvaluegridright" >&nbsp;10% FROM DOJ</td>
+											</tr>
+											<tr>
+						                       	<td class="labelgridleft" >Possession&nbsp;:</td>
+						                       	<td class="labelvaluegridright" >&nbsp;</td>
+						                       	<td class="labelgrid" >Writ of Eviction Issued Date&nbsp;:</td>
+						                       	<td class="labelvaluegridright" >&nbsp;</td>
+						                       	<td class="labelgrid" >Writ of Eviction Executed Date&nbsp;:</td>
+						                       	<td class="labelvaluegridright" >&nbsp;</td>
+											</tr>
+											<tr>
+												<td class="labelgridleft" >Homestead Exemption Waived&nbsp;:</td>
+						                       	<td class="labelvaluegridright">&nbsp;</td>
+						                       	<td class="labelgrid" >Writ of Fieri Facias Issued Date&nbsp;:</td>
+						                       	<td class="labelvaluegridright" colspan="3">&nbsp;</td>
+											</tr>
+											<tr>
+						                       	<td class="labelgridleft" >Is Judgment Satisfied&nbsp;:</td>
+						                       	<td class="labelvaluegridright" >&nbsp;Yes</td>
+						                       	<td class="labelgrid" >Date Satisfaction Filed&nbsp;:</td>
+						                       	<td class="labelvaluegridright" >&nbsp;04/18/2023</td>
+						                       	<td class="labelgrid" >Other Awarded&nbsp;:</td>
+						                       	<td class="labelvaluegridright" >&nbsp;</td>
+											</tr>
+											<tr>
+						                       	<td class="labelgridleft" >Further Case Information&nbsp;:</td>
+						                       	<td class="labelvaluegridright" colspan="5">&nbsp;                                                                 </td>
+											</tr>
+										</table>
+									</td>
+								</tr>
+							</table>
+						</td>
+					</tr>
+			<tr>
+				<td height="5px"></td>
+			</tr>
+	       	<tr>
+	        	<td class="tableback">
+					<table width="100%" border="0" cellpadding="5" cellspacing="2">
+						<tr>
+							<td width="15%" id="togglecontrol" class="subheader" onclick="elapsedcollapse('toggleGarnish','imgelapsedGarnish')">
+								<span class="togglearrowup" id="imgelapsedGarnish"></span>
+								<span>Garnishment Information</span>
+							</td>
+						</tr>
+						<tr id="toggleGarnish" style="display: none">
+							<td>
+				           		<table width="100%" border="0" cellpadding="5" cellspacing="0">
+				              		<tr>
+				                		<td width="12%" class="labelgridtopleft" >Garnishee&nbsp;:</td>
+					                	<td width="41%" class="labelvaluegridtopright" >&nbsp;</td>
+					                	<td width="9%" class="labelgridtop" >Address&nbsp;:</td>
+					                	<td width="38%" class="labelvaluegridtopright" >&nbsp;
+					                	</td>
+					              	</tr>
+				                  	<tr>
+				                       	<td  class="labelgridleft" >Garnishee Answer&nbsp;:</td>
+				                       	<td class="labelvaluegridright" >&nbsp;</td>
+				                      	<td colspan="2">
+				                      		<table width="100%" border="0" cellpadding="5" cellspacing="0">
+				                      			<tr>
+						                      		<td width="20%" class="labelgrid" >Answer Date&nbsp;&nbsp;:</td>
+						                       		<td width="20%" class="labelvaluegridright" >&nbsp;  </td>
+						                       		<td width="40%" class="labelgridleft" >Number of Checks Received&nbsp;:</td>
+						                       		<td width="20%" class="labelvaluegridright" colspan="3" >&nbsp;</td>
+						                        </tr>
+				                      		</table>
+				                      	</td>
+									</tr>
+								</table>
+							</td>
+						</tr>
+					</table>
+				</td>
+			</tr>
+			<tr>
+				<td height="5px"></td>
+			</tr>
+	       	<tr>
+	        	<td class="tableback">
+					<table width="100%" border="0" cellpadding="5" cellspacing="2">
+						<tr>
+							<td width="15%" id="togglecontrol" class="subheader" onclick="elapsedcollapse('toggleAppeal','imgelapsedAppeal')">
+								<span class="togglearrowdown" id="imgelapsedAppeal"></span>
+								<span>Appeal Information</span>
+							</td>
+						</tr>
+						<tr id="toggleAppeal" style="">
+							<td>
+				           		<table width="100%" border="0" cellpadding="5" cellspacing="0">
+				              		<tr>
+				                		<td width="9%" class="labelgridtopleft" >Appeal Date&nbsp;:</td>
+					                	<td width="15%" class="labelvaluegridtopright" >&nbsp;</td>
+					                	<td width="9%" class="labelgridtop" >Appealed By&nbsp;:</td>
+					                	<td width="67%" class="labelvaluegridtopright" >&nbsp;</td>
+					              	</tr>
+								</table>
+							</td>
+						</tr>
+					</table>
+				</td>
+			</tr>
+			<tr>
+				<td class="tableback">
+					<table width="100%" border="0" cellpadding="5" cellspacing="2">
+		                 <tr>
+		                   	<td style="text-align:center;">
+		                   		<input type="submit" name="button" class="submitBox disableOnBack" onclick="submitForm('backButton','153','2');" value="Back to Search Results" title="Back to Search Results"/>&nbsp;
+		                   	</td>
+		                 </tr>
+					</table>
+				</td>
+			</tr>
+		</table>
+	</div>
+</form>
+ <!-- End civilCaseDetails.jsp -->
+			        			 </main>
+			      			</td>
+			    		</tr>
+			    	</table>
+	</td>
+	</tr>
+	<tr>
+	<td align="center" valign="bottom" nowrap="nowrap">
+<!-- Begin gooter.jsp -->
+<footer>
+	<table width="100%" cellpadding="0" cellspacing="0" border="0">
+		<tr>
+		    <td class="footer">
+		        <a href="http://www.courts.state.va.us/main.htm" class="breadcrumbtoplinks" aria-describedby="desc-home">Home</a> <span id="desc-home" class="visually-hidden">Link to the homepage of the Virginia Judicial System.</span>|
+			    <a href="http://www.courts.state.va.us/courts/home.html" class="breadcrumbtoplinks" aria-describedby="desc-court-system">Virginia's Court System</a> <span id="desc-court-system" class="visually-hidden">Link to Virginia's Court System</span>|
+			    <a href="http://www.courts.state.va.us/online/home.html " class="breadcrumbtoplinks" aria-describedby="desc-online-services">Online Services</a> <span id="desc-online-services" class="visually-hidden">Link to Online Services</span>|
+			    <a href="http://www.courts.state.va.us/caseinfo/home.html" class="breadcrumbtoplinks" aria-describedby="desc-case-status">Case Status and Information</a> <span id="desc-case-status" class="visually-hidden">Link to Case Status and Information</span>|
+			    <a href="http://www.courts.state.va.us/courtadmin/home.html " class="breadcrumbtoplinks" aria-describedby="desc-court-administration">Court Administration</a> <span id="desc-court-administration" class="visually-hidden">Link to Court Administration</span> |
+			    <a href="http://www.courts.state.va.us/directories/home.html" class="breadcrumbtoplinks" aria-describedby="desc-directories">Directories</a> <span id="desc-directories" class="visually-hidden">Link to Directories</span>|
+			    <a href="http://www.courts.state.va.us/forms/home.html " class="breadcrumbtoplinks" aria-describedby="desc-form">Forms</a> <span id="desc-form" class="visually-hidden">Link to Forms</span>|
+			    <a href="http://www.courts.state.va.us/agencies/home.html " class="breadcrumbtoplinks" aria-describedby="desc-judicial-branch-agencies">Judicial Branch Agencies</a> <span id="desc-judicial-branch-agencies" class="visually-hidden">Link to Judicial Branch Agencies</span>|
+			    <a href="http://www.courts.state.va.us/programs/home.html " class="breadcrumbtoplinks" aria-describedby="desc-programs">Programs</a> <span id="desc-programs" class="visually-hidden">Link to Programs</span>
+		    </td>
+		</tr>
+		<tr>
+		    <td class="labelBuildNumber">
+				Build #: 6.4.1.2
+		    </td>
+		</tr>
+	</table>
+</footer>
+<script language="Javascript" type="text/javascript">
+	if (searchCounter >=  sessionStorage.searchCounter || sessionStorage.searchCounter == null) {
+		sessionStorage.searchCounter = searchCounter;
+		$(".disableOnBack").removeAttr("disabled");
+		$("input[type=checkbox]").removeAttr("disabled");
+	} else {
+		disableElements();
+	}
+	function disableElements() {
+		//Any button with the cssClass disableOnBack will be disabled
+		$(".disableOnBack").attr("disabled", "disabled").attr("title", "Action disabled. Please conduct a new search.");
+		//All checkboxes will be disabled
+		$("input[type=checkbox]").attr("disabled", "disabled").attr("title", "Action disabled. Please conduct a new search.");
+		//Any link for Mark/Unmark for payment will be disabled
+		$("a:contains('Mark For Payment')").addClass("disabledLink").attr("onclick", "return false;").attr("title", "Action disabled. Please conduct a new search.");
+		$("a:contains('Unmark For Payment')").addClass("disabledLink").attr("onclick", "return false;").attr("title", "Action disabled. Please conduct a new search.");
+		//Login link is disabled
+		$("a:contains('Log In')").removeClass("popupLink").addClass("disabledLink").removeAttr("href").attr("onclick", "return false;").attr("title", "Action disabled. Please conduct a new search.");
+	}
+</script>
+<!-- End footer.jsp -->
+	</td>
+	</tr>
+	</table>
+		<table align="center" width="100%" style="border:0px">
+			<tr>
+				<td>
+			    </td>
+			 </tr>
+			 <tr>
+      			<td colspan="2" >
+      			</td>
+    		</tr>
+		</table>
+		<script type="text/javascript">
+		var courtNamesHiddenObjects = document.getElementsByName("courtName");
+        var courtFipsHiddenObjects = document.getElementsByName("courtFips");
+        var courtNames = new Array();
+        var courtFips = new Array();
+        $.browser.chrome = /chrom(e|ium)/.test(navigator.userAgent.toLowerCase());
+		$(document).ready(function(){
+       	   //var arr = new Array("This is the longest name I have ever seen", "Supreme Court of Virginia", "Accomack County Circuit", "Albemarle County Circuit", "Alleghany County Circuit", "Amelia County Circuit", "ruby");
+           for(var i=0; i<courtNamesHiddenObjects.length; i++){
+              courtNames[i] = courtNamesHiddenObjects[i].value;
+              courtFips[i] = courtFipsHiddenObjects[i].value;
+           }
+			$("#txtcourts1").autocomplete({
+		    	source: courtNames,
+		    	focus: function( event, ui ) {
+		    		if(!$.browser.chrome){	// added this if for fixing prod00042600
+		    			$( "#txtcourts1" ).val( ui.item.label );
+		    		}
+		    		return false;
+     			 },
+				close: function(event, ui) {
+				            selectCourt();
+				            $("#txtcourts1").selectRange(0,0);
+				            }
+			});
+			$("#txtcourts1").bind("blur",function(){
+				selectCourt();
+	         });
+			$("#btndropdown1").bind("click",function(){
+				if ($("#txtcourts1").autocomplete("widget").is(":visible")) {
+	                  $("#txtcourts1").autocomplete("close");
+	                  return false;
+	               }
+				  else{
+				  		$("#txtcourts1").autocomplete("option","minLength","0");
+						$("#txtcourts1").autocomplete("search","");
+					  }
+			});
+            /*This is the function for hiding the dropdown options when user clicks anywhere in the body*/
+			$("body").bind('click', function(event){
+	     			if (event.target.id != "btndropdown1")
+	             	{
+						$("#txtcourts1").autocomplete("close");
+					}
+			});
+	       	$.fn.selectRange = function(start, end) {
+			    var e = document.getElementById($(this).attr('id'));
+			    if (!e) return;
+			    else if (e.setSelectionRange) { e.focus(); e.setSelectionRange(start, end); }
+			     else if (e.createTextRange) {
+			    	 var range = e.createTextRange();
+			    	 range.collapse(true);
+			    	 range.moveEnd('character', end);
+			    	 range.moveStart('character',
+			    			 start);
+			    	 range.select(); }
+			    else if (e.selectionStart) { e.selectionStart = start; e.selectionEnd = end; }
+			};
+	       	 $("#tree").treeview();
+	    });
+    	function selectCourt(){
+    	    var courtName = document.getElementById("txtcourts1").value;
+    	    if(courtName.length > 0){
+    	    	courtName = trim(courtName);
+    	    }
+    	    var selectedFips = '';
+    	    //Get fips code for the selected court
+    	    for(var i=0; i<courtNames.length; i++){
+    	       if(courtName == trim(courtNames[i])){
+    	          selectedFips = courtFips[i];
+    	          break;
+    	       }
+    	    }
+    	    if (selectedFips == ''){
+        	    courtName = "";
+    	    }
+    	  /*   var welcomePageMarker = document.getElementById("welcomePageMarker");
+    	    if(welcomePageMarker != null){ //In welcome page who does not have a form
+    	       //Update searchFipsCode in header
+				var headerFipsCodeInput = document.getElementById("headerCourtName");
+				if(headerFipsCodeInput != null){
+					headerFipsCodeInput.innerHTML = courtName;
+				}
+				//Update searchFipsCode parameters on the side bar
+				var moduleLinks = document.getElementsByName("moduleLink");
+				for(var i=0; i<moduleLinks.length; i++){
+					var link = moduleLinks[i];
+					var hrefStr = link.href;
+					//When searchFipsCode parameter value is not set or set to other fips code,
+					//change it to the selected one.
+					//Here searchFipsCode is always the last parameter.
+					if(hrefStr.indexOf(selectedFips) < 0){
+						var indexOfLastEqualSign = hrefStr.lastIndexOf("=");
+						hrefStr = hrefStr.substring(0, indexOfLastEqualSign + 1);
+						hrefStr = hrefStr + selectedFips;
+						link.href = hrefStr;
+					}
+				}
+    	    } */
+    	   // else{
+    	    	//In other pages who have a form
+				//Update searchFipsCode hidden input in form
+				var searchFipsCodeInput = document.getElementsByName("searchFipsCode")[0];
+				if(searchFipsCodeInput != null){
+				   searchFipsCodeInput.value = selectedFips;
+				}
+				document.getElementById('selectedCourtsName').value=courtName;
+				document.getElementById('selectedCourtsFipCode').value=selectedFips;
+				var newFipCode= document.getElementById('selectedCourtsFipCode').value;
+				var oldFipCode= document.getElementById('sessionCourtsFipCode').value;
+				if( newFipCode != oldFipCode && newFipCode !== null && newFipCode != 'undefined'){
+			//	alert('submitting now '+'selectedFips '+selectedFips + ' courtName '+courtName +" previous fip code " + document.getElementById('sessionCourtsFipCode').value);
+				 document.getElementById("changeCourtForm").submit();
+				}
+			//}
+        }
+  		</script>
+	</body>
+	<form name="changeCourtForm" id="changeCourtForm" method="post" action="/gdcourts/changeCourt.do">
+	 <input type="hidden" name="selectedCourtsName" id="selectedCourtsName" value="Prince William General District Court"/>
+	 <input type="hidden" name="selectedCourtsFipCode" id="selectedCourtsFipCode" value='153'/>
+	<input type="hidden" name="sessionCourtsFipCode" id="sessionCourtsFipCode" value='153'/>
+	</form>
+	<script language="javascript">
+	//On back, if selectedCourtsName value has changed, put back the textbox value in the hidden value
+	if($("#selectedCourtsName").val() != $("#txtcourts1").val()){
+		$("#selectedCourtsName").val($("#txtcourts1").val());
+		$("#selectedCourtsFipCode").val($("#sessionCourtsFipCode").val());
+	}
+	var obj = document.getElementById("curentFipsCode");
+	if(obj !== null){
+		var formObj=document.getElementById("changeCourtForm");
+		if(formObj !== null){
+			obj.value= formObj.elements["sessionCourtsFipCode"].value;
+		}
+	}
+	function makeAriaLabel(text) {
+		return text.split('').join(' ');
+	}
+	function applyAriaLabels() {
+	    document.querySelectorAll(".case-number-read").forEach(function (el) {
+	        // For <input>, use value instead of textContent
+	        const text = (el.value || el.textContent || "").trim();
+	        el.setAttribute("aria-label", makeAriaLabel(text));
+	    });
+	}
+	document.addEventListener("DOMContentLoaded", applyAriaLabels);
+</script>
+</html>
