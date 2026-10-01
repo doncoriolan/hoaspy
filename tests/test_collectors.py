@@ -1962,5 +1962,81 @@ class TestVaGdcParsing(unittest.TestCase):
         self.assertTrue({"name", "url", "access", "coverage", "caveat"} <= set(mod.INFO))
 
 
+class TestPaUjsCaptionMatching(unittest.TestCase):
+    """Pennsylvania MDJ captions abbreviate the association ("Hemlock Farms
+    Community Assoc." in 331 of 411 cases, spelled out in 9), so pa_ujs
+    searches the name's leading words plus a stem and folds abbreviations
+    before comparing parties."""
+
+    @classmethod
+    def setUpClass(cls):
+        from hoaspy.collect.courts.court_portals import pa_ujs
+        cls.m = pa_ujs
+
+    def test_query_is_leading_words_plus_stem(self):
+        q = self.m.query_name
+        for name, want in (
+                ("HEMLOCK FARMS COMMUNITY ASSOCIATION", "HEMLOCK FARMS Comm%"),
+                ("Lake Meade Property Owners Association, Inc.", "Lake Meade Prop%"),
+                ("LAKEVIEW CONDOMINIUM ASSOCIATION", "LAKEVIEW Condo%"),
+                ("WALTON WOODS HOME OWNERS ASSOCIATION", "WALTON WOODS HOME%"),
+                ("The Estates of Warwick Community Association, a Planned Community",
+                 "The Estates of Warwick Comm%"),
+                ("ELK MANOR ESTATES HOA INC", "ELK MANOR ESTATES H%"),
+                ("GREEN HOA", "GREEN HOA%"),
+                # distinguishing words after the generic ones, a generic word
+                # first, or none at all: searched whole
+                ("Rental Property Owners' Association of Lebanon County",
+                 "Rental Property Owners' Association of Lebanon County%"),
+                ("RESIDENTS ASSOCIATION LIMA ESTATES", "RESIDENTS ASSOCIATION LIMA ESTATES%"),
+                ("Townhome, Inc.", "Townhome%"),
+                ("HOMES FOR MANHEIM", "HOMES FOR MANHEIM%")):
+            self.assertEqual(q(name), want, name)
+
+    def test_party_matches_folds_caption_abbreviations(self):
+        ok = self.m.party_matches
+        name = "HEMLOCK FARMS COMMUNITY ASSOCIATION"
+        for party in ("Hemlock Farms Community Assoc.", "Hemlock Farms Comm Assoc",
+                      "Hemlock Farms Comm.Assoc.", "HEMLOCK FARMS COMMUNITY ASSOCI",
+                      "Hemlock Farms Community Assn.", "Hemlock Farms Community"):
+            self.assertTrue(ok(party, name), party)
+        for party in ("Hemlock Farms", "Hemlock Farms Realty", "Hemlock Farms Condo Assoc",
+                      "Hemlock Farms Community Services LLC", ""):
+            self.assertFalse(ok(party, name), party)
+        self.assertTrue(ok("Lake Meade Propertyowners", "LAKE MEADE PROPERTY OWNERS ASSOCIATION INC"))
+        self.assertTrue(ok("Elk Manor Estates Home Owner's Assn", "ELK MANOR ESTATES HOA INC"))
+        self.assertTrue(ok("Green H.O.A.", "GREEN HOA"))
+        self.assertTrue(ok("Hazelwood Green Property Owners Association",
+                           "HAZELWOOD GREEN PROPERTY OWNERS ASS OCIATION"), "IRS field break")
+        self.assertFalse(ok("Southpointe II Property Owners Assoc",
+                            "SOUTHPOINTE PROPERTY OWNERS ASSOCIATION INC"), "a different body")
+        self.assertFalse(ok("Townhome Associates", "Townhome, Inc."))
+        self.assertTrue(ok("Mh Townhomes LLC", "Mh Townhomes Llc"), "the roster's own spelling")
+
+    def test_search_keeps_matching_parties_under_the_queried_name(self):
+        row = dict.fromkeys(self.m.COLS, "")
+        hits = [dict(row, docket_number="MJ-60302-CV-0000123-2019", court_type="Magisterial District",
+                     caption="Hemlock Farms Community Assoc. v. Doe, Jane", case_status="Closed",
+                     filing_date="04/02/2019", county="Pike", court_office="MDJ-60-3-02"),
+                dict(row, docket_number="MJ-43202-CV-0000099-1997", court_type="Magisterial District",
+                     caption="Weseloh & Co. v. Hemlock Farms Comm Assoc, et al", filing_date="07/09/1997",
+                     county="Monroe", court_office="MDJ-43-2-02"),
+                dict(row, docket_number="MJ-60302-CV-0000007-2020", court_type="Magisterial District",
+                     caption="Hemlock Farms Realty v. Roe, Sam", filing_date="01/09/2020")]
+        client = self.m.Client()
+        asked = []
+        client._post = lambda q: asked.append(q) or hits
+        recs = client.search("HEMLOCK FARMS COMMUNITY ASSOCIATION")
+        self.assertEqual(asked, ["HEMLOCK FARMS Comm%"])
+        self.assertEqual([r["docket_number"] for r in recs],
+                         ["MJ-60302-CV-0000123-2019", "MJ-43202-CV-0000099-1997"])
+        self.assertEqual([r["association_role"] for r in recs], [["plaintiff"], ["defendant"]])
+        # the queried name, not the caption's abbreviation, is what build_site joins on
+        self.assertEqual(recs[1]["associations"], ["HEMLOCK FARMS COMMUNITY ASSOCIATION"])
+        self.assertIn("Hemlock Farms Comm Assoc", recs[1]["case_name"])
+        self.assertEqual(recs[0]["date_filed"], "2019-04-02")
+        self.assertEqual(recs[0]["nature_of_suit"], "Magisterial District — Civil")
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)
