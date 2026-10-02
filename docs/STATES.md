@@ -1,13 +1,13 @@
 # State-by-state data coverage
 
-_Generated from `coverage.json` (updated 2026-09-29) by `hoaspy.build.make_states_md` — edit the JSON, not this file. One page per state lives in [`states/`](states/)._
+_Generated from `coverage.json` (updated 2026-10-02) by `hoaspy.build.make_states_md` — edit the JSON, not this file. One page per state lives in [`states/`](states/)._
 
 ## Coverage at a glance
 
 | Tier | States | What that means |
 |---|---|---|
-| **County lien index + state data** | FL, NY | recorded liens/foreclosure filings per community, plus registry or corporate status |
-| **State-level data** | AK, AL, AR, AZ, CA, CO, CT, DC, DE, GA, HI, IA, ID, IL, IN, KS, KY, LA, MA, MD, MI, MN, MO, MS, MT, NC, ND, NE, NM, NV, OH, OK, OR, PA, SC, TN, TX, UT, VA, VT, WA, WI, WV, WY | HOA registry, corporate registry with status, complaint data, or county/city HOA inventories |
+| **County lien index + state data** | FL, IL, NY | recorded liens/foreclosure filings per community, plus registry or corporate status |
+| **State-level data** | AK, AL, AR, AZ, CA, CO, CT, DC, DE, GA, HI, IA, ID, IN, KS, KY, LA, MA, MD, MI, MN, MO, MS, MT, NC, ND, NE, NM, NV, OH, OK, OR, PA, SC, TN, TX, UT, VA, VT, WA, WI, WV, WY | HOA registry, corporate registry with status, complaint data, or county/city HOA inventories |
 | **IRS tax-exempt roster only** | ME, NH, NJ, RI, SD | associations holding a 501(c) ruling in the IRS EO Business Master File (most HOAs file Form 1120-H and are absent) — no state registry or corporate bulk file |
 | **Courts only** |  | federal dockets + state appellate opinions (collected for every state) |
 
@@ -31,7 +31,7 @@ Every state has nationwide court coverage; the tiers describe what exists **beyo
 | [Hawaii (HI)](states/HI.md) | State-level data | HOA/condo registry, IRS tax-exempt associations |  |  |  |
 | [Iowa (IA)](states/IA.md) | State-level data | corporate registry, IRS tax-exempt associations |  |  | state_sources.yml |
 | [Idaho (ID)](states/ID.md) | State-level data | corporate registry, IRS tax-exempt associations |  |  | state_sources.yml |
-| [Illinois (IL)](states/IL.md) | State-level data | county/city HOA inventories, county condo-building inventory, IRS tax-exempt associations |  |  | gov_layers/IL.yml |
+| [Illinois (IL)](states/IL.md) | County lien index + state data | county/city HOA inventories, county condo-building inventory, IRS tax-exempt associations | Cook |  | gov_layers/IL.yml |
 | [Indiana (IN)](states/IN.md) | State-level data | county/city HOA inventories, IRS tax-exempt associations |  |  | gov_layers/IN.yml |
 | [Kansas (KS)](states/KS.md) | State-level data | county/city HOA inventories, IRS tax-exempt associations |  |  | gov_layers/KS.yml |
 | [Kentucky (KY)](states/KY.md) | State-level data | county/city HOA inventories, IRS tax-exempt associations |  |  | gov_layers/KY.yml |
