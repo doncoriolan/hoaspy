@@ -15,7 +15,7 @@ for other states' and counties' trial-court sites, and one subscriber feed
 | --- | --- | --- | --- | --- |
 | `get_courts` | all 50 states + DC | CourtListener v4 search API: RECAP federal dockets, state supreme/appellate opinions | anonymous, paced | `courts/dockets.jsonl`, `courts/opinions.jsonl`, `courts/sources.json` (top level) |
 | `get_tx_research` | Texas trial courts (participating county/district courts) | re:SearchTX (Office of Court Administration) | your own logged-in Cookie header; 200 searches/hour | `courts/tx_research.jsonl`, `sources.json["tx_research"]` |
-| `get_state_courts` + `court_portals/*` | AK, CT, MD, PA statewide; VA general district courts; Broward and Hillsborough counties FL; the Supreme Court of Ohio | each portal's own search (see the adapter table) | anonymous; Broward and Virginia through the local BrowserOS browser | `courts/trial_<KEY>.jsonl`, `sources.json["trial_courts"][KEY]` |
+| `get_state_courts` + `court_portals/*` | AK, CT, MD, PA statewide; VA general district courts; Broward and Hillsborough counties FL; the Supreme Court of Ohio | each portal's own search (see the adapter table) | anonymous; Broward and Virginia through the local BrowserOS browser; Maryland with your own browser's DataDome cookie | `courts/trial_<KEY>.jsonl`, `sources.json["trial_courts"][KEY]` |
 | `records_miamidade_civil` | Miami-Dade County, FL | Clerk's Commercial Data Services **Civil** FTP feed | subscriber FTP files staged by hand; public per-case links | `courts/trial_fl_miamidade.jsonl`, `sources.json["trial_courts"]["fl_miamidade"]` |
 
 Record counts per source are in `courts/sources.json` (rebuilt on every run)
@@ -147,7 +147,7 @@ new portal is one new file. `--list` prints them.
 | --- | --- | --- | --- |
 | `ak_courtview` | AK statewide trial courts, reliable from 1990 | CourtView public access; Wicket per-session encrypted `?x=` URLs scraped from each response; company search is starts-with | 500-case cap per search; no public deep link (`url` = portal root, `docket_number` re-enters) |
 | `ct_civil` | CT Superior Court civil, family, housing, all 16 districts | Party search (`PartySearch.aspx`), 200 rows/page, no cap; filing date/type/disposition from the stateless `LoadDocket.aspx?DocketNo=` deep link (one extra request per case) | "Starts With" on our registered spelling |
-| `pa_ujs` | PA statewide **Magisterial District Judge** dockets | UJS portal organization search with an antiforgery token; SQL-LIKE name with `%`; one 1900-to-today date range returns everything | Common Pleas civil dockets are *not* on this portal — small-claims / landlord-tenant tier only |
+| `pa_ujs` | PA statewide **Magisterial District Judge** dockets | UJS portal organization search with an antiforgery token; starts-with match (a leading `%` is ignored); one 1900-to-today date range returns everything. Captions abbreviate the association ("Hemlock Farms Community Assoc." in 331 of 411 cases, spelled out in 9), so `query_name` sends the words before the first generic association word plus that word's stem ("Hemlock Farms Comm%") and `party_matches` folds Assoc/Assn/Comm/Condo/Propertyowners/H.O.A. before comparing; `associations` carries the queried name, not the caption spelling, so build_site joins the roster's community instead of creating "Hemlock Farms Comm Assoc" | Common Pleas civil dockets are *not* on this portal — small-claims / landlord-tenant tier only. Names that open with a generic word or carry distinguishing words after it are still searched whole; misspelled captions are missed |
 | `oh_supreme` | **Supreme Court of Ohio**, every case since 1985 (appeals from the twelve District Courts of Appeals, the Board of Tax Appeals and the PUCO; original actions) — the state's highest court, not a trial court: records carry `level: "supreme"`, `lower_court`, `lower_court_case`, `county` and `disposition` | Clerk's online docket, one handler (`POST Ajax.ashx`): `CaseSearch` by `paramPartyEntityName` — an adjacent-word phrase, each word a prefix — then `GetCaseDetails` per case for the parties and their roles; needs only the `X-CSRF-TOKEN` constant published in the page's own `site.min.js` and a `Referer`; per-name queries on the distinctive core (and its `&`/`and` twin), then statewide `SWEEPS` of the association words ("condo", "homeowner", "owners assoc", …) kept only when the party is a community (`community_name`); deep link `#/caseinfo/<year>/<number>` | 1,000-row cap, newest first → split by filing-date window; county Common Pleas and municipal dockets are not here; amicus-only appearances are left out; lake, civic, village and townhome associations are not swept (too often not HOAs) and are found only by name |
 | `fl_broward` | Broward County / 17th Circuit civil division | eCaseView business-name search POSTed with a Cloudflare Turnstile token that only a real browser can mint, so each name runs in a throw-away BrowserOS context over CDP (`127.0.0.1:9100`), ~8–12 s per name; `COUNTIES = {BROWARD}` | 200-row cap, newest first, no paging; leading-word match on the DBPR core name; no deep link |
 | `fl_hillsborough` | Hillsborough County / 13th Circuit, filings from 1976 | HOVER JSON API: `LogAnonymous` mints a guid, `Case/Search` by business; `COUNTIES = {HILLSBOROUGH}` | 500-row cap with `start` ignored → split by filing-date window; PerimeterX blocks only the per-case summary call; no deep link |
@@ -169,6 +169,91 @@ results, `dedupe` merges the same case found under several names (union of
 `associations` and `queries`), and `sources.json["trial_courts"][KEY]` gets
 the adapter's `INFO` plus record/association/court counts. The checkpoint is
 cleared only when the run completes.
+
+### Maryland sweep — where it stands, and finishing it from another machine
+
+The first `md_casesearch` sweep is unfinished: DataDome refused this host
+twice and then named its IP as bot traffic, so the rest has to run from
+another network (or wait for the hold to lift). State on 2026-10-01:
+
+| | |
+| --- | --- |
+| Query list | 1,256 queries: 1,246 association names (Montgomery CCOC registry + IRS roster, longest first) followed by the 10 statewide `SWEEPS` |
+| Done | 440 names |
+| Left | 816 queries: 806 names, then all 10 sweeps (none has run) |
+| Collected | 15,412 cases after `dedupe` (16,708 checkpoint rows), 3,045 party spellings, 44 courts, filed 1977–2026. 12,709 are Montgomery County cases, because the roster is mostly Montgomery's registry; the sweeps are what reach the other counties |
+| Published | the partial file was built into the site on 2026-10-01 (Maryland went from 1,497 to 2,481 communities) and pushed to S3 |
+| Last attempts | 2026-10-01 04:14: HTTP 403 after one name (resume attempt 17). One probe at 14:17 with the old cookie: still 403 |
+
+What the portal tolerated, all from this one IP: about 340 requests at
+`--pace 1.5` with a copied cookie, then a 5½-hour hold; about 200 more at
+`--pace 5` with a fresh cookie; after that the IP itself was refused, even
+for fetches made inside a real Chrome (`cdp:` mode). No mode has completed a
+long run yet, so start slow (`--pace 5` or more) and expect to stop and
+resume.
+
+Files, all in `courts/` (git-ignored) and mirrored under `hoa-courts/` in S3:
+
+| File | What it is |
+| --- | --- |
+| `trial_md_casesearch.jsonl` | the output so far (what the site was built from) |
+| `.trial_md_casesearch_done.txt` | the 440 names already queried |
+| `.trial_md_casesearch_partial.jsonl` | every row found under those names |
+| `.trial_md_casesearch_remaining.txt` | the 816 queries left, in order, names then sweeps. Written by hand for this handoff on 2026-10-01; the driver does not maintain it |
+
+To finish on another machine:
+
+1. **Code.** A checkout of this repo, or of the public collectors repo
+   (`github.com/doncoriolan/hoaspy`, same `hoaspy/collect/`), with a venv and
+   `pip install -r requirements.txt`.
+2. **Checkpoint and inputs.** Put the three dot-files above and
+   `sources.json` in `courts/`, and the roster files in `records/` — the
+   "board of directors of" sweep keeps a party only when it names a community
+   we hold (`known_cores`), so without `records/` it keeps fewer. With S3
+   access (`config.yml` `s3:` block and credentials, [S3.md](S3.md)):
+
+   ```bash
+   ./venv/bin/python -m hoaspy.lib.s3_sync pull --prefix hoa-courts/ --dir courts \
+       .trial_md_casesearch_done.txt .trial_md_casesearch_partial.jsonl .trial_md_casesearch_remaining.txt sources.json
+   ./venv/bin/python -m hoaspy.lib.s3_sync pull --prefix hoa-records/ --dir records \
+       associations.jsonl state_corps.jsonl state_registries.jsonl irs_exempt_orgs.jsonl
+   ```
+
+   Without S3 access, copy the same files over with `scp`.
+3. **A browser the portal trusts, on that machine's network.** Either start
+   a real (not headless) Chrome there with `--remote-debugging-port=9612`,
+   open the portal, and put the single line `cdp: http://127.0.0.1:9612` in
+   `md_cookie.txt`; or copy the `Cookie:` and `User-Agent:` headers of a
+   `/api-caselist/v1/cases` request into `md_cookie.txt` (Configuration &
+   secrets below). Not tested: a cookie minted on a different IP than the
+   one the collector runs from, and Chrome under a virtual display on a
+   server with no screen.
+4. **Run.**
+
+   ```bash
+   ./venv/bin/python -m hoaspy.collect.courts.get_state_courts --portal md_casesearch \
+       --cookie-file md_cookie.txt --names courts/.trial_md_casesearch_remaining.txt --pace 5 --no-upload
+   ```
+
+   The driver loads the checkpoint, skips what is done, and on every stop
+   rewrites `trial_md_casesearch.jsonl` with everything collected so far —
+   the 15,412 cases above plus the new ones — so the file is always safe to
+   copy back. Exit 3 is a refusal (4 a rate limit): refresh the cookie (or
+   reload the Chrome tab) and run the same command again. The checkpoint files are deleted
+   when the last query finishes. Do not pass `--fresh`; it discards the
+   checkpoint.
+5. **Bring it back.** From the other machine push `trial_md_casesearch.jsonl`
+   and `sources.json` (`s3_sync push --prefix hoa-courts/ --dir courts …`;
+   plus the two checkpoint files if the run is still unfinished), then here:
+
+   ```bash
+   ./venv/bin/python -m hoaspy.lib.s3_sync pull --force --prefix hoa-courts/ --dir courts trial_md_casesearch.jsonl sources.json
+   ```
+
+   `--force` replaces the local copies, so pull `sources.json` only if no
+   collector has written to it here in the meantime. Then rebuild
+   ([Run it](#run-it) and PIPELINE.md), and update this section, the MD row
+   in NEEDS.md §3d and the Maryland note in `coverage.json`.
 
 ## Miami-Dade Civil feed — `records_miamidade_civil`
 
@@ -222,6 +307,7 @@ entry adds link/ZIP/plaintiff/defendant counts and the feed statistics.
 ./venv/bin/python -m hoaspy.collect.courts.get_state_courts --all --wait-on-quota      # every anonymous adapter
 ./venv/bin/python -m hoaspy.collect.courts.get_state_courts --portal fl_broward         # needs BrowserOS running (NEEDS.md 3c)
 ./venv/bin/python -m hoaspy.collect.courts.get_state_courts --portal md_casesearch --cookie-file md_cookie.txt   # Maryland: your browser's datadome cookie
+./venv/bin/python -m hoaspy.collect.courts.get_state_courts --portal md_casesearch --cookie-file md_cookie.txt --no-sweeps --limit 50 -v
 # Virginia general district courts: BrowserOS running; names from the IRS roster (courts/.trial_va_gdc_names.txt), ~5–7 h
 ./venv/bin/python -m hoaspy.collect.courts.get_state_courts --portal va_gdc --names courts/.trial_va_gdc_names.txt --pace 0.5 --wait-on-quota
 HOASPY_VA_GDC_COURTS=059,153 ./venv/bin/python -m hoaspy.collect.courts.get_state_courts --portal va_gdc --limit 5 -v   # two courts, five names
@@ -301,7 +387,8 @@ from the same case dicts by `hoaspy/build/build_map.py` (MAP.md).
   for 5½ h, resumed with a fresh cookie at `--pace 5`, refused again after
   ~200 requests, then held with the IP named — 440 of 1,256 names done
   (15,412 cases); the remaining names and the statewide sweeps resume from
-  the checkpoint when the hold lifts, or from another network.
+  the checkpoint when the hold lifts, or from another network (the handoff
+  is written up under "Maryland sweep — where it stands" above).
   `fl_broward` needs the BrowserOS browser up with CDP on `127.0.0.1:9100`
   (NEEDS.md §3c).
 - **Miami-Dade feed:** FTP credentials are the subscriber's and are not in
@@ -357,7 +444,16 @@ check, 429 → `QuotaError`, 401 → `PermissionError`, name loader),
 `TestMiamiDadeCivilFeed` (association tiers, daily and indebtedness zips to
 records, OCS link), `TestDataIntegrity.test_trial_court_files_have_docket_shape`
 (every `trial_*.jsonl` has the shape `add_courts` folds in), `TestCourtFlags`
-(trial vs federal labels, level stamping, ZIP/county carried onto cases),
+(trial vs federal vs supreme labels, level stamping, ZIP/county carried onto cases,
+Maryland governing-body forms attaching to the registered community),
+`TestMdCaseSearchParsing` (query prefix and match core from a registry
+name, what a name query and each sweep keep and drop, role merging, the
+600-row date split, 403/404/429 answers, the driver's IRS names and
+`SWEEPS`),
+`TestVaGdcParsing` (search prefixes per level, the party gate on clerk
+misspellings and look-alikes, civil-only court list, result and detail
+parsing, one record per base case, narrowing a flooded prefix, redoing a
+court after a session timeout, placeholder-only fixtures),
 `TestOhSupremeParsing` (search phrase from a roster name and its `&`/`and`
 twin, the same-community and sweep gates on real docket parties, the
 supreme-court record shape, amicus and alias rows left out, the 1,000-row

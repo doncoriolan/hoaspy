@@ -44,6 +44,27 @@ each able to create new entities or attach to existing ones:
    `association_role` onto the case and uses `county` as the match hint)
 6. news (`news/articles.jsonl`, when present)
 
+## Where a community is (`hoaspy/build/places.py`)
+
+A community's `city` / `zip` / `address` come from the first record that
+carries them, but only when that record places it in its own state:
+
+- `Builder.take_location` skips a record whose ZIP is in another state
+  (`zip_state`, a USPS three-digit prefix table) — a registered agent's,
+  manager's or developer's mailing address — and drops a "city" that is a
+  street line or PO box (`is_address_line`; the NC OneMap mailing-city column
+  does this for ~2k parcels). A Fort Lauderdale condo used to read
+  "Boston, FL" from its manager's Sunbiz address.
+- `Builder.validate_locations` runs last: a location still in another state
+  is cleared, a street-line city is cleared, and every remaining city is
+  checked against the Census 2023 gazetteer (places + county subdivisions,
+  cached under `.cache/geocode/`; `norm_place` expands Ft./N./St. and strips
+  "city/town/CDP/township"). A city the gazetteer knows only in *other*
+  states is cleared when no in-state ZIP vouches for it; USPS-only names
+  (Flushing, Coconut Grove, Hallandale) stay and count as *unverified*. The
+  counts land in `meta.json` `stats.locations` and the build log.
+- The learned ZIP → county map is keyed by state for the same reason.
+
 ## Name normalization
 
 `normalize()`: uppercase, strip punctuation, expand ASSN/ASSOC→ASSOCIATION,
@@ -70,6 +91,34 @@ Building" condo, and multi-party court captions naming a bank *and* a real
 HOA all stay in. ~418 records excluded as of 2026-08. Non-community industry
 orgs (insurers, realtor boards, utility co-ops) are additionally excluded
 from SEO profile pages by `NON_COMMUNITY_RE` in build_seo.py.
+
+## Court parties that never become communities
+
+Trial-court portals match parties on leading words, so a query for
+"GOLDEN LAKES, A CONDO" also returned *Golden Lakes Medical Center Inc*,
+and *Third Avenue Chiropractic Ctr* came back for a Third Avenue condo.
+`Builder.party_ok` (using `party_is_association` / `looks_like_association`
+from the collectors' `court_portals/_common.py`) decides whether a party
+that matches no existing community may become one: yes if it carries an
+association marker (association, assn, HOA/POA/COA, condominium, homeowners,
+property owners, townhomes, cooperative, board of managers) and is not a
+business (`has_business_form`: an owner form LLC/LP, Ltd/PLLC without the
+full word Association, or a business activity — finance, mortgage, bank,
+insurance/underwriters, realty, management, services, associates, leasing,
+apartments — *after* the last association word, so "Homeowners Finance Co."
+and "Community Association Underwriters" are out while "Left Bank
+Condominium Association" and "Property Owners Association, Ltd." are in), or
+if it is the queried association's core name plus entity/association
+suffixes. Everything else is dropped and counted
+(`stats.court_parties_dropped`); a party that *does* match an existing
+community still attaches. The same test keeps corporate-registry rows with a
+business form (developer LLCs, "Homeowners Finance Co.") from becoming
+communities, and runs inside the Broward and Hillsborough adapters at
+collection time.
+
+An LLM second opinion (`hoaspy/build/llm_audit.py`, LLM_AUDIT.md)
+runs over the built index and the next build drops confident business
+verdicts that no registry backs, and clears or respells cities.
 
 ## Cross-source matching (deliberately conservative)
 
@@ -100,6 +149,7 @@ entities in Broward or with no county).
 | Federal housing/civil-rights, debt-collection suits | nature-of-suit | serious |
 | Insurance case | nature-of-suit | info (usually the association suing its insurer) |
 | State appellate case | opinion in caption | warning |
+| Taken to the state supreme court | docket with `level: supreme` (Supreme Court of Ohio); the detail carries the appeal type and the outcome | warning |
 | Consumer complaints (SC) | SCDCA complaint rows | info/warning |
 | Timeshare/resort context | name pattern + liens | info (contextualizes inflated counts) |
 | No adverse records | nothing above fired | good — with an explicit absence-of-coverage caveat |
@@ -161,6 +211,13 @@ the map panel when the data file is absent.
 
 ## Search ordering (site/app.js)
 
+The default list with no query ("Highest caution scores", or "Most liens on
+file" with a state picked) is filtered to names that read as an association
+(`looksLikeHoa`: association word, no business form — the same vocabulary as
+the build's party gate) so a landlord or clinic can never headline the front
+page; every indexed name stays searchable.
+
+
 - A query that exactly matches a **city or county name** is a place browse:
   communities located there first, ordered by liens (then foreclosures, then
   score), with communities merely *named* after the place appended after.
@@ -188,20 +245,37 @@ flags, or the caution score.
 
 ## Member-submitted record links (serve.py `submissions` + site/contribute.html)
 
-Links members bring back from their state's own court/lien/agency portals.
-Kept apart from the collected records exactly like reviews — same database,
-same sign-in, never fetched by us — but unlike reviews they *do* feed the
-verdict once described.
+Records members bring back from their state's own court/lien/agency portals.
+Most of those portals give a case no address of its own, so a record is
+stored as *where to find it*: the source's address (`url`), the case or
+instrument number (`ref`) and what to type into the source's search
+(`search_term`). Kept apart from the collected records exactly like reviews
+— same database, same sign-in, never fetched by us — but unlike reviews
+they *do* feed the verdict once described.
 
 - `submissions`: `entity_id` (nullable — a community we don't index is keyed
   by `state` + `hoa_key`, the app.js-folded name), `kind` ∈ court_case /
   recorded_document / agency_record / news / hoa_document / other,
   `category` ∈ the `SUB_CATEGORIES` vocabulary that `site/verdict.js`
   scores (test-enforced identical), `url` (http/https, host with a dot, no
-  userinfo, ≤2000 chars), optional title / ref / `event_date`
-  (YYYY[-MM[-DD]]) / notes; `status` pending → approved | rejected.
-  UNIQUE(user_id, url): re-posting edits the description and requeues.
-  30 per member per day.
+  userinfo, ≤2000 chars — the record's own page, or the portal it was found
+  on), optional `ref` (case / instrument number, ≤80) / `search_term`
+  (≤200) / title / `event_date` (YYYY[-MM[-DD]]) / notes; `status` pending
+  → approved | rejected. A member's record is its `url` plus its `ref` —
+  or, with no `ref`, its `url` plus its `search_term`: re-posting that
+  edits the description and requeues, anything else is a new row, so
+  several cases found on one portal are several rows. 30 per member per day.
+- `site/portals.json` decides where a member is sent: per state `courts`
+  (each with `scope`, `access`, `search`, optional `indexed`, and
+  `level: "supreme"` on a state supreme court docket — indexed, shown as
+  checked, but never counted as the state's trial courts), `liens`
+  (optional `scope` — "Broward County" ties the source to one county, none
+  means statewide — and `indexed: true` where HOA Spy collects it), `corp`
+  and `hoa_registry` (`indexed: true` where HOA Spy holds the registry),
+  plus the shared `federal` list. The contribute page recommends, one at a
+  time, only the sources for the member's county that are not `indexed`
+  (SUBMISSIONS.md); a county
+  `scope` also feeds the clerk-domain table in `counties.json`.
 - Visibility: `approved` to everyone (as "Member #N"); a member always sees
   their own in any status. `submissions.py export` writes
   `records/member_links.jsonl` (member id only, no email) for a future
@@ -223,7 +297,7 @@ verdict once described.
   association, then approve. Reject uploads-by-proxy, social posts, and
   anything naming a private person beyond the record.
 
-## Counties and clerk searches (site/counties.json, site/geo.js)
+## Counties and clerk searches (site/counties.json, site/geo.js, site/places.js)
 
 `make_counties.py` writes `site/counties.json` from the Census Bureau county
 gazetteer: every county-equivalent per state, spelled the way the index
@@ -232,10 +306,24 @@ independent cities as "Fairfax City"; Connecticut's eight legacy counties
 rather than the 2024 planning regions; NYC borough aliases). `clerks` maps
 county → clerk-of-court web domain, merged from county-scoped `portals.json`
 entries and the hand-maintained `CLERK_DOMAINS` table in the script.
-`geo.js` (`HW_GEO`) serves both pages: the full county menus, and the
-"Google the county clerk" link — `site:*<domain> <HOA name>` when a domain
-is known, otherwise `<HOA name> "<County> County" clerk records`. Regenerate
-with `./venv/bin/python -m hoaspy.build.make_counties`; `--check` reports drift.
+`geo.js` (`HW_GEO`) serves both pages the full county menus and the clerk
+domain of a county. `places.js` (`HW_PLACES`) turns the portal guide and
+that domain into the places where a county's records can be searched:
+`clerkSite(guide, state, county)` is the clerk's own website
+(`https://<domain>/`), offered where a domain is on file and the guide
+lists no court search for that county; `list(…)` is every place for the
+county — its own court search, the clerk's site, its lien index, then the
+state's court, lien, corporate and registry portals, never another
+county's — and `top(…, n)` the first few a visitor can use (not `paid`, not
+`none`). The search page's report line and empty state show `top(…, 3)`;
+the contribute page adds `clerkSite` to its sources. Until 2026-10-01 both
+pages built a Google query instead (`site:*<domain> <HOA name>`); clerks
+keep dockets and recorded liens behind their own search forms, so it rarely
+reached them. `HW_GEO.clerkQuery` / `clerkUrl` / `clerkLabel` are still in
+`geo.js`, unused, only so a browser holding an older cached `app.js` keeps
+working (DEPLOY.md, the four-hour cache) — delete them in a later release.
+Regenerate `counties.json` with `./venv/bin/python -m
+hoaspy.build.make_counties`; `--check` reports drift.
 
 ## Verdict (site/verdict.js)
 
