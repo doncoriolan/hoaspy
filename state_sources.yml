@@ -1,0 +1,272 @@
+# Per-state collectable sources, consumed by get_states.py.
+# kinds: socrata_corp | socrata_registry | csv_corp | csv_registry | arcgis_corp | tecuity_corp
+# coverage: "all" (dataset carries status incl. inactive) | "active_only"
+
+AK:
+  # Browser-downloaded from DCCED Data Downloads (Akamai-guarded to scripts).
+  # Active-entity roster: statuses are Good Standing / Non-Compliant only —
+  # dissolved corporations are absent, hence active_only.
+  - kind: csv_corp
+    source: "Alaska DCCED — Corporations database download"
+    page: "https://www.commerce.alaska.gov/cbp/main/"
+    local_cache: ".cache/ak/CorporationsDownload.csv"
+    coverage: active_only
+    fields:
+      record_id: ENTITYNUMBER
+      name: LEGALNAME
+      status: STATUS
+      address: ENTITYPHYSADDRESS1
+      city: ENTITYPHYSCITY
+      zip: ENTITYPHYSZIP
+      incorporated: AKFORMEDDATE
+      agent: REGISTEREDAGENT
+      type: CORPTYPE
+    # Companion "Officials Download" CSV from the same Data Downloads page
+    # (browser-downloaded 2026-09-02): current officers/directors keyed by
+    # the parent entity number. Optional — skipped if the file is absent.
+    officials:
+      local_cache: ".cache/ak/OfficialsDownload.csv"
+      key: ParentEntityNumber
+      last: OfficialLastOrEntityName
+      first: OfficialFirstName
+      title: OfficialTitle
+
+MS:
+  # Browser-exported from the SOS corp-reporting tool (nonprofit corporations,
+  # all statuses incl. Dissolved/Revoked). NameReserved rows are name
+  # reservations, not corporations.
+  - kind: csv_corp
+    source: "Mississippi Secretary of State — corp-reporting nonprofit export"
+    page: "https://corp.sos.ms.gov/corpreporting/"
+    local_cache: ".cache/Mississippi.xlsx"
+    xlsx: true
+    coverage: all
+    exclude_status: "NameReserved"
+    fields:
+      record_id: BusinessId
+      name: BusinessName
+      status: Status
+      address: AddressLine1
+      city: City
+      county: County
+      zip: PostalCode
+      incorporated: FormationDate
+      type: EntityType
+
+OH:
+  # Browser-downloaded monthly new-filings reports (domestic nonprofit
+  # articles). One file per month in .cache/oh/ — drop more months in and
+  # re-run. New incorporations only, no status: coverage stays partial.
+  - kind: csv_corp
+    source: "Ohio Secretary of State — monthly business filings reports"
+    page: "https://www.ohiosos.gov/business/business-reports"
+    local_glob: ".cache/oh/*.txt"
+    dedupe: true
+    coverage: partial
+    fields:
+      record_id: "CHARTER NUMBER"
+      name: "BUSINESS NAME"
+      status: ""
+      address: ""          # filing address is usually the attorney's, not the community's
+      city: "BUSINESS CITY"
+      county: "COUNTY"
+      zip: ""
+      incorporated: "EFFECTIVE DATE"
+      agent: "AGENT ADDRESS NAME"
+      type: "TRANSACTION CODE DESCRIPTION"
+
+CO:
+  - kind: socrata_corp
+    source: "Colorado Secretary of State — Business Entities (Colorado Information Marketplace)"
+    page: "https://data.colorado.gov/Business/Business-Entities-in-Colorado/4ykn-tg5h"
+    domain: data.colorado.gov
+    dataset: 4ykn-tg5h
+    coverage: all
+    fields:
+      record_id: entityid
+      name: entityname
+      status: entitystatus
+      address: principaladdress1
+      city: principalcity
+      zip: principalzipcode
+      incorporated: entityformdate
+      agent: [agentfirstname, agentlastname]
+      type: entitytype
+
+ID:
+  - kind: tecuity_corp
+    source: "Idaho Secretary of State — SOSBiz business search API (partial extract)"
+    page: "https://sosbiz.idaho.gov/search/business"
+    url: "https://sosbiz.idaho.gov/api/Records/businesssearch"
+
+ND:
+  - kind: tecuity_corp
+    source: "North Dakota Secretary of State — FirstStop business search API (partial extract)"
+    page: "https://firststop.sos.nd.gov/search/business"
+    url: "https://firststop.sos.nd.gov/api/Records/businesssearch"
+
+IA:
+  - kind: csv_corp
+    source: "Iowa Secretary of State — Active Iowa Business Entities (Iowa Data Hub)"
+    page: "https://data.iowa.gov/catalog/dataset/554"
+    url: "https://idh-be.iowa.gov/api/v1/datasets/554/rows.csv"
+    local_cache: ".cache/ia_business.zip"
+    zip: true
+    coverage: active_only
+    fields:
+      record_id: corp_number
+      name: legal_name
+      status: ""
+      address: ho_address_1
+      city: ho_city
+      zip: ho_zip
+      incorporated: effective_date
+      agent: registered_agent
+      type: corporation_type
+
+DC:
+  - kind: arcgis_corp
+    source: "DC DLCP — Corporate Registrations (Open Data DC)"
+    page: "https://opendata.dc.gov/datasets/DCGIS::corporate-registration"
+    url: "https://maps2.dcgis.dc.gov/dcgis/rest/services/DCGIS_DATA/Business_Licensing_and_Grants_WebMercator/FeatureServer/0/query"
+    coverage: all
+    fields:
+      record_id: FILE_NUMBER
+      name: BUSINESS_NAME
+      status: ENTITY_STATUS
+      address: BUSNIESS_ADDRESS_LINE1
+      city: BUSINESS_CITY
+      zip: ZIPCODE
+      incorporated: EFFECTIVE_DATE
+      agent: RA_NAME
+      type: MODELTYPE
+
+NY:
+  - kind: socrata_corp
+    source: "NYS Department of State — Active Corporations (data.ny.gov)"
+    page: "https://data.ny.gov/Economic-Development/Active-Corporations-Beginning-1800/n9v6-gdp6"
+    domain: data.ny.gov
+    dataset: n9v6-gdp6
+    coverage: active_only
+    fields:
+      record_id: dos_id
+      name: current_entity_name
+      status: ""
+      address: dos_process_address_1
+      city: dos_process_city
+      county: county
+      zip: dos_process_zip
+      incorporated: initial_dos_filing_date
+      agent: dos_process_name
+      type: entity_type
+
+PA:
+  - kind: socrata_corp
+    source: "PA Department of State — Registered Businesses (data.pa.gov)"
+    page: "https://data.pa.gov/d/xvd7-5r2c"
+    domain: data.pa.gov
+    dataset: xvd7-5r2c
+    coverage: active_only
+    dedupe: record_id
+    fields:
+      record_id: filing_number
+      name: business_name
+      status: ""
+      address: address_line1
+      city: city
+      county: shortcountyname
+      zip: zip
+      incorporated: creationdate
+      agent: [first_name, last_name]
+      type: typeofbusinessregistration
+
+CT:
+  - kind: socrata_corp
+    source: "Connecticut Secretary of the State — Business Registry Master (data.ct.gov)"
+    page: "https://data.ct.gov/d/n7gp-d28j"
+    domain: data.ct.gov
+    dataset: n7gp-d28j
+    coverage: all
+    where: "status != 'Expired Reservation'"
+    fields:
+      record_id: accountnumber
+      name: name
+      status: status
+      address: ""
+      city: ""
+      zip: ""
+      incorporated: date_registration
+      agent: ""
+      type: ""
+
+VA:
+  - kind: csv_registry
+    source: "Virginia DPOR — Common Interest Community Board registered associations"
+    page: "https://www.dpor.virginia.gov/RegulantLists"
+    url: "https://www.dpor.virginia.gov/sites/default/files/Records%20and%20Documents/Regulant%20List/0550__crnt.txt"
+    delimiter: "\t"
+    fields:
+      record_id: "CERTIFICATE #"
+      name: "BUSINESS NAME"
+      status: "LICENSE RANK"
+      address: "FIRST LINE ADDRESS"
+      city: "CITY"
+      zip: "FIVE DIGIT ZIP CODE"
+      incorporated: "CERTIFICATION DATE"
+  - kind: csv_registry
+    source: "Virginia DPOR — registered condominiums"
+    page: "https://www.dpor.virginia.gov/RegulantLists"
+    url: "https://www.dpor.virginia.gov/sites/default/files/Records%20and%20Documents/Regulant%20List/0517__crnt.txt"
+    delimiter: "\t"
+    fields:
+      record_id: "CERTIFICATE #"
+      name: "BUSINESS NAME"
+      status: "LICENSE RANK"
+      address: "FIRST LINE ADDRESS"
+      city: "CITY"
+      zip: "FIVE DIGIT ZIP CODE"
+      incorporated: "CERTIFICATION DATE"
+
+OR:
+  - kind: socrata_corp
+    source: "Oregon Secretary of State — Active Businesses (data.oregon.gov)"
+    page: "https://data.oregon.gov/Business/Active-Businesses-ALL/tckn-sxa6"
+    domain: data.oregon.gov
+    dataset: tckn-sxa6
+    coverage: active_only
+    dedupe: record_id
+    fields:
+      record_id: registry_number
+      name: business_name
+      status: ""            # dataset is active-only; no status column
+      address: address      # registered agent's address
+      city: city
+      zip: zip
+      incorporated: registry_date
+      agent: [first_name, last_name]
+      type: entity_type
+
+MD:
+  # Montgomery County DHCA — Commission on Common Ownership Communities (CCOC)
+  # registration list. Every HOA/condo/co-op in the county must register
+  # annually; the public list app exports the whole roster as CSV.
+  # County-level only: Maryland has no statewide registry (PG County's COC
+  # program sits behind a WAF; other counties have none).
+  - kind: csv_registry
+    source: "Montgomery County DHCA — registered common ownership communities (CCOC)"
+    page: "https://www.montgomerycountymd.gov/department-housing-community-affairs/common-ownership-communities-coc"
+    url: "https://apps.montgomerycountymd.gov/DHCA-Licensing/COC/Export?outputFormat=COC"
+    local_cache: ".cache/md/COCList.csv"
+    constants:
+      County: Montgomery
+      Status: "registered COC (Montgomery County)"
+    fields:
+      record_id: "Registration Number"
+      name: Community
+      status: Status
+      address: Street
+      city: City
+      county: County
+      zip: "Zip Code"
+      units: "Unit Count"
+

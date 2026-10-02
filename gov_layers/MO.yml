@@ -1,0 +1,47 @@
+# Missouri — city registries (MO SoS search sits behind a Cloudflare challenge).
+# Survey: scratchpad/survey_A/MO.md.
+# Skipped: City of St. Louis registered-neighborhood-org API
+# (https://api.stlouis-mo.gov/v1/neighborhoods/registered-neighborhood-orgs) — 8 rows in a
+# bespoke JSON envelope ({metadata, data}), not one of the arcgis|socrata|csv kinds;
+# Jackson County ParcelCondominiums (parcel ids, no names); St. Louis County Subdivisions
+# 2024 (45 plat applications); St. Charles County subdivisions (404).
+
+- kind: socrata
+  source: "Kansas City MO — registered neighborhood/homes associations (Open Data KC)"
+  page: "https://data.kcmo.org/dataset/Registered-Neighborhood-Homes-Associations/gctf-zc2y"
+  url: "https://data.kcmo.org/resource/pvda-3rmd.json"
+  # grouptype types the rows: keep Homes Associations plus anything association-named
+  # (drops councils, coalitions, block clubs, watch groups).
+  where: "grouptype = 'Homes Association' OR upper(grouptitle) like '%ASSOC%' OR upper(grouptitle) like '%HOMEOWNER%' OR upper(grouptitle) like '% HOA%'"
+  fields: {name: grouptitle, status: status, status_detail: grouptype, record_id: groupid}
+  constants: {city: Kansas City}
+
+- kind: arcgis
+  source: "Kansas City MO — registered neighborhood associations (city GIS, current)"
+  page: "https://mapd.kcmo.org/kcgis/rest/services/AGOL/MapServer/18"
+  url: "https://mapd.kcmo.org/kcgis/rest/services/AGOL/MapServer/18"
+  where: "GROUPTYPE LIKE 'Homes%' OR UPPER(GROUPTITLE) LIKE '%ASSOC%' OR UPPER(GROUPTITLE) LIKE '%HOMEOWNER%' OR UPPER(GROUPTITLE) LIKE '% HOA%'"
+  fields: {name: GROUPTITLE, address: CONTACT_ADDRESS, city: CONTACT_CITY, zip: CONTACT_ZIP,
+           status: STATUS, status_detail: GROUPTYPE, record_id: GROUPID}
+  constants: {city: Kansas City}
+
+- kind: arcgis
+  source: "Columbia MO — neighborhood associations (city open data)"
+  page: "https://gis.gocolumbiamo.com/arcgis/rest/services/Open_Data/Neighborhood_Associations/MapServer/0"
+  url: "https://gis.gocolumbiamo.com/arcgis/rest/services/Open_Data/Neighborhood_Associations/MapServer/0"
+  fields: {name: NEIGHBORHO, status_detail: Council_Ward}
+  constants: {city: Columbia, county: Boone, status: "neighborhood association (city-recognized)"}
+
+- kind: arcgis
+  source: "Springfield MO — registered neighborhood organizations (city GIS)"
+  page: "https://services1.arcgis.com/aOss8CrQf3pARS5q/arcgis/rest/services/Neighborhood_Organizations/FeatureServer/14"
+  url: "https://services1.arcgis.com/aOss8CrQf3pARS5q/arcgis/rest/services/Neighborhood_Organizations/FeatureServer/14"
+  fields: {name: ORGANIZATI}
+  constants: {city: Springfield, county: Greene, status: "registered neighborhood organization"}
+
+- kind: arcgis
+  source: "Independence MO — home owners association districts (city GIS)"
+  page: "https://gisportal.indepmo.org/giscoi/rest/services/Cadastral/Properties_and_Records/FeatureServer/5"
+  url: "https://gisportal.indepmo.org/giscoi/rest/services/Cadastral/Properties_and_Records/FeatureServer/5"
+  fields: {name: ASSOCNAME, status: CORPORATIONSTATUS}
+  constants: {city: Independence, county: Jackson}

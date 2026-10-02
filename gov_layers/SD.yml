@@ -1,0 +1,12 @@
+# South Dakota — no statewide registry. Sioux Falls registers voluntary neighborhood/resident
+# associations (22); only association-looking names are kept. The layer carries contact
+# name/e-mail/phone columns — never map them.
+# Skipped: Sioux Falls Subdivisions and Rapid City plats (plat names only); Minnehaha County
+# parcels (owner names, city excluded — weak).
+- kind: arcgis
+  source: "Sioux Falls SD — registered neighborhood associations (association-named only)"
+  page: "https://www.arcgis.com/home/item.html?id=1ad7f0ddd2a94f5c8c568a8fcf65bb16"
+  url: "https://gis.siouxfalls.gov/arcgis/rest/services/Data/Community/MapServer/32"
+  fields: {name: AssocName, address: AssocAddr, city: AssocCity, status_detail: Name, record_id: OBJECTID}
+  name_filter: true
+  constants: {city: Sioux Falls, county: Minnehaha}

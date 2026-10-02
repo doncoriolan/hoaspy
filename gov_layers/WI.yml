@@ -1,0 +1,111 @@
+# Wisconsin — the DFI HOA registry is collected separately (get_wi_dfi.py);
+# these layers add the associations that own common-area parcels (with mailing
+# addresses, condos included) plus the county condominium plat indexes and the
+# City of Madison's typed association list.
+# Skipped: Green Bay neighborhood associations (a web-map feature collection,
+# not a queryable service; voluntary NAs with presidents' contact details),
+# Dane County Parcels/MapServer/7 (service not started — the PlatBoundaries
+# layer carries the same condominium plats), Waukesha condo index (scanned PDF).
+
+# The statewide parcel service (3.57M rows) aborts any query that runs past
+# ~55 s, and a single owner-name LIKE over the whole table does — so the
+# filter is split into OBJECTID ranges of 400k rows, one owner-name term each
+# (54 queries, ~10-30 s apiece; the run takes 15-30 minutes).
+- kind: arcgis
+  source: "WI DOA Statewide Parcel Map V12 (2026) — association-owned parcels, owner name + mailing address"
+  page: "https://www.sco.wisc.edu/parcels/data/"
+  url: "https://services3.arcgis.com/n6uYoouQZW75n5WI/arcgis/rest/services/Wisconsin_Statewide_Parcels_DB/FeatureServer/0"
+  where:
+    - "OBJECTID BETWEEN 1 AND 400000 AND OWNERNME1 LIKE '%OWNERS%'"
+    - "OBJECTID BETWEEN 400001 AND 800000 AND OWNERNME1 LIKE '%OWNERS%'"
+    - "OBJECTID BETWEEN 800001 AND 1200000 AND OWNERNME1 LIKE '%OWNERS%'"
+    - "OBJECTID BETWEEN 1200001 AND 1600000 AND OWNERNME1 LIKE '%OWNERS%'"
+    - "OBJECTID BETWEEN 1600001 AND 2000000 AND OWNERNME1 LIKE '%OWNERS%'"
+    - "OBJECTID BETWEEN 2000001 AND 2400000 AND OWNERNME1 LIKE '%OWNERS%'"
+    - "OBJECTID BETWEEN 2400001 AND 2800000 AND OWNERNME1 LIKE '%OWNERS%'"
+    - "OBJECTID BETWEEN 2800001 AND 3200000 AND OWNERNME1 LIKE '%OWNERS%'"
+    - "OBJECTID BETWEEN 3200001 AND 3600000 AND OWNERNME1 LIKE '%OWNERS%'"
+    - "OBJECTID BETWEEN 1 AND 400000 AND OWNERNME1 LIKE '%CONDO%'"
+    - "OBJECTID BETWEEN 400001 AND 800000 AND OWNERNME1 LIKE '%CONDO%'"
+    - "OBJECTID BETWEEN 800001 AND 1200000 AND OWNERNME1 LIKE '%CONDO%'"
+    - "OBJECTID BETWEEN 1200001 AND 1600000 AND OWNERNME1 LIKE '%CONDO%'"
+    - "OBJECTID BETWEEN 1600001 AND 2000000 AND OWNERNME1 LIKE '%CONDO%'"
+    - "OBJECTID BETWEEN 2000001 AND 2400000 AND OWNERNME1 LIKE '%CONDO%'"
+    - "OBJECTID BETWEEN 2400001 AND 2800000 AND OWNERNME1 LIKE '%CONDO%'"
+    - "OBJECTID BETWEEN 2800001 AND 3200000 AND OWNERNME1 LIKE '%CONDO%'"
+    - "OBJECTID BETWEEN 3200001 AND 3600000 AND OWNERNME1 LIKE '%CONDO%'"
+    - "OBJECTID BETWEEN 1 AND 400000 AND OWNERNME1 LIKE '%HOA%'"
+    - "OBJECTID BETWEEN 400001 AND 800000 AND OWNERNME1 LIKE '%HOA%'"
+    - "OBJECTID BETWEEN 800001 AND 1200000 AND OWNERNME1 LIKE '%HOA%'"
+    - "OBJECTID BETWEEN 1200001 AND 1600000 AND OWNERNME1 LIKE '%HOA%'"
+    - "OBJECTID BETWEEN 1600001 AND 2000000 AND OWNERNME1 LIKE '%HOA%'"
+    - "OBJECTID BETWEEN 2000001 AND 2400000 AND OWNERNME1 LIKE '%HOA%'"
+    - "OBJECTID BETWEEN 2400001 AND 2800000 AND OWNERNME1 LIKE '%HOA%'"
+    - "OBJECTID BETWEEN 2800001 AND 3200000 AND OWNERNME1 LIKE '%HOA%'"
+    - "OBJECTID BETWEEN 3200001 AND 3600000 AND OWNERNME1 LIKE '%HOA%'"
+    - "OBJECTID BETWEEN 1 AND 400000 AND OWNERNME1 LIKE '%TOWNHO%'"
+    - "OBJECTID BETWEEN 400001 AND 800000 AND OWNERNME1 LIKE '%TOWNHO%'"
+    - "OBJECTID BETWEEN 800001 AND 1200000 AND OWNERNME1 LIKE '%TOWNHO%'"
+    - "OBJECTID BETWEEN 1200001 AND 1600000 AND OWNERNME1 LIKE '%TOWNHO%'"
+    - "OBJECTID BETWEEN 1600001 AND 2000000 AND OWNERNME1 LIKE '%TOWNHO%'"
+    - "OBJECTID BETWEEN 2000001 AND 2400000 AND OWNERNME1 LIKE '%TOWNHO%'"
+    - "OBJECTID BETWEEN 2400001 AND 2800000 AND OWNERNME1 LIKE '%TOWNHO%'"
+    - "OBJECTID BETWEEN 2800001 AND 3200000 AND OWNERNME1 LIKE '%TOWNHO%'"
+    - "OBJECTID BETWEEN 3200001 AND 3600000 AND OWNERNME1 LIKE '%TOWNHO%'"
+    - "OBJECTID BETWEEN 1 AND 400000 AND OWNERNME1 LIKE '%COMMUNITY ASSOC%'"
+    - "OBJECTID BETWEEN 400001 AND 800000 AND OWNERNME1 LIKE '%COMMUNITY ASSOC%'"
+    - "OBJECTID BETWEEN 800001 AND 1200000 AND OWNERNME1 LIKE '%COMMUNITY ASSOC%'"
+    - "OBJECTID BETWEEN 1200001 AND 1600000 AND OWNERNME1 LIKE '%COMMUNITY ASSOC%'"
+    - "OBJECTID BETWEEN 1600001 AND 2000000 AND OWNERNME1 LIKE '%COMMUNITY ASSOC%'"
+    - "OBJECTID BETWEEN 2000001 AND 2400000 AND OWNERNME1 LIKE '%COMMUNITY ASSOC%'"
+    - "OBJECTID BETWEEN 2400001 AND 2800000 AND OWNERNME1 LIKE '%COMMUNITY ASSOC%'"
+    - "OBJECTID BETWEEN 2800001 AND 3200000 AND OWNERNME1 LIKE '%COMMUNITY ASSOC%'"
+    - "OBJECTID BETWEEN 3200001 AND 3600000 AND OWNERNME1 LIKE '%COMMUNITY ASSOC%'"
+    - "OBJECTID BETWEEN 1 AND 400000 AND OWNERNME1 LIKE '%MASTER ASSOC%'"
+    - "OBJECTID BETWEEN 400001 AND 800000 AND OWNERNME1 LIKE '%MASTER ASSOC%'"
+    - "OBJECTID BETWEEN 800001 AND 1200000 AND OWNERNME1 LIKE '%MASTER ASSOC%'"
+    - "OBJECTID BETWEEN 1200001 AND 1600000 AND OWNERNME1 LIKE '%MASTER ASSOC%'"
+    - "OBJECTID BETWEEN 1600001 AND 2000000 AND OWNERNME1 LIKE '%MASTER ASSOC%'"
+    - "OBJECTID BETWEEN 2000001 AND 2400000 AND OWNERNME1 LIKE '%MASTER ASSOC%'"
+    - "OBJECTID BETWEEN 2400001 AND 2800000 AND OWNERNME1 LIKE '%MASTER ASSOC%'"
+    - "OBJECTID BETWEEN 2800001 AND 3200000 AND OWNERNME1 LIKE '%MASTER ASSOC%'"
+    - "OBJECTID BETWEEN 3200001 AND 3600000 AND OWNERNME1 LIKE '%MASTER ASSOC%'"
+  out_fields: "OBJECTID,PARCELID,OWNERNME1,PSTLADRESS,SITEADRESS,PLACENAME,ZIPCODE,CONAME"
+  page_size: 1000
+  fields: {name: OWNERNME1, address: PSTLADRESS, county: CONAME, record_id: PARCELID,
+           status_detail: [SITEADRESS, PLACENAME]}
+  constants: {status: "parcel owner"}
+  name_regex: '^(.*?)(?:\s*\bC/O.*|\s+ATTN?(?::|\s).*)?$'
+  name_filter: true
+  exclude_name: '^(?!.*ASSOC|.*ASSN|.*\bHOA\b|.*\bPOA\b|.*OWNERS\b)(?=.*(\bLLC\b|\bL\.?L\.?C\.?\b|\bLP\b|\bLTD\b|\bINC\b|\bCORP|DEVELOPMENT|RENTAL|PARTNERS|REALTY|BUILDERS|CONSTRUCTION))|\bBANK\b|MORTGAGE|CREDIT UNION|LIFE ESTATE|EDUCATION|CHURCH|SCHOOL|HOSPITAL|CEMETERY'
+  group_by_name: true
+
+- kind: arcgis
+  source: "Dane County — recorded condominium plats (PlatBoundaries)"
+  page: "https://dcimapapps.countyofdane.com/arcgissrv/rest/services/PlatBoundaries/MapServer/0"
+  url: "https://dcimapapps.countyofdane.com/arcgissrv/rest/services/PlatBoundaries/MapServer/0"
+  where: "CONVEYANCETYPE = 'CONDOMINIUM'"
+  out_fields: "OBJECTID,CONVEYANCEID,CONVEYANCENAME"
+  fields: {name: CONVEYANCENAME, record_id: CONVEYANCEID}
+  constants: {county: Dane, status: "condominium plat", status_detail: "recorded condominium declaration (register of deeds plat index)"}
+  name_regex: '^(.*?)(?:,\s.*)?$'
+  group_by_name: true
+
+- kind: arcgis
+  source: "Milwaukee County LIO — condominium plat index (Cadastral/Condo)"
+  page: "https://data-mclio.hub.arcgis.com/datasets/8a869fc8d3bf4aa09264976d4b3899d1"
+  url: "https://services2.arcgis.com/s1wgJQKbKJihhhaT/arcgis/rest/services/Cadastral/FeatureServer/11"
+  out_fields: "OBJECTID,Name,DocNo,SimConTypeText"
+  fields: {name: Name, record_id: DocNo, status: SimConTypeText}
+  constants: {county: Milwaukee, status_detail: "recorded condominium plat (register of deeds index)"}
+  group_by_name: true
+
+- kind: arcgis
+  source: "City of Madison — Neighborhood Associations typed HOA / condominium / property-owners"
+  page: "https://data-cityofmadison.opendata.arcgis.com/datasets/neighborhood-associations"
+  url: "https://maps.cityofmadison.com/arcgis/rest/services/Public/OPEN_DATA/MapServer/12"
+  where: "CLASSIFICA LIKE '%Owners Association' OR CLASSIFICA LIKE 'Condominium%'"
+  out_fields: "OBJECTID,NA_ID,NEIGHB_NAME,STATUS,CLASSIFICA"
+  fields: {name: NEIGHB_NAME, status: STATUS, status_detail: CLASSIFICA, record_id: NA_ID}
+  constants: {county: Dane, city: Madison}
+  group_by_name: true

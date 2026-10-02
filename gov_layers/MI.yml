@@ -1,0 +1,86 @@
+# Michigan — LARA condominium subdivision plans are only searchable per record
+# (Accela) and COFS bulk is paid, so coverage is county/city GIS plat layers.
+# Condominium projects (site & building condos) are kept via each layer's TYPE
+# column; plain platted subdivisions have no HOA flag and are dropped except
+# where the name itself says condo/townhome (name_filter).
+# Skipped: SEMCOG Condos_2024 (153k unit points, no project name); Shelby Twp
+# Condominium_Lots (parcel-level, no name); Detroit "Block Clubs and Community
+# Groups" (444 block clubs / watch groups, not owner associations) and the
+# Detroit block-club PDF; Grand Rapids neighborhood-associations PDF (image only).
+- kind: arcgis
+  source: "Oakland County MI — Simultaneous Conveyance condominium projects"
+  page: "https://accessoakland.oakgov.com/"
+  url: "https://gisservices.oakgov.com/arcgis/rest/services/Enterprise/EnterpriseOpenParcelDataMapService/MapServer/4"
+  where: "TYPE = 'Condominium'"
+  out_fields: "OBJECTID,NAME,OCCP,TYPE,CondoType,NumberOfUnits,LIBERPAGE"
+  page_size: 2000
+  fields: {name: NAME, record_id: OCCP, status: TYPE, status_detail: CondoType, units: NumberOfUnits}
+  constants: {county: Oakland}
+
+- kind: arcgis
+  source: "City of Ann Arbor MI — Condominium Associations"
+  page: "https://www.a2gov.org/services/data/"
+  url: "https://utility.arcgis.com/usrsvcs/servers/3db985839933478e8376ba218ed46229/rest/services/CommunityPlanningSymbols/MapServer/16"
+  page_size: 1000
+  # ADDRESS/CITY/ZIPCODE are the association's mailing (management office) address.
+  fields: {name: CNVYNAME, address: [ADDRESS, CITY], record_id: FacilityID, status: CNVYTYP}
+  constants: {city: Ann Arbor, county: Washtenaw, status: "condominium association"}
+
+- kind: arcgis
+  source: "City of Farmington Hills MI — Subdivisions and Condominiums (condominium projects)"
+  page: "https://www.fhgov.com/"
+  url: "https://services1.arcgis.com/Voda7YLF8AUZO5Ro/arcgis/rest/services/Subdivisions/FeatureServer/0"
+  where: "TYPE = 'Condominium'"
+  fields: {name: NAME, record_id: OCCP, status: TYPE, units: NumberOfUnits}
+  constants: {city: Farmington Hills, county: Oakland}
+
+- kind: arcgis
+  source: "Roscommon County MI — Subdivisions and Condominiums (condominium projects)"
+  page: "https://www.roscommoncounty.net/"
+  url: "https://services3.arcgis.com/rAGekBpQuVeYptc1/arcgis/rest/services/SubdivisionsandCondominiums/FeatureServer/141"
+  oid: FID
+  where: "Type = 'Condo'"
+  fields: {name: Name, record_id: Number, status: Type}
+  constants: {county: Roscommon, status: condominium}
+
+- kind: arcgis
+  source: "Montcalm County MI — Subdivision & Condominium boundaries (condominiums by name)"
+  page: "https://www.montcalm.us/"
+  url: "https://services6.arcgis.com/GJ2uZAPsEvtmqpe1/arcgis/rest/services/Sub_Condo_Boundaries/FeatureServer/0"
+  # no type column: keep only names that say condo/townhome/etc.
+  name_filter: true
+  fields: {name: CNVYNAME}
+  constants: {county: Montcalm, status: condominium}
+
+- kind: arcgis
+  source: "Kalamazoo County MI — Plats and condominiums (condominium projects)"
+  page: "https://www.kalcounty.com/planning/"
+  url: "https://services3.arcgis.com/RGltUbqpl4h9E3Qh/arcgis/rest/services/Plats/FeatureServer/0"
+  where: "Type = 'Condo'"
+  fields: {name: Name, status: Type, recorded_date: Recorded}
+  constants: {county: Kalamazoo, status: condominium}
+
+- kind: arcgis
+  source: "Lenawee County MI — Subdivisions (condominium & site-condominium projects)"
+  page: "https://www.lenawee.mi.us/"
+  url: "https://services6.arcgis.com/mjEvhc9AE3ceAXtG/arcgis/rest/services/Lenawee_Subdivisions_Pubic/FeatureServer/2"
+  where: "Type IN ('Condominium', 'Site Condominium')"
+  fields: {name: Name, status: Type, status_detail: [Liber, Page]}
+  constants: {county: Lenawee}
+
+- kind: arcgis
+  source: "City of Lansing MI — registered Neighborhood Associations"
+  page: "https://neighborhoods.lansingmi.gov/"
+  url: "https://services1.arcgis.com/pNPbgWy7hpfFGWoZ/arcgis/rest/services/NeighborhoodAssocs/FeatureServer/0"
+  oid: OBJECTID_1
+  # PRESIDENT_/PHONE_NUMB/EMAIL are personal contact columns — not mapped.
+  fields: {name: NAME, record_id: ID}
+  constants: {city: Lansing, county: Ingham, status: "neighborhood association"}
+
+- kind: arcgis
+  source: "City of Grand Rapids MI — Neighborhood Associations"
+  page: "https://www.grandrapidsmi.gov/Government/Departments/Community-Development/Neighborhood-Associations"
+  url: "https://maps.grcity.us/arcgis/rest/services/ArcGIS_Online/Water_Adopt_A_Hydrant/MapServer/3"
+  oid: OBJECTID_1
+  fields: {name: NBASON}
+  constants: {city: Grand Rapids, county: Kent, status: "neighborhood association"}

@@ -1,0 +1,19 @@
+# Oklahoma — no statewide registry. Two city registries carry typed HOA/POA/condo names.
+# Skipped: OKC Plats (layer 4, codes only, no names); Norman Subdivisions (plat names,
+# no associations); Edmond neighborhoods (Enterprise app, no public REST); Broken Arrow
+# HOA page (Akamai 403). OKC origin gis.okc.gov is Imperva-blocked — use the AGOL proxy.
+- kind: arcgis
+  source: "Oklahoma City OK — registered neighborhood associations (HOA/POA/condo types)"
+  page: "https://data.okc.gov/portal/page/viewer?datasetName=Neighborhood+Associations&view=table"
+  url: "https://utility.arcgis.com/usrsvcs/servers/244dcd1f13f94ec6a17edceeb4f54c04/rest/services/OpenData/Licensing_Subdivision/FeatureServer/7"
+  where: "TYPE IN ('HOA','POA','CONDOA')"
+  fields: {name: NEIGH_ASSOC_NAME, status: TYPE, record_id: OBJECTID}
+  constants: {city: Oklahoma City}
+
+- kind: arcgis
+  source: "Tulsa OK — registered neighborhoods (Homeowners Association type)"
+  page: "https://tulsa-open-data-cityoftulsagis.hub.arcgis.com/datasets/87eaabba96d04bf1b715f74ad63f6659_0"
+  url: "https://services2.arcgis.com/XkZ90iCdbTJ9oNXl/arcgis/rest/services/Neighborhoods_OpenData/FeatureServer/0"
+  where: "NeighborhoodType = 'Homeowners Association'"
+  fields: {name: Name_Long, status: ActiveInactive, status_detail: NeighborhoodType, record_id: OBJECTID}
+  constants: {city: Tulsa, county: Tulsa}

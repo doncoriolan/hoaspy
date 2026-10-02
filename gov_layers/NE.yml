@@ -1,0 +1,20 @@
+# Nebraska — no statewide registry. Opt-in city registries (Lincoln, Omaha).
+# Skipped: Papillion "Homeowners Associations" (https://www.papillion.org/779/Homeowners-Associations)
+# is a CivicPlus HTML table with no CSV/export — not a supported layer kind (16 HOAs);
+# Lincoln NA Contacts (layer 0, voluntary neighborhood associations, not HOAs);
+# Douglas County Subdivisions / Sarpy subdivisions (plat names only).
+# Both layers carry board-member contact columns — never map them.
+- kind: arcgis
+  source: "Lincoln NE — Homeowner Association Contacts (Planning Dept opt-in list)"
+  page: "https://opendata.lincoln.ne.gov/datasets/homeowners-association-contacts"
+  url: "https://gis.lincoln.ne.gov/public/rest/services/Planning/HOANA/MapServer/1"
+  fields: {name: ASSOCNAME, address: [mailing_address2, apartment_suite], city: city, zip: zipcode, record_id: OBJECTID}
+  constants: {county: Lancaster}
+
+- kind: arcgis
+  source: "Omaha NE — Planning Dept neighborhood associations (HOA-named only)"
+  page: "https://data.dogis.org/datasets/neighborhood-associations-1"
+  url: "https://services1.arcgis.com/tIBLyYZX96jUntYm/arcgis/rest/services/Omaha_Neighborhood_Associations_VIEW_ONLY/FeatureServer/0"
+  fields: {name: NEIGHBORHOOD, address: ADDRESS1, city: CITY1, zip: ZIP1, status: STATUS, status_detail: TYPE, record_id: OBJECTID}
+  name_filter: true
+  constants: {county: Douglas}

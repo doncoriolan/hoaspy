@@ -1,0 +1,302 @@
+# California — no statewide inventory (SI-CID filings are not published; bizfile
+# is Imperva-blocked). Coverage is a union of city/agency HOA and
+# neighborhood-association GIS layers. Where a layer stores the management
+# company's mailing address, it goes in `address` (with its city folded into the
+# string) and `city` is the HOA's own city, as with the NV registry rows.
+# Skipped: CA DRE "New Subdivision Filing List" (statewide, ~190 new CIDs/yr
+# with county, subtype and unit count, 2020-2025 annual files) — legacy .xls
+# needs xlrd, which the venv lacks (openpyxl reads .xlsx only); worth a follow-
+# up. Irvine HOA-list PDF (GIS layer below has the same data); Corona HOA
+# MapServer (host times out); OC Public Works exposure points and San Jose
+# condo parcels (no association name).
+- kind: arcgis
+  source: "City of Irvine CA — Homeowners' Associations (sub-associations with management company)"
+  page: "https://www.cityofirvine.org/community-development/homeowners-associations"
+  url: "https://services2.arcgis.com/3mkVbLdbLBFHrfbK/arcgis/rest/services/HOA_6_8_21_gdb/FeatureServer/0"
+  oid: OBJECTID_1
+  out_fields: "OBJECTID_1,MASTER_ID,MASTER_HOA,SUB_ID,SUB_HOA,Management_Co_,Management_address,Management_City,Management_Zip,District"
+  # CONTACT/Mgmt_Phone_Number/Email are contact columns — not mapped.
+  fields: {name: SUB_HOA, record_id: SUB_ID, status_detail: MASTER_HOA, manager: Management_Co_,
+           address: [Management_address, Management_City]}
+  constants: {city: Irvine, county: Orange, status: "homeowners association"}
+
+- kind: arcgis
+  source: "City of Irvine CA — Homeowners' Associations (master associations)"
+  page: "https://www.cityofirvine.org/community-development/homeowners-associations"
+  url: "https://services2.arcgis.com/3mkVbLdbLBFHrfbK/arcgis/rest/services/HOA_6_8_21_gdb/FeatureServer/0"
+  oid: OBJECTID_1
+  out_fields: "OBJECTID_1,MASTER_ID,MASTER_HOA"
+  fields: {name: MASTER_HOA, record_id: MASTER_ID}
+  constants: {city: Irvine, county: Orange, status: "master association"}
+
+- kind: arcgis
+  source: "City of Sacramento CA — Neighborhood Associations"
+  page: "https://data.cityofsacramento.org/datasets/SacCity::neighborhood-associations"
+  url: "https://services5.arcgis.com/54falWtcpty3V47Z/arcgis/rest/services/Neighborhood_Associations/FeatureServer/0"
+  out_fields: "OBJECTID,ASSOCIATION,ACTIVE,MAILING_ADDRESS,UNIQUE_ID"
+  # CONTACT_PERSON/CONTACT_EMAIL/CONTACT_PHONE are personal contacts — not mapped.
+  fields: {name: ASSOCIATION, record_id: UNIQUE_ID, status_detail: ACTIVE, address: MAILING_ADDRESS}
+  constants: {city: Sacramento, county: Sacramento, status: "neighborhood association"}
+  exclude_name: "CHAMBER|BUSINESS|MERCHANT|\\bPBID\\b|\\bBID\\b|PARTNERSHIP"
+
+- kind: arcgis
+  source: "City of San Jose CA — Neighborhood, Homeowner & Mobile Home Associations"
+  page: "https://gisdata-csj.opendata.arcgis.com/"
+  url: "https://geo.sanjoseca.gov/server/rest/services/OPN/OPN_OpenDataService/MapServer/550"
+  where: "TYPE IN ('Neighborhood Association', 'Home Owners Association', 'Mobile Home Association')"
+  out_fields: "OBJECTID,FACILITYID,NAME,TYPE,STATUS,DISTRICT"
+  fields: {name: NAME, record_id: FACILITYID, status: TYPE, status_detail: STATUS}
+  constants: {city: San Jose, county: Santa Clara}
+
+- kind: arcgis
+  source: "City of Pasadena CA — Neighborhood Associations"
+  page: "https://www.cityofpasadena.net/"
+  url: "https://services2.arcgis.com/zNjnZafDYCAJAbN0/arcgis/rest/services/Neighborhood_Associations/FeatureServer/0"
+  oid: F__OBJECTID
+  out_fields: "F__OBJECTID,Association_Name"
+  fields: {name: Association_Name}
+  constants: {city: Pasadena, county: Los Angeles, status: "neighborhood association"}
+
+- kind: arcgis
+  source: "City of San Clemente CA — HOA_Residential (HOAs, master HOAs & condominiums)"
+  page: "https://www.san-clemente.org/"
+  url: "https://services3.arcgis.com/x68DaqVkReQwi0Vd/arcgis/rest/services/HOA_Residential/FeatureServer/0"
+  where: "TYPE IS NULL OR TYPE NOT IN ('Apartments', 'Not within HOA')"
+  page_size: 1000
+  fields: {name: HOA_NAME, status: TYPE}
+  constants: {city: San Clemente, county: Orange, status: "homeowners association"}
+
+- kind: arcgis
+  source: "City of Rancho Santa Margarita CA — HOA_Master"
+  page: "https://www.cityofrsm.org/"
+  url: "https://services3.arcgis.com/tNo51C8FdS7k3M1O/arcgis/rest/services/HOA_Master/FeatureServer/1"
+  out_fields: "OBJECTID,NAME"
+  fields: {name: NAME}
+  constants: {city: Rancho Santa Margarita, county: Orange, status: "homeowners association"}
+
+- kind: arcgis
+  source: "City of Aliso Viejo CA — HOAs (with management company)"
+  page: "https://www.alisoviejo.gov/"
+  url: "https://services9.arcgis.com/BMNzM85wEtX7LHzh/arcgis/rest/services/AGOL_HOA/FeatureServer/2"
+  page_size: 1000
+  out_fields: "OBJECTID,NAME,COMPANY,ADDRESS"
+  # MANAGER holds a person's name and phone — not mapped.
+  fields: {name: NAME, manager: COMPANY, address: ADDRESS}
+  constants: {city: Aliso Viejo, county: Orange, status: "homeowners association"}
+
+- kind: arcgis
+  source: "City of San Juan Capistrano CA — Homeowner Associations (with management company)"
+  page: "https://www.sanjuancapistrano.org/"
+  url: "https://services5.arcgis.com/NUp4yl2gULzlAcEm/arcgis/rest/services/HomeownerAssocations_Hosted/FeatureServer/0"
+  out_fields: "OBJECTID,NAME,TYPE,ACCOUNT,MGMT_CO,MGMT_ADDR,MGMT_CITY,MGMT_ZIP"
+  # MGMT_MGR/MGMT_PHONE/MGMT_EMAIL and landscape-contractor contacts — not mapped.
+  fields: {name: NAME, status: TYPE, record_id: ACCOUNT, manager: MGMT_CO, address: [MGMT_ADDR, MGMT_CITY]}
+  constants: {city: San Juan Capistrano, county: Orange, status: "homeowners association"}
+
+- kind: arcgis
+  source: "City of San Ramon CA — HOAs (with management company)"
+  page: "https://www.sanramon.ca.gov/"
+  url: "https://gis.sanramon.ca.gov/server/rest/services/Public_Works/HOAs/FeatureServer/0"
+  page_size: 1000
+  out_fields: "OBJECTID,LINK_ID,HOA_NM,HOA,BUSINESS,ADDRESS,CITY_ZIP"
+  # PROPERTY_M (manager's name), PHONE, EMAIL_ADDR, FAX — not mapped.
+  fields: {name: HOA_NM, record_id: LINK_ID, manager: BUSINESS, address: [ADDRESS, CITY_ZIP]}
+  constants: {city: San Ramon, county: Contra Costa, status: "homeowners association"}
+
+- kind: arcgis
+  source: "City of Dana Point CA — DP_HOA"
+  page: "https://www.danapoint.org/"
+  url: "https://services7.arcgis.com/mRLEu9cKL0xMY05m/arcgis/rest/services/DP_HOA/FeatureServer/0"
+  oid: FID
+  out_fields: "FID,HOA_NAME,HOA_NUM"
+  fields: {name: HOA_NAME, record_id: HOA_NUM}
+  constants: {city: Dana Point, county: Orange, status: "homeowners association"}
+
+- kind: arcgis
+  source: "City of Indian Wells CA — HOAs"
+  page: "https://www.cityofindianwells.org/"
+  url: "https://services5.arcgis.com/wofcwmgSgOCK8921/arcgis/rest/services/HOAs_Publish/FeatureServer/0"
+  page_size: 1000
+  out_fields: "OBJECTID,HOA_ID,HOA_Name,MasterAccessEasementAssociation"
+  fields: {name: HOA_Name, record_id: HOA_ID, status_detail: MasterAccessEasementAssociation}
+  constants: {city: Indian Wells, county: Riverside, status: "homeowners association"}
+
+- kind: arcgis
+  source: "City of Menifee CA — HOAs (with management company)"
+  page: "https://www.cityofmenifee.us/"
+  url: "https://services.arcgis.com/RjTKod25O4b8SbZx/arcgis/rest/services/HOAs/FeatureServer/0"
+  out_fields: "OBJECTID,HOA,MANAGER,ADDRESS,TYPE,GATED,Senior"
+  # CONTACT/ContactPH/ContactEM/ManagerPhone/ManagerFax/ManagerEM — not mapped.
+  fields: {name: HOA, manager: MANAGER, address: ADDRESS, status: TYPE}
+  constants: {city: Menifee, county: Riverside, status: "homeowners association"}
+
+- kind: arcgis
+  source: "City of Temecula CA — HOAs / CC&R areas (with management company)"
+  page: "https://gis.temeculaca.gov/"
+  url: "https://gis.temeculaca.gov/arcgis/rest/services/OpenData/MapServer/7"
+  page_size: 1000
+  out_fields: "OBJECTID,NAME,DESC_,NO_PARCELS,MgmtCompan,MgmtAddres,MgmtCitySt,HOAMapNo"
+  fields: {name: NAME, record_id: HOAMapNo, manager: MgmtCompan, address: [MgmtAddres, MgmtCitySt], units: NO_PARCELS}
+  constants: {city: Temecula, county: Riverside, status: "homeowners association / CC&R area"}
+
+- kind: arcgis
+  source: "City of Cupertino CA — Home Owners Association designations (with management company)"
+  page: "https://gis.cupertino.org/"
+  url: "https://gis.cupertino.org/cupgis/rest/services/Public/AmazonData/MapServer/30"
+  where: "isHOA = 'Y'"
+  page_size: 1000
+  out_fields: "OBJECTID,Name,ManagementCo,ManageAddress,isHOA,isNeighborhood"
+  fields: {name: Name, manager: ManagementCo, address: ManageAddress}
+  constants: {city: Cupertino, county: Santa Clara, status: "homeowners association"}
+
+- kind: arcgis
+  source: "City of Cupertino CA — Neighborhood designations (non-HOA neighborhoods)"
+  page: "https://gis.cupertino.org/"
+  url: "https://gis.cupertino.org/cupgis/rest/services/Public/AmazonData/MapServer/30"
+  where: "isNeighborhood = 'Y' AND (isHOA IS NULL OR isHOA <> 'Y')"
+  page_size: 1000
+  out_fields: "OBJECTID,Name,isHOA,isNeighborhood"
+  fields: {name: Name}
+  constants: {city: Cupertino, county: Santa Clara, status: "neighborhood"}
+
+- kind: arcgis
+  source: "City of Torrance CA — Homeowner Associations"
+  page: "https://www.torranceca.gov/"
+  url: "https://services1.arcgis.com/38fAqAZVRCrVtPUU/arcgis/rest/services/Homeowner_Association/FeatureServer/13"
+  out_fields: "OBJECTID,HOA_NAME,HOA,ActiveStatus"
+  # ContactName/ContactAddress/ContactPhone/ContactEmail and AltContact* — not mapped.
+  fields: {name: HOA, record_id: HOA_NAME, status_detail: ActiveStatus}
+  constants: {city: Torrance, county: Los Angeles, status: "homeowners association"}
+
+- kind: arcgis
+  source: "City of Elk Grove CA — Homeowners Associations"
+  page: "https://data.elkgrovecity.org/"
+  url: "https://webmaps.elkgrove.gov/arcgis/rest/services/OPEN_DATA_PORTAL/Homeowners_Association/MapServer/0"
+  page_size: 50
+  out_fields: "OBJECTID,ORGANIZATION"
+  fields: {name: ORGANIZATION}
+  constants: {city: Elk Grove, county: Sacramento, status: "homeowners association"}
+
+- kind: arcgis
+  source: "City of Elk Grove CA — Neighborhood Associations"
+  page: "https://data.elkgrovecity.org/"
+  url: "https://webmaps.elkgrove.gov/arcgis/rest/services/OPEN_DATA_PORTAL/Neighborhood_Association/MapServer/0"
+  page_size: 20
+  out_fields: "OBJECTID,ORGANIZATI"
+  fields: {name: ORGANIZATI}
+  constants: {city: Elk Grove, county: Sacramento, status: "neighborhood association"}
+
+- kind: arcgis
+  source: "City of Glendale CA — HOA areas"
+  page: "https://www.glendaleca.gov/"
+  url: "https://gisapps.glendaleca.gov/arcgis/rest/services/Common/HOA_Areas/MapServer/0"
+  page_size: 1000
+  out_fields: "OBJECTID,AssocName"
+  fields: {name: AssocName}
+  constants: {city: Glendale, county: Los Angeles, status: "homeowners association"}
+
+- kind: arcgis
+  source: "City of Agoura Hills CA — HOAs (with management mailing address)"
+  page: "https://www.agourahillscity.org/"
+  url: "https://services3.arcgis.com/q0ABydkxDjl7DvmN/arcgis/rest/services/HOAs/FeatureServer/0"
+  page_size: 1000
+  out_fields: "OBJECTID,Name,Address"
+  # Contact (company + "Attn." person), Contact_Phone, Contact_Email — not mapped.
+  fields: {name: Name, address: Address}
+  constants: {city: Agoura Hills, county: Los Angeles, status: "homeowners association"}
+
+- kind: arcgis
+  source: "City of Calabasas CA — Homeowners Associations (CWPP layer)"
+  page: "https://www.cityofcalabasas.com/"
+  url: "https://services3.arcgis.com/SpdLoVK6cxWCmNhU/arcgis/rest/services/Service_CWPP_Feature_Layers/FeatureServer/1"
+  oid: FID
+  out_fields: "FID,ID,HOA,PARCELS"
+  fields: {name: HOA, record_id: ID, units: PARCELS}
+  constants: {city: Calabasas, county: Los Angeles, status: "homeowners association"}
+  exclude_name: "APARTMENT"
+
+- kind: arcgis
+  source: "City of Brisbane CA — Home Owners Association parcels (grouped by HOA)"
+  page: "https://www.brisbaneca.org/"
+  url: "https://services9.arcgis.com/UGpGSV1ugL0pHSgX/arcgis/rest/services/Home_Owners_Association/FeatureServer/0"
+  out_fields: "OBJECTID,APN,HOA_Name"
+  fields: {name: HOA_Name, record_id: APN}
+  constants: {city: Brisbane, county: San Mateo, status: "homeowners association"}
+
+- kind: arcgis
+  source: "City of La Habra CA — Home Owners Associations (with management company & unit count)"
+  page: "https://www.lahabraca.gov/"
+  url: "https://services9.arcgis.com/wGK8Rz3RqYkFF2a3/arcgis/rest/services/Public_Parcel_Search_Layers/FeatureServer/4"
+  out_fields: "OBJECTID,HOAName,HOAManagement,NumberOfUnits"
+  fields: {name: HOAName, manager: HOAManagement, units: NumberOfUnits}
+  constants: {city: La Habra, county: Orange, status: "homeowners association"}
+
+- kind: arcgis
+  source: "City of Rolling Hills Estates CA — HOA layer"
+  page: "https://www.rollinghillsestates.gov/"
+  url: "https://services6.arcgis.com/bAbxvpVOohBztFzh/arcgis/rest/services/HOA/FeatureServer/0"
+  oid: FID
+  out_fields: "FID,NAME"
+  fields: {name: NAME}
+  constants: {city: Rolling Hills Estates, county: Los Angeles, status: "homeowners association"}
+
+- kind: arcgis
+  source: "City of Oakley CA — HOA locations (with management company)"
+  page: "https://www.oakleyca.gov/"
+  url: "https://services8.arcgis.com/ql5SF28UZRL4qU2a/arcgis/rest/services/HOA_Locations_/FeatureServer/184"
+  out_fields: "OBJECTID,HOAName,MgmtCo,ADDRESS,City,Zip"
+  # POC/OfficePhn/Mobile/Email — not mapped.
+  fields: {name: HOAName, manager: MgmtCo, address: [ADDRESS, City]}
+  constants: {city: Oakley, county: Contra Costa, status: "homeowners association"}
+
+- kind: arcgis
+  source: "City of South Lake Tahoe CA — Homeowners Associations"
+  page: "https://www.cityofslt.us/"
+  url: "https://services2.arcgis.com/gWRYLIS16mKUskSO/arcgis/rest/services/Homeowners_Associations/FeatureServer/164"
+  out_fields: "OBJECTID,hoa_name"
+  fields: {name: hoa_name}
+  constants: {city: South Lake Tahoe, county: El Dorado, status: "homeowners association"}
+
+- kind: arcgis
+  source: "City of Roseville CA — registered Neighborhood Associations"
+  page: "https://www.roseville.ca.us/"
+  url: "https://ags.roseville.ca.us/arcgis/rest/services/PublicServices/PropertyInformationToolLayers/MapServer/23"
+  out_fields: "OBJECTID,NAME,NUMBER"
+  fields: {name: NAME, record_id: NUMBER}
+  constants: {city: Roseville, county: Placer, status: "neighborhood association"}
+
+- kind: arcgis
+  source: "City of San Bernardino CA — Neighborhood Associations"
+  page: "https://www.sbcity.org/"
+  url: "https://gisweb.sbcity.org/arcgis/rest/services/NAs/NeighborhoodAssns/MapServer/1"
+  page_size: 1000
+  out_fields: "OBJECTID,ProperName,OldName,ActiveNA"
+  fields: {name: ProperName, status_detail: ActiveNA}
+  constants: {city: San Bernardino, county: San Bernardino, status: "neighborhood association"}
+
+- kind: arcgis
+  source: "City of Vacaville CA — Neighborhood Associations"
+  page: "https://www.cityofvacaville.gov/"
+  url: "https://services3.arcgis.com/ceLnGXX8aWBjc5h0/arcgis/rest/services/Neighborhood_Association_Public_View/FeatureServer/0"
+  out_fields: "OBJECTID,NeighborhoodName"
+  fields: {name: NeighborhoodName}
+  constants: {city: Vacaville, county: Solano, status: "neighborhood association"}
+
+- kind: arcgis
+  source: "Rancho California Water District CA — HOAs in the district (Temecula / Murrieta, with management company)"
+  page: "https://www.ranchowater.com/"
+  url: "https://services.arcgis.com/vnrbyc9a9SAdU5qI/arcgis/rest/services/HOA_AGOL/FeatureServer/0"
+  page_size: 1000
+  out_fields: "OBJECTID,FacilityID,Name,City,MgmtCompany,MgmtAddress,MgmtCity,MgmtZIP,UnitCount"
+  # MgmtMainContact/MgmtPhone — not mapped.
+  fields: {name: Name, record_id: FacilityID, city: City, manager: MgmtCompany, address: [MgmtAddress, MgmtCity], units: UnitCount}
+  constants: {county: Riverside, status: "homeowners association"}
+
+- kind: arcgis
+  source: "LA County GIS (City of Arcadia) — Homeowners Association areas (architectural-review HOAs)"
+  page: "https://www.arcadiaca.gov/"
+  url: "https://arcgis.gis.lacounty.gov/arcgis/rest/services/Arcadia/Zoning_Viewer/MapServer/120"
+  page_size: 1000
+  out_fields: "OBJECTID,HOA_Name"
+  fields: {name: HOA_Name}
+  constants: {city: Arcadia, county: Los Angeles, status: "homeowners association"}

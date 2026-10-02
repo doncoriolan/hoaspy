@@ -1,0 +1,12 @@
+# Tennessee — no statewide registry. Chattanooga's Socrata origin (www.chattadata.org) did not
+# resolve when tried; use the city's own ArcGIS Online open-data extract (CSV mirror).
+# Skipped: Knoxville "List of Neighborhood Groups" and KGIS gazetteer (PDFs); Nashville
+# Subdivision Boundaries (plat names only); Memphis Neighborhood Watch groups (not associations);
+# Clarksville subdivision cases. The description column holds president/contact e-mail — never map it.
+- kind: csv
+  source: "Chattanooga TN — neighborhood association boundaries (association-named only)"
+  page: "https://www.chattadata.org/Public-Safety/Neighborhood-Association-Boundaries/dxzz-idjy"
+  url: "https://www.arcgis.com/sharing/rest/content/items/592038cfd0f9465f9807181e477cfcf4/data"
+  fields: {name: name}
+  name_filter: true
+  constants: {city: Chattanooga, county: Hamilton}

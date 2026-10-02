@@ -1,0 +1,40 @@
+# New Mexico — no statewide registry (HOA Act notices are recorded at county clerks, none publish lists).
+# Skipped: Rio Rancho Neighborhood Associations (gis.rrnm.gov robots.txt is "Disallow: /") and the
+# Rio Rancho HOA HTML page (no export); Las Cruces / Doña Ana / Santa Fe County subdivision
+# plats (names only, no associations); data.cabq.gov KMZ (robots Disallow: /) — use coageo REST.
+# Bernalillo County layer carries contact names/e-mails — never map them.
+- kind: arcgis
+  source: "Albuquerque NM — recognized neighborhood associations (association-named only)"
+  page: "https://www.arcgis.com/home/item.html?id=ea84772907ae48c5b667b4fcfab15439"
+  url: "https://coageo.cabq.gov/cabqgeo/rest/services/agis/Neighborhood_Associations/FeatureServer/0"
+  fields: {name: AssociationName, status: Status, status_detail: RecognitionStatus, record_id: AssociationAcronym}
+  name_filter: true
+  constants: {city: Albuquerque, county: Bernalillo}
+
+- kind: arcgis
+  source: "Santa Fe NM — registered neighborhood associations (HOA/condo types)"
+  page: "https://www.arcgis.com/home/item.html?id=17f34e8edbef4f4cae668192d4524769"
+  url: "https://services7.arcgis.com/p0Gk2nDbPs7KEqSZ/arcgis/rest/services/Neighborhood_Associations/FeatureServer/0"
+  where: "Type IN ('HOA','Condo')"
+  fields: {name: NEIASSCO, status: Type, record_id: OBJECTID}
+  constants: {city: Santa Fe, county: Santa Fe}
+
+# Condo plats — project names only (no association rows); city asks that source be cited
+# and secondary distribution be discouraged. Collapsed to one row per project name.
+- kind: arcgis
+  source: "Santa Fe NM — condominium plats (project names)"
+  page: "https://www.arcgis.com/home/item.html?id=9e3af913f716407880d833bec80ebf1f"
+  url: "https://services7.arcgis.com/p0Gk2nDbPs7KEqSZ/arcgis/rest/services/Condominiums_1/FeatureServer/0"
+  oid: OBJECTID_1
+  where: "Type = 'RES'"                 # residential plats only (COMM = office/commercial condos)
+  fields: {name: PRCSUB, units: NoUints, record_id: PLT_BKPG}
+  constants: {city: Santa Fe, county: Santa Fe, status: "condominium plat"}
+  exclude_name: "^(N/?A|NONE|UNKNOWN|TEST)$"
+
+- kind: arcgis
+  source: "Bernalillo County NM — recognized neighborhood associations (association-named only)"
+  page: "https://www.arcgis.com/home/item.html?id=076ec47632fc4489b3e2398efd52e929"
+  url: "https://pdsgismaps.bernco.gov/server/rest/services/BERNCO/Neighborhood_Associations/MapServer/301"
+  fields: {name: FullName, status: Type, record_id: OBJECTID}
+  name_filter: true
+  constants: {county: Bernalillo}

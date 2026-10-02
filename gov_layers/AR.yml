@@ -1,0 +1,33 @@
+# Arkansas — city registries (AR SoS corp search robots-disallows results; bulk is paid).
+# Survey: scratchpad/survey_A/AR.md.
+# Skipped: North Little Rock neighborhood-organizations page (HTML, ~19 names,
+# https://nlr.ar.gov/departments/neighborhood-services/neighborhood-organizations/);
+# NWARPC Benton (4,067) / Washington (2,255) County and Centerton subdivision plats — names of
+# plats, not associations. Little Rock's joined contact columns (Name, Tel, E_mail_Address,
+# President/Vice_President/Secretary/Treasurer, Active_contact) are not mapped.
+
+- kind: arcgis
+  source: "Little Rock AR — registered neighborhood associations (city GIS)"
+  page: "https://maps.littlerock.gov/server/rest/services/Neighborhood_Associations/MapServer/0"
+  url: "https://maps.littlerock.gov/server/rest/services/Neighborhood_Associations/MapServer/0"
+  oid: "GIS_LR.GISADM.Neighborhood_Associations.OBJECTID"
+  fields:
+    name: "GIS_LR.GISADM.Neighborhood_Associations.NAME"
+    status_detail: "GIS_LR.GISADM.NBHD_ASSN_Input.Neighborhood_Association"
+    address: "GIS_LR.GISADM.NBHD_ASSN_Input.Address"
+    city: "GIS_LR.GISADM.NBHD_ASSN_Input.City"
+    zip: "GIS_LR.GISADM.NBHD_ASSN_Input.ZIP"
+    record_id: "GIS_LR.GISADM.Neighborhood_Associations.Neighborhood_Association_Index"
+  constants: {city: Little Rock, county: Pulaski, status: "registered neighborhood association (incl. POAs)"}
+
+# Little Rock 2018 contact list (XLSX, 199 rows, association names incl. POAs/HOAs):
+# https://www.littlerock.gov/media/4500/neighborhood-associations-list_july-31_2018.xlsx
+# (2018 snapshot; the live Little Rock layer above is the current list — the XLSX adds
+# names that dropped off since.)
+- kind: csv
+  source: "Little Rock AR — neighborhood associations contact list 2018 (city XLSX)"
+  page: "https://www.littlerock.gov/media/4500/neighborhood-associations-list_july-31_2018.xlsx"
+  url: "https://www.littlerock.gov/media/4500/neighborhood-associations-list_july-31_2018.xlsx"
+  name_regex: "^(.*(?:ASSOC|HOA|POA|HOMEOWNER|PROPERTY OWNER|CONDO|NBHD|NEIGHBORHOOD).*)$"
+  fields: {name: "Neighborhood Association", address: Address, city: City, zip: ZIP, status_detail: Ward}
+  constants: {city: Little Rock, county: Pulaski, status: "registered neighborhood association (2018 list)"}

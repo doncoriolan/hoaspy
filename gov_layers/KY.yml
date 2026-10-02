@@ -1,0 +1,21 @@
+# Kentucky — city registries (KY SoS sosbes is per-record HTML, begins-with search only).
+# Survey: scratchpad/survey_A/KY.md.
+# Skipped: LOJIC Jefferson County Subdivisions (5,774 recorded plats, no association);
+# LINK-GIS Kenton County active residential subdivisions (68 developments, not associations);
+# Center for Neighborhoods boundaries (non-government). LFUCG contact columns
+# (Primary/Second_Contact_Name/Addr/Zip/Ph/Email) are deliberately not mapped — they are
+# individual officers' names and home addresses.
+
+- kind: arcgis
+  source: "Lexington-Fayette KY — registered neighborhood/homeowner associations (LFUCG Planning)"
+  page: "https://data.lexingtonky.gov/datasets/neighborhood-association"
+  url: "https://services1.arcgis.com/Mg7DLdfYcSWIaDnu/arcgis/rest/services/Neighborhood_Association/FeatureServer/0"
+  fields: {name: Assoc_Name, record_id: ID, status_detail: Council}
+  constants: {city: Lexington, county: Fayette, status: "registered neighborhood/homeowner association"}
+
+- kind: arcgis
+  source: "Louisville-Jefferson County KY — neighborhood associations (LOJIC open data)"
+  page: "https://louisville-metro-opendata-lojic.hub.arcgis.com/datasets/jefferson-county-ky-neighborhood-associations"
+  url: "https://gis.lojic.org/maps/rest/services/LojicSolutions/OpenDataSociety/MapServer/19"
+  fields: {name: NAME, status_detail: DISTRICT}
+  constants: {city: Louisville, county: Jefferson, status: "neighborhood association (LOJIC)"}

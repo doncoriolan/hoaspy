@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <meta name="format-detection" content="telephone=no">
+    <title>Advanced Search | Clerk's Recordings System</title>
+    <noscript>
+        <meta http-equiv="refresh" content="0;URL=http://crs.cookcountyclerkil.gov/Home/EnableJavascript" />
+    </noscript>
+    <link href="/Content/css?v=rsU2Eji0u9P2WvZEOnL1IuAZ4thNyibej24hJDWdkAY1" rel="stylesheet"/>
+    <link href="/Content/font-awesome.min.css" rel="stylesheet" />
+    <link href="/Content/PagedList.css" rel="stylesheet" type="text/css" />
+    <link href="/Content/jquery-ui.css" rel="stylesheet" />
+    <link rel="icon" href="https://www.cookcountyclerkil.gov/themes/custom/clerk/cookcountyclerk.ico" />
+    <link href="/Content/Site.css?v=1" rel="stylesheet" />
+</head>
+<body>
+    <div class="bg-light container">
+        <div class="mRow">
+            <div class="Column" style="width:8%;">
+                <div class="nav-clerk-logo-link">
+                    <a href="/Search" title="Home">
+                        <img src="/Images/seal.png" alt="Home" />
+                    </a>
+                </div>
+            </div>
+            <div class="Column p-0 m-0 pt-3" style="vertical-align:top;">
+                <div class="text-end" id="cartDisplay">
+                    <div class="shoppingCart ms-2">
+    <a href="/Cart" class="no-textdecoration" id="lnkCart">
+0    </a>
+</div>
+                </div>
+                <div class="font-weight-boldOld text-uppercase float-left" style="font-size:12px;">Recordings</div>
+                <div class="smallFont text-uppercase float-left">
+                    Cook County Clerk's Office
+                </div>
+                <hr class="w-100 float-left p-0 mt-0 mb-0" />
+                <div class="float-left">
+                    <span class="appTitle small"><small></small></span>
+                    <div class="text-end">
+                        <nav class="navbar navbar-expand-lg navbar-light bg-light">
+                            <div class="container-fluid ps-0">
+                                <div class="ms-auto">
+                                    <button class="navbar-toggler btn btn-primary text-white" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+                                        <span class="navbar-toggler-icon1"><i class="fa fa-bars fa-lg" style="background-color:#337AB7;color:white; "></i></span>
+                                    </button>
+                                </div>
+                                <div class="collapse navbar-collapse collapse w-100 order-3 dual-collapse2 text-end" id="navbarSupportedContent">
+                                    <ul class="navbar-nav ms-auto" style="font-size :15px;">
+                                        <li class="nav-item text-start">
+                                            <a href="/Search" class="nav-link menuActiveLink"><i class="fa fa-search"></i> Search</a>
+                                        </li>
+                                        <li class="nav-item text-start">
+                                            <a href="/Public" class="nav-link "><i class="fa fa-commenting-o"></i> Property Fraud Alert</a>
+                                        </li>
+                                        <li class="nav-item text-start">
+                                            <a href="/MailTracking?returnUrl=%2FSearch%2FResultAddt%3Fid1%3D%2523collapse2" class="nav-link "><i class="fa fa-envelope-o"></i> Mail Tracking</a>
+                                        </li>
+                                        <li class="nav-item text-start">
+                                            <a href="/ChangeRequest" class="nav-link "><i class="fa fa-table"></i> Indexing Corrections</a>
+                                        </li>
+                                            <li class="nav-item text-start">
+                                                <a href="/Order/Search?column=OrderDate&amp;direction=desc" class="nav-link "><i class="fa fa-table"></i> Orders</a>
+                                            </li>
+                                                                                    <li class="nav-item text-start">
+                                                <a href="/Account/Login?returnUrl=%2FSearch%2FResultAddt%3Fid1%3D%2523collapse2" class="nav-link "><i class="fa fa-sign-in"></i> Account</a>
+                                            </li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </nav>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="container">
+        <div class="row ">
+            <div class="breadcrumb container m-0 p-0">
+                <p class="float-right m-0">
+    <text>Search Results - Documents</text>
+                </p>
+            </div>
+            <div class="bg-white">
+            </div>
+            <div class="container mt-1">
+                <div class="row container-box" style="padding:5px 20px;" role="main">
+<form action="/Cart/AddItem" id="__AjaxAntiForgeryForm" method="post"><input name="__RequestVerificationToken" type="hidden" value="SAMPLE-TOKEN" /><div class="validation-summary-valid text-danger" data-valmsg-summary="true"><ul><li style="display:none"></li>
+</ul></div>    <div class="row mt-2">
+        <div class="col-md-6">
+            <strong><a href="javascript: window.history.back();"> <i class="fa fa-arrow-circle-left fa-lg" style="color:black;"></i> Back</a></strong>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-md-8">
+            Search : <span class="text-big-and-bold">Name: MASTER ASSN From Date: 1/1/1980 To Date: 10/1/2026</span>
+        </div>
+    </div>
+    <div id="result">
+<div class="row">
+    <div class="col-md-8">
+            <span>Total Documents : </span><span class="text-big-and-bold">340</span> <span class="ms-0"> (View 100/Page) </span>     </div>
+</div>
+<div>
+    <span class="fw-bold">Click the boxes to select your documents before adding to the cart.</span><br />
+        <span class="small">You may remove documents from your cart by clicking the “Shopping Cart”, which is located on the upper right corner of the page.</span>
+</div>
+<div class="row mb-1">
+            <div class="col-md-2 pt-2 productlist">
+                <a href="1" id="btnAddDoc" class="1 CartItemButton" title="Select your documents"> <i class="fa fa-shopping-cart" style="color:lightblue;"></i> Buy Documents</a>
+            </div>
+            <div class="col-md-3 pt-2 productlist">
+                <a href="2" id="btnAddData" class="3 CartItemButton" title="Select your documents"> <i class="fa fa-shopping-cart" style="color:lightblue;"></i> Buy Certified Documents</a>
+            </div>
+            <div class="col-md-3 pt-2 productlist">
+                <a href="3" id="btnAddData" class="3 CartItemButton" title="Select your documents"> <i class="fa fa-shopping-cart" style="color:lightblue;"></i> Buy Search Result (No Images)</a>
+            </div>
+</div>
+<div class="table-responsive">
+        <div id="totalSelected"></div>
+        <table class="table table-hover table-responsive tblfmt">
+            <thead>
+                <tr>
+                    <td scope="col" class="align-middle"><input id="selectAll" name="selectAll" title="Select All" type="checkbox" value="true" /><input name="selectAll" type="hidden" value="false" /></td>
+                    <th scope="col" class="align-middle text-center">
+                        <span >View Doc</span>
+                    </th>
+                    <th scope="col"><a href='/Search/SortResultAddt?id1=%23collapse2&column=AlphaDocNumber&direction=asc&page=1' class='searchresult'> Doc Number</a></th>
+                    <th scope="col" class="text-center">
+                        <a href='/Search/SortResultAddt?id1=%23collapse2&column=DateRecorded&direction=asc&page=1' class='searchresult'><i class='fa fa-sort-up' style='color:orange;'></i> Doc Recorded</a>
+                    </th>
+                    <th scope="col" class="text-center">
+                        <a href='/Search/SortResultAddt?id1=%23collapse2&column=DateExecuted&direction=asc&page=1' class='searchresult'> Doc Executed</a>
+                    </th>
+                    <th scope="col">
+                        <a href='/Search/SortResultAddt?id1=%23collapse2&column=DocTypeDescription&direction=asc&page=1' class='searchresult'> Doc Type</a>
+                    </th>
+                    <th scope="col" class="text-center">
+                        <a href='/Search/SortResultAddt?id1=%23collapse2&column=ConsiderationAmount&direction=asc&page=1' class='searchresult'> Consi. Amt.</a>
+                    </th>
+                    <th scope="col">
+                        <a href='/Search/SortResultAddt?id1=%23collapse2&column=FirstGrantor&direction=asc&page=1' class='searchresult'> 1st Grantor</a>
+                    </th>
+                    <th scope="col">
+                        <a href='/Search/SortResultAddt?id1=%23collapse2&column=FirstGrantee&direction=asc&page=1' class='searchresult'> 1st Grantee</a>
+                    </th>
+                    <th scope="col">
+                        <a href='/Search/SortResultAddt?id1=%23collapse2&column=RefDocNum&direction=asc&page=1' class='searchresult'> Assoc. Doc#</a>
+                    </th>
+                    <th scope="col">
+                        <a href='/Search/SortResultAddt?id1=%23collapse2&column=FirstPin&direction=asc&page=1' class='searchresult'> 1st PIN</a>
+                    </th>
+                </tr>
+            </thead>
+            <tbody>
+                    <tr>
+                        <td class="align-middle"> <input aria-label="Doc Id" class="docitem" name="45807299" type="checkbox" value="true" /><input name="45807299" type="hidden" value="false" /></td>
+                        <td class="align-middle text-center">
+                            <a href="/Document/Detail?dId=SAMPLEDID&amp;hId=SAMPLEHID" style="display:block;" title="View">View</a>
+                        </td>
+                        <td class="align-middle">
+                            <span>2600000001</span>
+                        </td>
+                        <td class="align-middle text-center">
+                            <span>9/10/2026</span>
+                        </td>
+                        <td class="align-middle text-center">
+                            <span>9/3/2026</span>
+                        </td>
+                        <td class="align-middle text-start">
+                            <span>LIS PENDENS FORECLOSURE</span>
+                        </td>
+                        <td class="align-middle text-end">
+                        </td>
+                        <td class="align-middle">
+                            <span>ROCKET MTG LLC</span>
+                        </td>
+                        <td class="align-middle">
+                            <span>DOE MARY</span>
+                        </td>
+                        <td class="align-middle">
+<a href="/Document/Detail?dId=SAMPLEDID&amp;hId=SAMPLEHID">2600000002</a>                        </td>
+                        <td class="align-middle">00-00-000-000-1001<br />100 SAMPLE ST<br />CHICAGO</td>
+                    </tr>
+                    <tr>
+                        <td class="align-middle"> <input aria-label="Doc Id" class="docitem" name="45799493" type="checkbox" value="true" /><input name="45799493" type="hidden" value="false" /></td>
+                        <td class="align-middle text-center">
+                            <a href="/Document/Detail?dId=SAMPLEDID&amp;hId=SAMPLEHID" style="display:block;" title="View">View</a>
+                        </td>
+                        <td class="align-middle">
+                            <span>2600000003</span>
+                        </td>
+                        <td class="align-middle text-center">
+                            <span>9/1/2026</span>
+                        </td>
+                        <td class="align-middle text-center">
+                            <span>8/31/2026</span>
+                        </td>
+                        <td class="align-middle text-start">
+                            <span>LIS PENDENS FORECLOSURE</span>
+                        </td>
+                        <td class="align-middle text-end">
+                        </td>
+                        <td class="align-middle">
+                            <span>ELIZON MASTER PARTICIPATION TRUST I US BK TRUST NATL ASSN</span>
+                        </td>
+                        <td class="align-middle">
+                            <span>DOE JOHN TR</span>
+                        </td>
+                        <td class="align-middle">
+                        </td>
+                        <td class="align-middle">00-00-000-000-1002<br />100 SAMPLE ST<br />CHICAGO</td>
+                    </tr>
+                    <tr>
+                        <td class="align-middle"> <input aria-label="Doc Id" class="docitem" name="45791287" type="checkbox" value="true" /><input name="45791287" type="hidden" value="false" /></td>
+                        <td class="align-middle text-center">
+                            <a href="/Document/Detail?dId=SAMPLEDID&amp;hId=SAMPLEHID" style="display:block;" title="View">View</a>
+                        </td>
+                        <td class="align-middle">
+                            <span>2600000004</span>
+                        </td>
+                        <td class="align-middle text-center">
+                            <span>8/26/2026</span>
+                        </td>
+                        <td class="align-middle text-center">
+                            <span>8/25/2026</span>
+                        </td>
+                        <td class="align-middle text-start">
+                            <span>LIS PENDENS FORECLOSURE</span>
+                        </td>
+                        <td class="align-middle text-end">
+                        </td>
+                        <td class="align-middle">
+                            <span>LAKEVIEW LOAN SERVICING LLC</span>
+                        </td>
+                        <td class="align-middle">
+                            <span>DOE JANE</span>
+                        </td>
+                        <td class="align-middle">
+<a href="/Document/Detail?dId=SAMPLEDID&amp;hId=SAMPLEHID">2600000005</a>                        </td>
+                        <td class="align-middle">00-00-000-000-1003<br />100 SAMPLE ST<br />CHICAGO</td>
+                    </tr>
+                    <tr>
+                        <td class="align-middle"> <input aria-label="Doc Id" class="docitem" name="45525084" type="checkbox" value="true" /><input name="45525084" type="hidden" value="false" /></td>
+                        <td class="align-middle text-center">
+                            <a href="/Document/Detail?dId=SAMPLEDID&amp;hId=SAMPLEHID" style="display:block;" title="View">View</a>
+                        </td>
+                        <td class="align-middle">
+                            <span>2600000006</span>
+                        </td>
+                        <td class="align-middle text-center">
+                            <span>1/29/2026</span>
+                        </td>
+                        <td class="align-middle text-center">
+                            <span>1/28/2026</span>
+                        </td>
+                        <td class="align-middle text-start">
+                            <span>LIEN</span>
+                        </td>
+                        <td class="align-middle text-end">
+                            <span>$1,520.20</span>
+                        </td>
+                        <td class="align-middle">
+                            <span>ENCLAVE AT GALEWOOD CROSSINGS MASTER ASSN</span>
+                        </td>
+                        <td class="align-middle">
+                            <span>DOE RICHARD</span>
+                        </td>
+                        <td class="align-middle">
+                        </td>
+                        <td class="align-middle">00-00-000-000-1004<br />100 SAMPLE ST<br />CHICAGO</td>
+                    </tr>
+                    <tr>
+                        <td class="align-middle"> <input aria-label="Doc Id" class="docitem" name="45509112" type="checkbox" value="true" /><input name="45509112" type="hidden" value="false" /></td>
+                        <td class="align-middle text-center">
+                            <a href="/Document/Detail?dId=SAMPLEDID&amp;hId=SAMPLEHID" style="display:block;" title="View">View</a>
+                        </td>
+                        <td class="align-middle">
+                            <span>2600000007</span>
+                        </td>
+                        <td class="align-middle text-center">
+                            <span>1/14/2026</span>
+                        </td>
+                        <td class="align-middle text-center">
+                            <span>1/13/2026</span>
+                        </td>
+                        <td class="align-middle text-start">
+                            <span>LIEN</span>
+                        </td>
+                        <td class="align-middle text-end">
+                            <span>$17,511.85</span>
+                        </td>
+                        <td class="align-middle">
+                            <span>ENCLAVE AT GALEWOOD CROSSINGS MASTER ASSN</span>
+                        </td>
+                        <td class="align-middle">
+                            <span>DOE JAMES</span>
+                        </td>
+                        <td class="align-middle">
+                        </td>
+                        <td class="align-middle">00-00-000-000-1005<br />100 SAMPLE ST<br />CHICAGO</td>
+                    </tr>
+                    <tr>
+                        <td class="align-middle"> <input aria-label="Doc Id" class="docitem" name="44477189" type="checkbox" value="true" /><input name="44477189" type="hidden" value="false" /></td>
+                        <td class="align-middle text-center">
+                            <a href="/Document/Detail?dId=SAMPLEDID&amp;hId=SAMPLEHID" style="display:block;" title="View">View</a>
+                        </td>
+                        <td class="align-middle">
+                            <span>2600000008</span>
+                        </td>
+                        <td class="align-middle text-center">
+                            <span>7/18/2023</span>
+                        </td>
+                        <td class="align-middle text-center">
+                            <span>7/17/2023</span>
+                        </td>
+                        <td class="align-middle text-start">
+                            <span>MECHANICS LIEN</span>
+                        </td>
+                        <td class="align-middle text-end">
+                            <span>$14,605.43</span>
+                        </td>
+                        <td class="align-middle">
+                            <span>SAMPLE CONST CORP</span>
+                        </td>
+                        <td class="align-middle">
+                            <span>LAKE ARLINGTON TOWNE MASTER ASSN</span>
+                        </td>
+                        <td class="align-middle">
+                        </td>
+                        <td class="align-middle">00-00-000-000-1006<br />100 SAMPLE ST<br />CHICAGO</td>
+                    </tr>
+            </tbody>
+        </table>
+        <br />
+        <div id='Paging' style="text-align: left;">
+            Page 1 of 4 <span class="ml-2">Page Size: 100</span>
+            <div class="pagination-container"><ul class="pagination"><li class="active"><a>1</a></li><li><a href="/Search/SortResultAddt?id1=%23collapse2&amp;column=DateRecorded&amp;direction=desc&amp;page=2">2</a></li><li><a href="/Search/SortResultAddt?id1=%23collapse2&amp;column=DateRecorded&amp;direction=desc&amp;page=3">3</a></li><li><a href="/Search/SortResultAddt?id1=%23collapse2&amp;column=DateRecorded&amp;direction=desc&amp;page=4">4</a></li><li class="PagedList-skipToNext"><a href="/Search/SortResultAddt?id1=%23collapse2&amp;column=DateRecorded&amp;direction=desc&amp;page=2" rel="next">»</a></li></ul></div>
+        </div>
+<p class="text-start small mark">
+    <b> Please Note: </b> Annexations, Condominium declarations, Dedications, Easements, Highway plats, Monuments, Plats, Vacations/Dedications, and Real estate transfer declarations are not available for purchase on our website. If you would like a copy
+    of these document types, you may purchase them at our <a target="_blank" href="https://www.cookcountyclerkil.gov/about/locations/downtown-chicago-recordings">downtown office</a>.
+</p>
+</div>    </div>
+</form>
+                </div>
+            </div>
+        </div>
+        <hr />
+        <footer style="margin-top:10px;">
+            <div class="footerLeft">
+                <p>&copy; Copyright 2026 Cook County Clerk's Office. All Rights Reserved.</p>
+            </div>
+            <div class="footerRight">
+                <p class="cookCounty"><a href="https://www.cookcountyclerkil.gov/recordings/search-recordings" target="_blank" class="cookCountyLink" title="Cook County Website">Go To Cook County Clerk's Website</a></p>
+            </div>
+            <div class="clear">
+            </div>
+        </footer>
+    </div>
+</body>
+</html>

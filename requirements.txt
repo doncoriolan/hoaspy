@@ -1,0 +1,6 @@
+requests>=2.31
+PyYAML>=6.0
+paramiko>=3.4        # Broward County official-records SFTP (get_liens)
+openpyxl>=3.1        # xlsx registries (SC complaints, MS/OH corp reports, gov_layers csv kind)
+pdfplumber>=0.11     # HI AOUO contact-list PDF
+websocket-client>=1.8   # browser-driven collectors over the DevTools protocol (fl_broward, va_gdc, md_casesearch, get_wa_ccfs)

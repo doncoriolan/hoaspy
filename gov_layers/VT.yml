@@ -1,0 +1,24 @@
+# Vermont — no HOA registry (27A V.S.A. declarations are recorded town by
+# town). The VCGI statewide standardized parcel layer (Grand List joined)
+# carries the listed owner and the grand-list mailing address, so every HOA /
+# condominium / property-owners association that owns common land is listed.
+# No county field in the layer; the town goes into status_detail.
+
+- kind: arcgis
+  source: "VCGI statewide standardized parcels (Grand List) — association-owned parcels, owner name + mailing address"
+  page: "https://geodata.vermont.gov/pages/parcels"
+  url: "https://services1.arcgis.com/BkFxaEFNwHqX3tAw/arcgis/rest/services/FS_VCGI_OPENDATA_Cadastral_VTPARCELS_poly_standardized_parcels_SP_v1/FeatureServer/0"
+  where: >-
+    UPPER(OWNER1) LIKE '%HOMEOWNER%' OR UPPER(OWNER1) LIKE '%HOME OWNER%' OR UPPER(OWNER1) LIKE '%CONDO%'
+    OR UPPER(OWNER1) LIKE '%PROPERTY OWNER%' OR UPPER(OWNER1) LIKE '%OWNERS ASSOC%'
+    OR UPPER(OWNER1) LIKE '%COMMUNITY ASSOC%' OR UPPER(OWNER1) LIKE '%MASTER ASSOC%'
+    OR UPPER(OWNER1) LIKE '%TOWNHOME%' OR UPPER(OWNER1) LIKE '%TOWNHOUSE%' OR UPPER(OWNER1) LIKE '%HOA%'
+  out_fields: "OBJECTID,SPAN,OWNER1,OWNER2,ADDRGL1,ADDRGL2,CITYGL,ZIPGL,TNAME,E911ADDR"
+  page_size: 1000
+  fields: {name: [OWNER1, OWNER2], address: [ADDRGL1, ADDRGL2], city: CITYGL, zip: ZIPGL,
+           record_id: SPAN, status_detail: [E911ADDR, TNAME]}
+  constants: {status: "parcel owner"}
+  name_regex: '^(.*?)(?:\s*\bC/O.*|\s+ATTN?(?::|\s).*)?$'
+  name_filter: true
+  exclude_name: '^(?!.*ASSOC|.*ASSN|.*\bHOA\b|.*\bPOA\b|.*OWNERS\b)(?=.*(\bLLC\b|\bL\.?L\.?C\.?\b|\bLP\b|\bLTD\b|\bINC\b|\bCORP|DEVELOPMENT|RENTAL|PARTNERS|REALTY|BUILDERS|CONSTRUCTION))|\bBANK\b|MORTGAGE|CREDIT UNION|LIFE ESTATE|EDUCATION|CHURCH|SCHOOL|HOSPITAL|CEMETERY'
+  group_by_name: true

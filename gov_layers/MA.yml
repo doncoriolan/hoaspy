@@ -1,0 +1,22 @@
+# Massachusetts — no statewide HOA/condo registry. MA SoS CorpWeb is behind an
+# Incapsula JS challenge and masslandrecords.com is NOINDEX/per-registry, so the
+# only scriptable government inventory is the MassGIS statewide L3 assessor
+# parcel layer: associations show up as the OWNER1 of common-area/unit parcels
+# ("X CONDOMINIUM TRUST", "X HOMEOWNERS ASSOC TR"). Parcel rows collapse to one
+# per association (group_by_name); `parcels` counts how many parcels it owns.
+# Skipped (civic groups, not HOAs): Springfield neighborhood-council HTML list,
+# Lowell neighborhood-groups DOCX.
+- kind: arcgis
+  source: "MassGIS statewide property-tax parcels — condominium trusts & homeowners associations (parcel owner name)"
+  page: "https://www.mass.gov/info-details/massgis-data-property-tax-parcels"
+  url: "https://services1.arcgis.com/hGdibHYSPO59RG1h/arcgis/rest/services/Massachusetts_Property_Tax_Parcels/FeatureServer/0"
+  where: "UPPER(OWNER1) LIKE '%CONDO%' OR UPPER(OWNER1) LIKE '%HOMEOWNER%' OR UPPER(OWNER1) LIKE '%HOME OWNER%' OR UPPER(OWNER1) LIKE '%OWNERS ASSOC%' OR UPPER(OWNER1) LIKE '%OWNERS ASSN%'"
+  out_fields: "OBJECTID,LOC_ID,OWNER1,SITE_ADDR,CITY,ZIP,UNITS,USE_DESC"
+  page_size: 2000
+  fields: {name: OWNER1, address: SITE_ADDR, city: CITY, zip: ZIP, units: UNITS, record_id: LOC_ID}
+  constants: {status: "parcel owner (condominium trust / homeowners association)"}
+  # ASSOC_RE does not match the MA abbreviation "OWNERS ASSOC"; keep the whole
+  # name (group 1) when it contains an association/condo keyword. '%CONDO%' also
+  # hits surnames like CONDON — the \b guards drop those.
+  name_regex: '^(.*\b(?:CONDOMINIUMS?|CONDOS?|HOMEOWNERS?|HOME OWNERS?|OWNERS ASSOC\w*|OWNERS ASSN|PROPERTY OWNERS|HOA)\b.*)$'
+  exclude_name: '\bLLC\b|\bL\.L\.C\b|\bBANK\b|MORTGAGE|\bLP\b|LIMITED PARTNERSHIP|REALTY TRUST|\bINC\b.*\bLLC\b'

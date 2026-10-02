@@ -1,0 +1,56 @@
+# Louisiana — parish/city registries (LA SoS coraweb is robots-disallowed).
+# Survey: scratchpad/survey_A/LA.md.
+# Skipped: EBR "Neighborhood Registry_EBRP" Survey123 layer (40 self-submitted rows keyed by
+# officer first/last name + e-mail; names underscore-mangled, mostly duplicates of the layers
+# below); EBR Subdivision (3,037 plats) and Jefferson Parish Subdivision (1,091) — plat names,
+# no association; Shreveport PDF list (same rows as the FeatureServer layer used here).
+
+- kind: socrata
+  source: "East Baton Rouge Parish LA — neighborhood associations (Open Data BR)"
+  page: "https://data.brla.gov/Housing-and-Development/Neighborhood-Association/m7ct-r5ua"
+  url: "https://data.brla.gov/resource/nkc8-x43v.json"
+  # zip is 0 on 102 of 317 rows — not mapped.
+  fields: {name: association_name, address: full_address}
+  constants: {county: East Baton Rouge, status: "registered neighborhood association (parish)"}
+
+- kind: arcgis
+  source: "East Baton Rouge Parish LA — existing neighborhood association boundaries (EBRGIS)"
+  page: "https://www.brla.gov/2560/Neighborhood-Registry"
+  url: "https://services.arcgis.com/KYvXadMcgf0K1EzK/arcgis/rest/services/Neighborhood_Association_Existing/FeatureServer/0"
+  oid: FID
+  fields: {name: ASSOCIATIO, address: MAILING_AD, record_id: ID1}
+  constants: {county: East Baton Rouge, status: "registered neighborhood association (parish)"}
+
+- kind: arcgis
+  source: "St. George LA — neighborhood associations (city GIS)"
+  page: "https://gis.stgeorgela.gov/server/rest/services/SubdivisionsAndNeighborhoods/COSG_NeighborhoodAssociations/FeatureServer/0"
+  url: "https://gis.stgeorgela.gov/server/rest/services/SubdivisionsAndNeighborhoods/COSG_NeighborhoodAssociations/FeatureServer/0"
+  # ZIP is 0 on every row — not mapped.
+  fields: {name: ASSOCIATIO, address: FULL_ADDRE, record_id: ID}
+  constants: {city: St. George, county: East Baton Rouge, status: "registered neighborhood association (city)"}
+
+- kind: arcgis
+  source: "Shreveport LA — neighborhood associations (city/MPC GIS)"
+  page: "https://www.shreveportla.gov/211/Neighborhood-Associations"
+  url: "https://services3.arcgis.com/cEsSI6IR59h5UGE4/arcgis/rest/services/Neighborhood_Association_0711/FeatureServer/22"
+  # Mixes associations with apartments, bare subdivision names and business groups:
+  # keep association-named rows, drop business/commercial groups.
+  where: "UPPER(Name) LIKE '%ASSOC%' OR UPPER(Name) LIKE '%HOMEOWNER%' OR UPPER(Name) LIKE '%HOMES%' OR UPPER(Name) LIKE '%PROPERTY OWNER%' OR UPPER(Name) LIKE '% HOA%' OR UPPER(Name) LIKE '%CONDO%'"
+  exclude_name: "BUSINESS|CHAMBER|MERCHANT|CONSORTIUM"
+  fields: {name: Name, address: Address, zip: Zipcode, status: Status, status_detail: District}
+  constants: {city: Shreveport, county: Caddo}
+
+- kind: socrata
+  source: "New Orleans LA — self-reported neighborhood organizations (Neighborhood Engagement Office)"
+  page: "https://data.nola.gov/resource/bqyy-s7xy"
+  url: "https://data.nola.gov/resource/bqyy-s7xy.json"
+  where: "upper(organization_name) like '%ASSOC%' OR upper(organization_name) like '%HOMEOWNER%' OR upper(organization_name) like '%PROPERTY OWNER%' OR upper(organization_name) like '%CONDO%'"
+  fields: {name: organization_name, status_detail: neighborhood, record_id: objectid}
+  constants: {city: New Orleans, county: Orleans, status: "self-reported neighborhood organization"}
+
+- kind: arcgis
+  source: "Jefferson Parish LA — civic associations (parish GIS)"
+  page: "https://eweb.jeffparish.net/arcgis/rest/services/JPFeatures2025/MapServer/34"
+  url: "https://eweb.jeffparish.net/arcgis/rest/services/JPFeatures2025/MapServer/34"
+  fields: {name: NAME}
+  constants: {county: Jefferson, status: "civic association (parish map)"}

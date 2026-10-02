@@ -1,0 +1,12 @@
+id,date_created,date_modified,judges,date_filed,date_filed_is_approximate,slug,case_name_short,case_name,case_name_full,scdb_id,scdb_decision_direction,scdb_votes_majority,scdb_votes_minority,source,procedural_history,attorneys,nature_of_suit,posture,syllabus,headnotes,summary,disposition,history,other_dates,cross_reference,correction,citation_count,precedential_status,date_blocked,blocked,filepath_json_harvard,filepath_pdf_harvard,docket_id,arguments,headmatter
+"7967752","2022-09-08 22:19:48.191374+00","2024-11-10 03:59:26.433558+00","","2005-10-12","f","doe-v-twelve-hills-community-assn","Doe","Doe v. Twelve Hills Community Ass'n","John DOE v. TWELVE HILLS COMMUNITY ASSOCIATION","",,,,"U","","","","","","","","","","","","","0","Published",,"f","law.free.cap.md.389/242.560104.json","harvard_pdf/7967752.pdf","65062906","",""
+"7974835","2022-09-08 22:19:48.191374+00","2024-11-10 03:59:26.433558+00","","2013-11-01","f","falls-garden-condominium-assn-v-falls-homeowners-assn","","Falls Garden Condominium Ass'n v. Falls Homeowners Ass'n","FALLS GARDEN CONDOMINIUM ASSOCIATION, INC. v. The FALLS HOMEOWNERS ASSOCIATION, INC.","",,,,"U","","","","","","","","","","Reconsideration Denied Dec. 19, 2013.","","","1","Published",,"f","law.free.cap.md-app.215/115.3901878.json","","65070136","",""
+"10933293","2022-09-08 22:19:48.191374+00","2024-11-10 03:59:26.433558+00","","2026-07-21","f","cash-energy-condominium-association-v-jane-roe-others","","CASH ENERGY CONDOMINIUM ASSOCIATION v. JANE ROE & Others.","","",,,,"C","","","","","","","","","","","","","0","Unpublished","2026-07-21","t","","","73645368","",""
+"4488611","2022-09-08 22:19:48.191374+00","2024-11-10 03:59:26.433558+00","","2018-04-12","f","northlake-manor-condominium-association-inc-v-harvest-assests-llc","","Northlake Manor Condominium Association, Inc. v. Harvest Assests, LLC","Northlake Manor Condominium Association, Inc. v. Harvest Assets, LLC.","",,,,"CU","","","","","","","","","","","","","5","Published",,"f","law.free.cap.se2d.812/658.12650389.json","","6368320","","<parties id=\"p-1\">
+    NORTHLAKE MANOR CONDOMINIUM ASSOCIATION, INC.
+    <br/>
+    v.
+    <br/>
+    HARVEST ASSETS, LLC.
+  </parties>"
+"6732967","2022-09-08 22:19:48.191374+00","2024-11-10 03:59:26.433558+00","","1885-04-07","f","doe-v-sportsmans-park-club-assn","Doe","Doe v. Sportsman's Park & Club Ass'n","John Doe v. Sportsman's Park and Club Association","",,,,"U","","","","","","","","","","","","","0","Published",,"f","","","63713949","",""

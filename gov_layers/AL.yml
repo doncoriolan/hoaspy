@@ -1,0 +1,12 @@
+# Alabama — only city neighborhood-association inventories exist (AL SoS HOA search is
+# robots-disallowed; no county/state HOA or condo dataset found). Survey: scratchpad/survey_A/AL.md.
+# Skipped (HTML pages, not arcgis|socrata|csv): Huntsville HCCNA neighborhood-association list
+# https://www.huntsvilleal.gov/residents/neighborhoods/neighborhood-associations/ (~27 names,
+# mixed HOAs/civic) and Hoover https://hooveralabama.gov/1295/Neighborhood-Associations (9 HOAs).
+
+- kind: arcgis
+  source: "Birmingham AL — official neighborhood associations (city GIS, Citizen Participation Program)"
+  page: "https://www.birminghamal.gov/live/about-birmingham/23-communities-99-neighborhoods"
+  url: "https://gisweb.birminghamal.gov/arcgis/rest/services/Neighborhood/MapServer/0"
+  fields: {name: NAME, record_id: NUM, status_detail: AREATYPE_TEXT}
+  constants: {city: Birmingham, county: Jefferson, status: "neighborhood association (city-chartered)"}

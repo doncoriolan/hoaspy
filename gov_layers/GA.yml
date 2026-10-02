@@ -1,0 +1,139 @@
+# Georgia — GA SoS eCorp is per-record only (bulk paid). Coverage is metro-
+# Atlanta county/city GIS layers plus Savannah. Layers with a type column are
+# filtered to HOA/condo/townhome/neighborhood/civic rows (apartments, cultural
+# groups and business organisations dropped); plat-only subdivision layers keep
+# only names that say condo/townhome/homeowners.
+# Skipped: Athens-Clarke "Directory of Registered Neighborhoods" (41 rows, HTML
+# page — no CSV/API; note for a manual pass); Forsyth County Schools
+# "Subdivision" (school-district dataset mixing owner names); Chatham DPLAT
+# common areas (no name column); the non-government 2022 DeKalb snapshot copy.
+- kind: arcgis
+  source: "DeKalb County GA GIS — HOA and Neighborhoods (homeowner, condo, townhome, neighborhood & civic associations)"
+  page: "https://dcgis-dekalbgis.hub.arcgis.com/datasets/hoa-and-neighborhoods"
+  url: "https://services2.arcgis.com/IxVN2oUE9EYLSnPE/arcgis/rest/services/HOA%20and%20Neighborhoods/FeatureServer/0"
+  oid: FID
+  where: "Type NOT IN ('Apt', 'Cultural')"
+  out_fields: "FID,Name,Type,MailAddres,City,State,Zip"
+  # OrgPhone/OrgEmail/Contact/ContactPho/ContactEma are contact columns — not mapped.
+  fields: {name: Name, status: Type, address: MailAddres, city: City, zip: Zip}
+  constants: {county: DeKalb}
+
+- kind: arcgis
+  source: "City of Sandy Springs GA — Neighborhoods (HOAs, condos, neighborhood & civic associations)"
+  page: "https://gis2.sandyspringsga.gov/arcgis/rest/services/OpenData/General_Reference/MapServer/125"
+  url: "https://gis2.sandyspringsga.gov/arcgis/rest/services/OpenData/General_Reference/MapServer/125"
+  where: "Type IN ('HOA', 'Condo', 'Neighbor', 'Civic')"
+  out_fields: "OBJECTID,Type,Name,DISTRICT"
+  fields: {name: Name, status: Type}
+  constants: {city: Sandy Springs, county: Fulton}
+
+- kind: arcgis
+  source: "City of Milton GA — Milton_HOA neighborhoods (subdivisions, townhomes & condominiums with management company)"
+  page: "https://www.miltonga.gov/"
+  url: "https://services2.arcgis.com/HgtLmZiOnoT105i1/arcgis/rest/services/Milton_HOA/FeatureServer/2"
+  where: "DevType IS NULL OR DevType <> 'Apartments'"
+  out_fields: "OBJECTID,FeatureID,Name,AKAName,DevType,PlatDate,HomesTot,Management_Company_Name,ManagementAddress"
+  # Persons_Name/Phone_Number/Email/HOA_Email/Contacts* are board contacts — not mapped.
+  fields: {name: Name, record_id: FeatureID, status: DevType, units: HomesTot, recorded_date: PlatDate,
+           manager: Management_Company_Name, address: ManagementAddress}
+  constants: {city: Milton, county: Fulton}
+
+- kind: arcgis
+  source: "City of Johns Creek GA — Neighborhoods (subdivisions, townhomes, senior & mixed communities)"
+  page: "https://www.johnscreekga.gov/"
+  url: "https://services1.arcgis.com/bqfNVPUK3HOnCFmA/arcgis/rest/services/Neighborhoods/FeatureServer/0"
+  where: "DevType <> 'Apartments'"
+  out_fields: "OBJECTID,FeatureID,Name,AKAName,DevType,PlatDate,HomesTot"
+  fields: {name: Name, record_id: FeatureID, status: DevType, units: HomesTot, recorded_date: PlatDate}
+  constants: {city: Johns Creek, county: Fulton}
+
+- kind: arcgis
+  source: "City of Brookhaven GA — Neighborhoods & Subdivisions"
+  page: "https://www.brookhavenga.gov/"
+  url: "https://maps.brookhavenga.gov/arcgis/rest/services/AdministrativeArea/AdministrativeArea/MapServer/2"
+  out_fields: "OBJECTID,NAME"
+  page_size: 1000
+  fields: {name: NAME}
+  constants: {city: Brookhaven, county: DeKalb, status: "neighborhood / subdivision association"}
+
+- kind: arcgis
+  source: "City of Atlanta GA (Dept. of City Planning) — Neighborhood Associations & HOAs by NPU"
+  page: "https://www.atlantaga.gov/government/departments/city-planning/office-of-zoning-development/neighborhood-planning-unit-npu"
+  url: "https://services5.arcgis.com/5RxyIIJ9boPdptdo/arcgis/rest/services/Updated_Neighborhood_Asset_Map_WFL1/FeatureServer/0"
+  where: "Type_of_Organization <> 'Neighborhood-Based Business Organization'"
+  out_fields: "OBJECTID,Organization_Name,NPU,Neighborhood,Type_of_Organization,Council_District"
+  # Organization_Leader_Name_*, Email_Address, Phone_Number are personal contacts — not mapped.
+  fields: {name: Organization_Name, status: Type_of_Organization, status_detail: Neighborhood}
+  constants: {city: Atlanta, county: Fulton}
+
+- kind: arcgis
+  source: "City of Savannah GA / SAGIS — Neighborhood Associations"
+  page: "https://www.savannahga.gov/"
+  url: "https://pub.sagis.org/arcgis/rest/services/OpenData/Community/MapServer/9"
+  out_fields: "OBJECTID,NUMBER,NAME,NEIGHBORHOOD_ORG_NAME"
+  fields: {name: NEIGHBORHOOD_ORG_NAME, record_id: NUMBER, status_detail: NAME}
+  constants: {city: Savannah, county: Chatham, status: "neighborhood association"}
+  exclude_name: "NO ACTIVE"
+
+- kind: arcgis
+  source: "Fulton County GA GIS — LandBase Subdivisions (condominium & townhome plats)"
+  page: "https://gisdata.fultoncountyga.gov/"
+  url: "https://services1.arcgis.com/AQDHTHDrZzfsFsB5/arcgis/rest/services/LandBase_Subdivisions/FeatureServer/0"
+  where: "UPPER(SubdivName) LIKE '%CONDO%' OR UPPER(SubdivName) LIKE '%TOWNHO%' OR UPPER(SubdivName) LIKE '%HOMEOWNER%'"
+  name_filter: true
+  fields: {name: SubdivName, city: City, record_id: FeatureID, recorded_date: YearRecorded}
+  constants: {county: Fulton, status: "recorded plat"}
+
+- kind: arcgis
+  source: "Gwinnett County GA GIS — Subdivisions (condominium & townhome plats)"
+  page: "https://www.gwinnettcounty.com/web/gwinnett/departments/informationtechnologyservices/geographicinformationsystems"
+  url: "https://services3.arcgis.com/RfpmnkSAQleRbndX/arcgis/rest/services/Property_and_Tax/FeatureServer/2"
+  where: "UPPER(DEVNAME) LIKE '%CONDO%' OR UPPER(DEVNAME) LIKE '%TOWNHO%' OR UPPER(DEVNAME) LIKE '%HOMEOWNER%'"
+  name_filter: true
+  fields: {name: DEVNAME, record_id: DEVID}
+  constants: {county: Gwinnett, status: "recorded plat"}
+
+- kind: arcgis
+  source: "City of Duluth GA — Neighborhoods (condominium & townhome communities)"
+  page: "https://www.duluthga.net/"
+  url: "https://services7.arcgis.com/ZTAeUzNBWlnSi6by/arcgis/rest/services/Neighborhoods/FeatureServer/151"
+  where: "TYPE IN ('Condo', 'Townhome', 'Single Family/Townhome')"
+  fields: {name: DEVNAME, record_id: DEVID, status: TYPE}
+  constants: {city: Duluth, county: Gwinnett}
+
+- kind: arcgis
+  source: "City of Peachtree Corners GA — Subdivisions (condominium & townhome plats)"
+  page: "https://www.peachtreecornersga.gov/"
+  url: "https://services3.arcgis.com/jEYjQXUX2JTVoctH/arcgis/rest/services/Subdivisions_PTC/FeatureServer/0"
+  where: "UPPER(DEVNAME) LIKE '%CONDO%' OR UPPER(DEVNAME) LIKE '%TOWNHO%' OR UPPER(DEVNAME) LIKE '%HOMEOWNER%'"
+  name_filter: true
+  fields: {name: DEVNAME, record_id: DEVID}
+  constants: {city: Peachtree Corners, county: Gwinnett, status: "recorded plat"}
+
+- kind: arcgis
+  source: "DeKalb County GA GIS — Subdivisions (condominium & townhome plats)"
+  page: "https://dcgis.dekalbcountyga.gov/"
+  url: "https://dcgis.dekalbcountyga.gov/mapping/rest/services/Subdivision/MapServer/0"
+  where: "UPPER(SUBDIV_NAME) LIKE '%CONDO%' OR UPPER(SUBDIV_NAME) LIKE '%TOWNHO%' OR UPPER(SUBDIV_NAME) LIKE '%HOMEOWNER%'"
+  name_filter: true
+  fields: {name: SUBDIV_NAME, record_id: SUB_ID}
+  constants: {county: DeKalb, status: "recorded plat"}
+
+- kind: arcgis
+  source: "City of Kennesaw GA — Major subdivisions (condominium & attached-home plats)"
+  page: "https://www.kennesaw-ga.gov/"
+  url: "https://services2.arcgis.com/XwGh5SYpBlXQGJEB/arcgis/rest/services/SubdivisionsBoth/FeatureServer/0"
+  where: "PlatType IN ('CDM', 'SFA')"
+  fields: {name: NAME, status_detail: PlatType, units: NumUnits}
+  constants: {city: Kennesaw, county: Cobb, status: "recorded plat (condominium / single-family attached)"}
+
+- kind: arcgis
+  source: "City of Canton GA — Subdivision HOA lookup (HOA name & management company)"
+  page: "https://www.cantonga.gov/"
+  url: "https://services6.arcgis.com/dpaY3zboICQILFY5/arcgis/rest/services/Canton_Subdivisions/FeatureServer/0"
+  oid: OBJECTID_1
+  where: "HOA_Name IS NOT NULL AND HOA_Name <> ''"
+  out_fields: "OBJECTID_1,SUBDIVISIO,Management_Company,HOA_Name"
+  # HOA_Contact/Contact_Phone/Contact_Email/Second_Contact* are personal contacts — not mapped.
+  fields: {name: HOA_Name, manager: Management_Company, status_detail: SUBDIVISIO}
+  constants: {city: Canton, county: Cherokee, status: "homeowners association"}

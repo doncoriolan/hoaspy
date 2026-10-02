@@ -1,0 +1,404 @@
+{
+ "search": [
+  {
+   "ID": 0,
+   "CaseNumber": "2026-0797",
+   "Caption": "John A. Doe\nv.\nCobblestone Lane Condominium Association, Inc.",
+   "DateFiled": "2026-06-24T04:00:00",
+   "Status": "Disposed",
+   "CaseType": "Jurisdictional Appeal",
+   "PriorJurisdiction": "9th District Court of Appeals "
+  },
+  {
+   "ID": 0,
+   "CaseNumber": "2017-0797",
+   "Caption": "State of Ohio ex, rel. Richard Roe, Peter Poe, Mark Moe, Lena Loe, and Neil Noe\nv.\nLost Hollow Property Owners Association Board of Directors Mary Doe-Roe (President)",
+   "DateFiled": "2017-06-13T04:00:00",
+   "Status": "Disposed",
+   "CaseType": "Original Action in Mandamus",
+   "PriorJurisdiction": ""
+  },
+  {
+   "ID": 0,
+   "CaseNumber": "1990-2459",
+   "Caption": "Pat Condo\r\nv.\r\nThe Buckeye Tree Antique Co-Op",
+   "DateFiled": "1990-12-18T00:00:00",
+   "Status": "Disposed",
+   "CaseType": "Motion to Certify; Claimed Appeal of Right",
+   "PriorJurisdiction": "7th District Court of Appeals "
+  },
+  {
+   "ID": 0,
+   "CaseNumber": "2002-0152",
+   "Caption": "John Doe and Jane Doe\r\nv.\r\nHickory Creek Homeowners Association, Richard Roe, Mary Roe,\r\nPaula Poe, Roe Realty, PNC Bank, etc., Sarah Moe, et al.",
+   "DateFiled": "2002-01-28T00:00:00",
+   "Status": "Disposed",
+   "CaseType": "Discretionary Appeal (Non-felony); Claimed Appeal of Right",
+   "PriorJurisdiction": "1st District Court of Appeals"
+  },
+  {
+   "ID": 0,
+   "CaseNumber": "2010-2092",
+   "Caption": "The Condominiums at Stonebridge Owners' Association, et al.\r\nv.\r\nJohn Doe, et al.\r\nv.\r\nThe K & D Group, Inc., et al.",
+   "DateFiled": "2010-12-03T00:00:00",
+   "Status": "Disposed",
+   "CaseType": "Discretionary Appeal (Non-felony)",
+   "PriorJurisdiction": "8th District Court of Appeals "
+  },
+  {
+   "ID": 0,
+   "CaseNumber": "1995-0135",
+   "Caption": "Jane Doe, Administratrix, etc.\r\nv.\r\nAuto-Owners Insurance Company",
+   "DateFiled": "1995-01-20T00:00:00",
+   "Status": "Disposed",
+   "CaseType": "Discretionary Appeal (Non-felony)",
+   "PriorJurisdiction": "6th District Court of Appeals "
+  }
+ ],
+ "details": {
+  "2026-0797": {
+   "CaseInfo": {
+    "ID": 119049,
+    "CaseNumber": "2026-0797",
+    "Caption": "John A. Doe\nv.\nCobblestone Lane Condominium Association, Inc.",
+    "DateFiled": "2026-06-24T04:00:00",
+    "Status": "Disposed",
+    "CaseType": "Jurisdictional Appeal",
+    "PriorJurisdiction": null
+   },
+   "CaseJurisdiction": {
+    "Name": "9th District Court of Appeals ",
+    "County": "Summit",
+    "PriorDecisionDate": "2026-05-13T04:00:00",
+    "PriorCaseNumbers": [
+     {
+      "Number": "31501"
+     }
+    ]
+   },
+   "DecisionItems": [
+    {
+     "Description": "Jurisdiction declined.  See announcement at <a href='https://supremecourt.ohio.gov/rod/docs/pdf/0/2026/2026-ohio-3554.pdf' target='_blank'>2026-Ohio-3554</a>.",
+     "ReleaseDate": "2026-09-15T00:00:00",
+     "DisposesCase": true,
+     "DocumentName": "245507.pdf"
+    }
+   ],
+   "Parties": [
+    {
+     "Name": "Cobblestone Lane Condominium Association, Inc.",
+     "ProSe": false,
+     "Type": "Appellant",
+     "Attorneys": []
+    },
+    {
+     "Name": "John A. Doe",
+     "ProSe": false,
+     "Type": "Appellee",
+     "Attorneys": []
+    }
+   ],
+   "DocketItems": [],
+   "CaseIssues": []
+  },
+  "2017-0797": {
+   "CaseInfo": {
+    "ID": 97445,
+    "CaseNumber": "2017-0797",
+    "Caption": "State of Ohio ex, rel. Richard Roe, Peter Poe, Mark Moe, Lena Loe, and Neil Noe\nv.\nLost Hollow Property Owners Association Board of Directors Mary Doe-Roe (President)",
+    "DateFiled": "2017-06-13T04:00:00",
+    "Status": "Disposed",
+    "CaseType": "Original Action in Mandamus",
+    "PriorJurisdiction": null
+   },
+   "CaseJurisdiction": {
+    "Name": null,
+    "County": null,
+    "PriorDecisionDate": null,
+    "PriorCaseNumbers": null
+   },
+   "DecisionItems": [
+    {
+     "Description": "Granted; cause dismissed.  See announcement at <a href='https://supremecourt.ohio.gov/rod/docs/pdf/0/2017/2017-ohio-7567.pdf' target='_blank'>2017-Ohio-7567</a>. (<em>Motion for judgment on pleadings of Mary Doe-Roe, President of the Lost Hollow Property Owners Association Board of Directors</em>)",
+     "ReleaseDate": "2017-09-13T00:00:00",
+     "DisposesCase": true,
+     "DocumentName": "212999.pdf"
+    }
+   ],
+   "Parties": [
+    {
+     "Name": "Mark Moe",
+     "ProSe": true,
+     "Type": "Relator",
+     "Attorneys": []
+    },
+    {
+     "Name": "Peter Poe",
+     "ProSe": true,
+     "Type": "Relator",
+     "Attorneys": []
+    },
+    {
+     "Name": "Lena Loe",
+     "ProSe": true,
+     "Type": "Relator",
+     "Attorneys": []
+    },
+    {
+     "Name": "Neil Noe",
+     "ProSe": true,
+     "Type": "Relator",
+     "Attorneys": []
+    },
+    {
+     "Name": "Richard R. Roe",
+     "ProSe": true,
+     "Type": "Relator",
+     "Attorneys": []
+    },
+    {
+     "Name": "Richard R Roe",
+     "ProSe": true,
+     "Type": "Relator",
+     "Attorneys": []
+    },
+    {
+     "Name": "Mary Doe-Roe, President, Lost Hollow Property Owners Association Board of Directors",
+     "ProSe": true,
+     "Type": "Respondent",
+     "Attorneys": []
+    }
+   ],
+   "DocketItems": [],
+   "CaseIssues": []
+  },
+  "1990-2459": {
+   "CaseInfo": {
+    "ID": 13242,
+    "CaseNumber": "1990-2459",
+    "Caption": "Pat Condo\r\nv.\r\nThe Buckeye Tree Antique Co-Op",
+    "DateFiled": "1990-12-18T00:00:00",
+    "Status": "Disposed",
+    "CaseType": "Motion to Certify; Claimed Appeal of Right",
+    "PriorJurisdiction": null
+   },
+   "CaseJurisdiction": {
+    "Name": "7th District Court of Appeals ",
+    "County": "Mahoning",
+    "PriorDecisionDate": "1990-12-07T00:00:00",
+    "PriorCaseNumbers": [
+     {
+      "Number": "89CA188"
+     }
+    ]
+   },
+   "DecisionItems": [
+    {
+     "Description": "Overruled (<em>Upon consideration of jurisdictional question\r\nDISMISSED SUA SPONTE</em>)",
+     "ReleaseDate": "1991-03-20T00:00:00",
+     "DisposesCase": true,
+     "DocumentName": ""
+    }
+   ],
+   "Parties": [
+    {
+     "Name": "Pat Condo",
+     "ProSe": false,
+     "Type": "Appellant",
+     "Attorneys": []
+    },
+    {
+     "Name": "Buckeye Tree Antique Co-Op",
+     "ProSe": false,
+     "Type": "Appellee",
+     "Attorneys": []
+    }
+   ],
+   "DocketItems": [],
+   "CaseIssues": []
+  },
+  "2002-0152": {
+   "CaseInfo": {
+    "ID": 42117,
+    "CaseNumber": "2002-0152",
+    "Caption": "John Doe and Jane Doe\r\nv.\r\nHickory Creek Homeowners Association, Richard Roe, Mary Roe,\r\nPaula Poe, Roe Realty, PNC Bank, etc., Sarah Moe, et al.",
+    "DateFiled": "2002-01-28T00:00:00",
+    "Status": "Disposed",
+    "CaseType": "Discretionary Appeal (Non-felony); Claimed Appeal of Right",
+    "PriorJurisdiction": null
+   },
+   "CaseJurisdiction": {
+    "Name": "1st District Court of Appeals",
+    "County": "Hamilton",
+    "PriorDecisionDate": "2001-12-14T00:00:00",
+    "PriorCaseNumbers": [
+     {
+      "Number": "C010332"
+     }
+    ]
+   },
+   "DecisionItems": [
+    {
+     "Description": "Jurisdiction declined and appeal dismissed (<em>Upon consideration of jurisdictional question</em>)",
+     "ReleaseDate": "2002-04-03T00:00:00",
+     "DisposesCase": true,
+     "DocumentName": ""
+    }
+   ],
+   "Parties": [
+    {
+     "Name": "Hickory Hill Homeowners Association",
+     "ProSe": false,
+     "Type": "Alias",
+     "Attorneys": []
+    },
+    {
+     "Name": "Hickory Creek Homeowners Association",
+     "ProSe": false,
+     "Type": "Appellant",
+     "Attorneys": []
+    },
+    {
+     "Name": "Jane Doe",
+     "ProSe": false,
+     "Type": "Appellee",
+     "Attorneys": []
+    },
+    {
+     "Name": "John Doe",
+     "ProSe": false,
+     "Type": "Appellee",
+     "Attorneys": []
+    }
+   ],
+   "DocketItems": [],
+   "CaseIssues": []
+  },
+  "2010-2092": {
+   "CaseInfo": {
+    "ID": 74702,
+    "CaseNumber": "2010-2092",
+    "Caption": "The Condominiums at Stonebridge Owners' Association, et al.\r\nv.\r\nJohn Doe, et al.\r\nv.\r\nThe K & D Group, Inc., et al.",
+    "DateFiled": "2010-12-03T00:00:00",
+    "Status": "Disposed",
+    "CaseType": "Discretionary Appeal (Non-felony)",
+    "PriorJurisdiction": null
+   },
+   "CaseJurisdiction": {
+    "Name": "8th District Court of Appeals ",
+    "County": "Cuyahoga",
+    "PriorDecisionDate": "2010-08-05T00:00:00",
+    "PriorCaseNumbers": [
+     {
+      "Number": "94139"
+     }
+    ]
+   },
+   "DecisionItems": [
+    {
+     "Description": "Jurisdiction declined",
+     "ReleaseDate": "2011-03-02T00:00:00",
+     "DisposesCase": true,
+     "DocumentName": "186880.pdf"
+    }
+   ],
+   "Parties": [
+    {
+     "Name": "John Doe",
+     "ProSe": false,
+     "Type": "Appellant",
+     "Attorneys": []
+    },
+    {
+     "Name": "Jane Doe",
+     "ProSe": false,
+     "Type": "Appellant",
+     "Attorneys": []
+    },
+    {
+     "Name": "The Condominiums at Stonebridge, LTD",
+     "ProSe": false,
+     "Type": "Appellee",
+     "Attorneys": []
+    },
+    {
+     "Name": "The Condominiums at Stonebridge Owners' Association",
+     "ProSe": false,
+     "Type": "Appellee",
+     "Attorneys": []
+    },
+    {
+     "Name": "The K & D Group, Inc.",
+     "ProSe": false,
+     "Type": "Appellee",
+     "Attorneys": []
+    },
+    {
+     "Name": "Richard Roe",
+     "ProSe": false,
+     "Type": "Appellee",
+     "Attorneys": []
+    },
+    {
+     "Name": "Peter Poe",
+     "ProSe": false,
+     "Type": "Appellee",
+     "Attorneys": []
+    },
+    {
+     "Name": "Mary Moe",
+     "ProSe": false,
+     "Type": "Appellee",
+     "Attorneys": []
+    }
+   ],
+   "DocketItems": [],
+   "CaseIssues": []
+  },
+  "1995-0135": {
+   "CaseInfo": {
+    "ID": 24107,
+    "CaseNumber": "1995-0135",
+    "Caption": "Jane Doe, Administratrix, etc.\r\nv.\r\nAuto-Owners Insurance Company",
+    "DateFiled": "1995-01-20T00:00:00",
+    "Status": "Disposed",
+    "CaseType": "Discretionary Appeal (Non-felony)",
+    "PriorJurisdiction": null
+   },
+   "CaseJurisdiction": {
+    "Name": "6th District Court of Appeals ",
+    "County": "Lucas",
+    "PriorDecisionDate": "1994-12-09T00:00:00",
+    "PriorCaseNumbers": [
+     {
+      "Number": "L94156"
+     }
+    ]
+   },
+   "DecisionItems": [
+    {
+     "Description": "Reversed and remanded. See opinion <a href='https://supremecourt.ohio.gov/rod/docs/pdf/0/1996/1996-ohio-209.pdf' target='_blank'>1996-Ohio-209</a> (<em>Upon consideration of the merits</em>)",
+     "ReleaseDate": "1996-05-15T00:00:00",
+     "DisposesCase": true,
+     "DocumentName": ""
+    }
+   ],
+   "Parties": [
+    {
+     "Name": "Jane Doe",
+     "ProSe": false,
+     "Type": "Appellant",
+     "Attorneys": []
+    },
+    {
+     "Name": "Auto-Owners Insurance Company",
+     "ProSe": false,
+     "Type": "Appellee",
+     "Attorneys": []
+    }
+   ],
+   "DocketItems": [],
+   "CaseIssues": []
+  }
+ }
+}
