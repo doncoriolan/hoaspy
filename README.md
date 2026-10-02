@@ -60,6 +60,7 @@ re-run. Examples:
 ./venv/bin/python -m hoaspy.collect.liens.get_nyc_liens                  # NYC ACRIS
 ./venv/bin/python -m hoaspy.collect.liens.get_cook_liens --no-upload     # Cook County IL recorder liens (resumable)
 ./venv/bin/python -m hoaspy.collect.courts.get_courts                    # CourtListener RECAP + state opinions
+./venv/bin/python -m hoaspy.collect.courts.get_courts_bulk               # CourtListener bulk files: every caption naming an association (~7.7 GB)
 ./venv/bin/python -m hoaspy.collect.courts.get_state_courts --list       # trial-court portal adapters
 ./venv/bin/python -m hoaspy.collect.courts.get_state_courts --portal va_gdc --limit 5   # one portal, five names
 ```

@@ -2473,3 +2473,222 @@ class TestCookLiensParsing(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)
+
+
+class TestCourtListenerBulk(unittest.TestCase):
+    """CourtListener bulk-data collector (`get_courts_bulk`) against three
+    small files in the bulk CSV dialect (`tests/fixtures/courtlistener_bulk/`:
+    rows captured from the 2026-09-30 `courts`, `dockets` and
+    `opinion-clusters` files, columns the collector does not read emptied,
+    individuals replaced by Doe/Roe placeholders) — no network. Guards the
+    bucket listing, the PostgreSQL CSV dialect, the gate that tells an
+    association from a person / lender / club wearing the words, the caption
+    splitter, the record shapes and the blocked-row rule."""
+
+    @classmethod
+    def setUpClass(cls):
+        try:
+            from hoaspy.collect.courts import get_courts_bulk
+        except Exception as exc:
+            raise unittest.SkipTest(f"get_courts_bulk import failed: {exc}")
+        cls.m = get_courts_bulk
+        cls.fx = ROOT / "tests" / "fixtures" / "courtlistener_bulk"
+        cls.courts = cls.m.court_table(cls.fx / "courts.csv")
+
+    def _refined(self):
+        m = self.m
+        clusters = list(m.scan(self.fx / "opinion-clusters.csv", m.CLUSTER_COLS))
+        ids = frozenset(r["docket_id"] for r in clusters)
+        dockets = list(m.scan(self.fx / "dockets.csv", m.DOCKET_COLS, ids))
+        return m.refine(clusters, dockets, self.courts, "2026-09-30", "2026-10-01T00:00:00+00:00")
+
+    def test_listing_finds_the_latest_complete_snapshot(self):
+        m = self.m
+        def obj(key, size):
+            return f"<Contents><Key>{key}</Key><LastModified>x</LastModified><ETag>e</ETag><Size>{size}</Size></Contents>"
+        xml = ("<ListBucketResult>"
+               + obj("bulk-data/courts-2026-06-30.csv.bz2", 81000)
+               + obj("bulk-data/dockets-2026-06-30.csv.bz2", 5000000000)
+               + obj("bulk-data/opinion-clusters-2026-06-30.csv.bz2", 2400000000)
+               + obj("bulk-data/courts-2026-09-30.csv.bz2", 81226)
+               + obj("bulk-data/dockets-2026-09-30.csv.bz2", 5144011100)   # clusters not uploaded yet
+               + obj("bulk-data/opinions-2026-09-30.csv.bz2", 55252600000)
+               + "<NextContinuationToken>abc&amp;def</NextContinuationToken></ListBucketResult>")
+        items, token = m.parse_listing(xml)
+        self.assertEqual(token, "abc&def")
+        self.assertIn(("bulk-data/dockets-2026-09-30.csv.bz2", 5144011100), items)
+        snaps = m.snapshots(items)
+        self.assertEqual(list(snaps), ["2026-06-30"])           # the incomplete one is not offered
+        self.assertEqual(snaps["2026-06-30"]["dockets"], ("bulk-data/dockets-2026-06-30.csv.bz2", 5000000000))
+        self.assertEqual(m.parse_listing("<ListBucketResult></ListBucketResult>"), ([], ""))
+
+    def test_download_ranges_cover_the_file_exactly(self):
+        plan = self.m.plan_parts
+        parts = plan(5144011100, 8)
+        self.assertEqual(len(parts), 8)
+        self.assertEqual(parts[0][0], 0)
+        self.assertEqual(parts[-1][1], 5144011100 - 1)
+        for (_, end), (start, _) in zip(parts, parts[1:]):
+            self.assertEqual(start, end + 1)
+        self.assertEqual(plan(81226, 8), [(0, 81225)])           # a small file is one request
+        self.assertEqual(sum(e - s + 1 for s, e in plan(200 << 20, 8)), 200 << 20)
+
+    def test_csv_dialect_escapes_nulls_and_multiline_fields(self):
+        m = self.m
+        with m.open_rows(self.fx / "dockets.csv") as rows:
+            head = next(rows)
+            body = list(rows)
+        self.assertEqual(len(head), 54)
+        self.assertEqual({len(r) for r in body}, {54})
+        col = {c: i for i, c in enumerate(head)}
+        quoted = next(r for r in body if r[0] == "74274066")
+        self.assertEqual(quoted[col["case_name"]], 'JANE "JD" DOE v. GLOBE COMMUNICATIONS')   # \" in the file
+        self.assertEqual(quoted[col["date_terminated"]], "")                                  # NULL
+        with m.open_rows(self.fx / "opinion-clusters.csv") as rows:
+            head = next(rows)
+            body = list(rows)
+        self.assertEqual(len(body), 5)                           # the headmatter spans six lines
+        col = {c: i for i, c in enumerate(head)}
+        northlake = next(r for r in body if r[0] == "4488611")
+        self.assertIn('<parties id="p-1">\n', northlake[col["headmatter"]])
+        # a .bz2 file reads the same through bzip2 / the bz2 module
+        import bz2
+        with tempfile.TemporaryDirectory() as tmp:
+            packed = Path(tmp) / "courts-2026-09-30.csv.bz2"
+            packed.write_bytes(bz2.compress((self.fx / "courts.csv").read_bytes()))
+            self.assertEqual(m.court_table(packed), self.courts)
+
+    def test_court_table_gives_state_and_jurisdiction(self):
+        c = self.courts
+        self.assertEqual(len(c), 11)                             # one court's notes span two lines
+        self.assertEqual(c["mdctspecapp"], {"state": "MD", "jurisdiction": "SA",
+                                            "name": "Court of Special Appeals of Maryland"})
+        self.assertEqual((c["mied"]["state"], c["mied"]["jurisdiction"]), ("MI", "FD"))
+        self.assertEqual((c["ca11"]["state"], c["ca11"]["jurisdiction"]), ("", "F"))
+
+    def test_association_gate(self):
+        ok = self.m.is_association
+        for name in ("Twelve Hills Community Association", "FALLS GARDEN CONDOMINIUM ASSOCIATION, INC",
+                     "Council of Unit Owners of Annen Woods Condominium No. 4", "Sunset Lakes HOA",
+                     "SAWGRASS LAKES HOMEOWNERS", "Board of Managers of the 432 Park Condominium",
+                     "Relay Improvement Association", "Bradford Village Condo Trust"):
+            self.assertTrue(ok(name), name)
+        for name in ("Hoa Van Doe", "Nguyen Hoa", "HOA VAN DOE",        # a given name, not an HOA
+                     "Home Owners Loan Corporation", "Homeowners Choice Property & Casualty Insurance Company",
+                     "Bank of America, National Association", "Signature Point Condominiums LLC",
+                     "Standardbred Owners Association, Inc", "Sportsman's Park and Club Association",
+                     "Homeowners", "Property Owners", "Condos",           # truncated captions
+                     "on Behalf of Themselves and All Other Property Owners in the Subdivision",
+                     "Community Associations Institute", "Empire Indemnity Insurance Company"):
+            self.assertFalse(ok(name), name)
+
+    def test_captions_are_split_into_parties_with_roles(self):
+        f = self.m.find_associations
+        # reporter abbreviations; the full caption wins and "The" is dropped
+        self.assertEqual(f("Falls Garden Condominium Ass'n v. Falls Homeowners Ass'n",
+                           "FALLS GARDEN CONDOMINIUM ASSOCIATION, INC. v. The FALLS HOMEOWNERS ASSOCIATION, INC."),
+                         {"FALLS GARDEN CONDOMINIUM ASSOCIATION, INC": "plaintiff",
+                          "FALLS Homeowners ASSOCIATION, INC": "defendant"})
+        self.assertEqual(f("Lake Point Tower Condo. Ass'n v. Roe"),
+                         {"Lake Point Tower Condominium Association": "plaintiff"})
+        self.assertEqual(f("Board of Mgrs. of the 432 Park Condominium v. 56th & Park (NY) Owner, LLC"),
+                         {"Board of Managers of the 432 Park Condominium": "plaintiff"})
+        # Florida's shortened case_name, the association only in the full caption
+        self.assertEqual(f("JANE DOE and JOHN v. SAWGRASS LAKES HOMEOWNERS",
+                           "JANE DOE and JOHN DOE v. SAWGRASS LAKES HOMEOWNERS ASSOC."),
+                         {"SAWGRASS LAKES Homeowners Association": "defendant"})
+        # one of several defendants; ", Inc." stays on its name; role words go
+        self.assertEqual(f("Roe v. Wells Fargo Bank, N.A., Arbor Ridge Community Association, Inc., et al."),
+                         {"Arbor Ridge Community Association, Inc": "defendant"})
+        self.assertEqual(f("Sand and Sea Homeowners Association and John Doe v. Roe"),
+                         {"Sand and Sea Homeowners Association": "plaintiff"})
+        self.assertEqual(f("In re: Port Louis Owners Association, Inc."), {"Port Louis Owners Association, Inc": ""})
+        self.assertEqual(f("Malcolm Roe v. Lakeshore Estates Homeowner&39;s Association, Inc"),
+                         {"Lakeshore Estates Homeowners Association, Inc": "defendant"})
+        for caption in ("State v. Hoa Van Doe", "Doe v. Home Owners Loan Corporation",
+                        "Roe v. Bank of America, National Association", "Doe v. Roe"):
+            self.assertEqual(f(caption), {}, caption)
+        self.assertEqual(self.m.clean_caption('Roe Dental, LLC <b><font color="red">Jointly Administered</font></b>'),
+                         "Roe Dental, LLC Jointly Administered")
+
+    def test_scan_keeps_association_captions_and_skips_blocked_rows(self):
+        m = self.m
+        stats = __import__("collections").Counter()
+        clusters = list(m.scan(self.fx / "opinion-clusters.csv", m.CLUSTER_COLS, stats=stats))
+        self.assertEqual((stats["rows"], stats["kept"], stats["blocked"]), (5, 3, 1))
+        self.assertNotIn("10933293", {r["id"] for r in clusters})     # the blocked opinion
+        self.assertNotIn("6732967", {r["id"] for r in clusters})      # "Park & Club Ass'n": not in the net
+        self.assertEqual(set(clusters[0]), set(m.CLUSTER_COLS))
+        stats = __import__("collections").Counter()
+        dockets = {r["id"]: r for r in m.scan(self.fx / "dockets.csv", m.DOCKET_COLS,
+                                              frozenset({"74274066"}), stats)}
+        self.assertEqual((stats["rows"], stats["blocked"], stats["malformed"]), (12, 1, 0))
+        self.assertNotIn("1055750", dockets)                           # blocked docket, association or not
+        self.assertTrue(dockets["74274066"]["for_opinion"])            # no association word: kept only by id
+        self.assertNotIn("for_opinion", dockets["67847660"])
+        self.assertIn("53328483", dockets)                             # "Hoa" passes the wide net …
+
+    def test_refine_writes_docket_and_opinion_records(self):
+        dockets, opinions, stats = self._refined()
+        by_id = {d["docket_id"]: d for d in dockets}
+        # … and the name gate drops it, with the lender
+        self.assertEqual(sorted(by_id), [6368320, 65062906, 65070136, 67400605, 67847660, 73645368, 74274459])
+        d = by_id[67847660]
+        self.assertEqual(d, {
+            "docket_id": 67847660, "case_name": "Doe v. Poinsettia Homeowners Association, Inc.",
+            "court": "District Court, E.D. Michigan", "court_id": "mied", "jurisdiction": "FD",
+            "docket_number": "2:23-cv-12481", "date_filed": "2023-10-02", "date_terminated": "2024-06-24",
+            "nature_of_suit": "Civil Rights: Other", "cause": "42:1981 Civil Rights", "state": "MI",
+            "associations": ["Poinsettia Homeowners Association, Inc"],
+            "association_role": {"Poinsettia Homeowners Association, Inc": "defendant"},
+            "url": "https://www.courtlistener.com/docket/67847660/doe-v-poinsettia-homeowners-association-inc/",
+            "source": "courtlistener-bulk", "queries": ["bulk-data 2026-09-30"],
+            "retrieved_at": "2026-10-01T00:00:00+00:00"})
+        # the fields build_site's add_courts reads are all there
+        for key in ("case_name", "court", "docket_number", "date_filed", "date_terminated",
+                    "nature_of_suit", "cause", "url", "state", "associations"):
+            for rec in dockets:
+                self.assertIn(key, rec)
+        # a federal court of appeals has no state of its own: the district appealed from gives it
+        self.assertEqual((by_id[67400605]["state"], by_id[67400605]["jurisdiction"]), ("FL", "F"))
+        self.assertEqual(by_id[74274459]["associations"], ["SAWGRASS LAKES Homeowners Association"])
+        self.assertEqual(by_id[73645368]["association_role"], {"CASH ENERGY CONDOMINIUM ASSOCIATION": "plaintiff"})
+
+        by_cluster = {o["cluster_id"]: o for o in opinions}
+        self.assertEqual(sorted(by_cluster), [4488611, 7967752, 7974835])
+        o = by_cluster[7967752]
+        self.assertEqual(o, {
+            "cluster_id": 7967752, "docket_id": 65062906, "case_name": "Doe v. Twelve Hills Community Ass'n",
+            "court": "Court of Appeals of Maryland", "court_id": "md", "jurisdiction": "S",
+            "docket_number": "No. 13", "state": "MD", "date_filed": "2005-10-12", "status": "Published",
+            "associations": ["TWELVE HILLS COMMUNITY ASSOCIATION"],
+            "association_role": {"TWELVE HILLS COMMUNITY ASSOCIATION": "defendant"},
+            "url": "https://www.courtlistener.com/opinion/7967752/doe-v-twelve-hills-community-assn/",
+            "source": "courtlistener-bulk-opinions", "queries": ["bulk-data 2026-09-30"],
+            "retrieved_at": "2026-10-01T00:00:00+00:00"})
+        self.assertEqual(by_cluster[7974835]["associations"],
+                         ["FALLS GARDEN CONDOMINIUM ASSOCIATION, INC", "FALLS Homeowners ASSOCIATION, INC"])
+        self.assertEqual(stats["dockets kept"], 7)
+        self.assertEqual(stats["opinions kept"], 3)
+        self.assertEqual(stats["docket captions without an association party"], 2)
+
+    def test_an_opinion_without_its_docket_is_dropped(self):
+        m = self.m
+        row = {"id": "1", "docket_id": "999", "date_filed": "2020-01-01", "slug": "x", "precedential_status": "Published",
+               "case_name": "Roe v. Elm Court Condominium Association", "case_name_full": "", "source": "C",
+               "citation_count": "0"}
+        self.assertIsNone(m.opinion_record(row, None, self.courts, "2026-09-30", "now"))
+        dockets, opinions, stats = m.refine([row], [], self.courts, "2026-09-30", "now")
+        self.assertEqual((opinions, stats["opinions without a docket row"]), ([], 1))
+
+    def test_sources_entry_is_merged_not_overwritten(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "sources.json"
+            path.write_text(json.dumps({"dockets": 7527, "tx_research": {"records": 42814}}))
+            self.m.merge_sources(path, {"snapshot": "2026-09-30", "dockets": 3})
+            data = json.loads(path.read_text())
+            self.assertEqual(data["dockets"], 7527)
+            self.assertEqual(data["tx_research"], {"records": 42814})
+            self.assertEqual(data["courtlistener_bulk"], {"snapshot": "2026-09-30", "dockets": 3})
+            self.m.write_jsonl(Path(tmp) / "bulk_dockets.jsonl", [{"a": 1}, {"a": 2}])
+            self.assertEqual((Path(tmp) / "bulk_dockets.jsonl").read_text(), '{"a": 1}\n{"a": 2}\n')
