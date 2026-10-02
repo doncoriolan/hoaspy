@@ -56,7 +56,7 @@ the attempt.
 ## Commands
 
 ```bash
-./venv/bin/python -m unittest tests.test_collectors -v      # the whole suite, no network
+./venv/bin/python -m unittest discover -s tests -t . -v     # the whole suite, no network; CI runs the same on every pull request
 ./venv/bin/python -m hoaspy.collect.courts.get_state_courts --list
 ./venv/bin/python -m hoaspy.collect.<family>.<module> --help
 ```

@@ -1,0 +1,63 @@
+name: New source
+description: A government registry, recorder index or court search that lists community associations, liens or cases
+title: "Source: "
+labels: ["source"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you. A source needs no code from you: the address and a line on what it publishes is enough.
+        Please leave private individuals' names out of the text.
+  - type: input
+    id: url
+    attributes:
+      label: Address
+      description: The page a person would open to search or download it
+      placeholder: https://
+    validations:
+      required: true
+  - type: input
+    id: place
+    attributes:
+      label: State and county or city
+      placeholder: FL, Palm Beach County
+    validations:
+      required: true
+  - type: dropdown
+    id: kind
+    attributes:
+      label: What it lists
+      options:
+        - Associations (a registry or inventory)
+        - Liens or foreclosure filings (a recorder index)
+        - Court cases
+        - Corporate status
+        - Complaints or enforcement actions
+        - Something else
+    validations:
+      required: true
+  - type: dropdown
+    id: access
+    attributes:
+      label: How it is reached
+      options:
+        - Bulk download or open-data API
+        - Free search page, no login
+        - Free search page behind a login
+        - Captcha on every search
+        - Paid
+        - Not sure
+    validations:
+      required: true
+  - type: textarea
+    id: notes
+    attributes:
+      label: Anything else
+      description: Can it be searched by association name? Does it show a date, an amount, the parties? Do its terms say anything about automated access?
+  - type: checkboxes
+    id: rules
+    attributes:
+      label: Sourcing
+      options:
+        - label: It is published by a government body or a court
+          required: true

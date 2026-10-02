@@ -1,0 +1,41 @@
+name: tests
+
+# Runs the whole suite (no network, captured fixtures only) on every pull
+# request and on main.
+#
+# The trigger is `pull_request`, never `pull_request_target`: a pull request
+# from a fork then runs with a read-only token and no secrets, so the code it
+# brings cannot write to this repository. tests/test_repo.py fails if a
+# workflow here asks for more.
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: tests-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  unittest:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ["3.11", "3.14"]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: ${{ matrix.python }}
+          cache: pip
+      - name: Install
+        run: pip install -r requirements.txt
+      - name: Tests
+        run: python -m unittest discover -s tests -t . -v
