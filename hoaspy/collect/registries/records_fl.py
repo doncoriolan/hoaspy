@@ -22,6 +22,8 @@ import re
 
 import requests
 
+from hoaspy.lib.contract import strip_contacts
+
 log = logging.getLogger("records.fl")
 
 BASE = "https://www2.myfloridalicense.com/sto/file_download/extracts/"
@@ -101,10 +103,11 @@ def fetch(session: requests.Session, timeout: float = 120.0) -> list[dict]:
                 "status_detail": (row.get("Secondary Status") or "").strip(),
                 "manager_id": (row.get("Managing Entity Number") or "").strip(),
                 "manager_name": (row.get("Managing Entity Name") or "").strip(),
-                "manager_address": " ".join(
+                # Some managing entities type their phone number into the route line.
+                "manager_address": strip_contacts(" ".join(
                     p for p in ((row.get("Managing Entity Route") or "").strip(),
                                 (row.get("Managing Entity Street") or "").strip()) if p
-                ),
+                )),
                 "manager_city": (row.get("Managing Entity City") or "").strip(),
                 "manager_state": (row.get("Managing Entity State") or "").strip(),
                 "manager_zip": (row.get("Managing Entity Zip") or "").strip(),

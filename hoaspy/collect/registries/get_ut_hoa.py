@@ -41,6 +41,7 @@ import requests
 from hoaspy.collect.registries.get_states import REGS, update_coverage, write_merged
 
 from hoaspy import ROOT
+from hoaspy.lib.contract import strip_contacts
 CACHE = ROOT / ".cache" / "ut"
 CKPT = CACHE / "hoa_details.jsonl"
 BASE = "https://services.commerce.utah.gov/hoa/"
@@ -133,10 +134,11 @@ class Client:
 
 def _block_name(frag: str) -> str:
     """First line of a contact block is the name; phone/e-mail/address lines
-    that follow are deliberately dropped."""
+    that follow are deliberately dropped. A block with no name line starts
+    with the phone number instead, which is dropped too."""
     parts = [clean(p) for p in re.split(r"<br\s*/?>", frag)]
     parts = [p for p in parts if p]
-    return parts[0] if parts else ""
+    return strip_contacts(parts[0]) if parts else ""
 
 
 def _iso(v: str) -> str:

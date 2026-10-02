@@ -50,6 +50,84 @@ each able to create new entities or attach to existing ones:
    `association_role` onto the case and uses `county` as the match hint)
 6. news (`news/articles.jsonl`, when present)
 
+## The record contract
+
+Every collector writes JSON Lines, and each output file belongs to one
+*family* of records. `hoaspy/lib/contract.py` says which keys a row of each
+family must carry and what each may hold. `python -m hoaspy.lib.validate`
+checks files against it, and the site build reads every file through it, so
+a collector that starts writing something else is caught before its rows are
+used.
+
+| Family | Files | Keys every row carries | A row is unique by |
+| --- | --- | --- | --- |
+| `registry` | every `records/*.jsonl` not listed below | `name`, `state`, `source`, `source_url` | `source`, `record_id`, `name` |
+| `corp` | `records/state_corps.jsonl` | `name`, `state`, `source`, `source_url` | `source`, `record_id`, `name` |
+| `complaint` | `records/*complaints*.jsonl` | `name`, `state`, `source`, `source_url` | `source`, `complaint_number` |
+| `lien` | `liens/liens*.jsonl` | `association`, `state`, `county`, `doc_id`, `doc_type`, `year`, `recorded_date`, `source`, `source_page`, `retrieved_at` | `source`, `doc_id`, `association` |
+| `docket` | `courts/dockets.jsonl`, `courts/tx_research.jsonl`, `courts/trial_*.jsonl` | `case_name`, `court`, `docket_number`, `date_filed`, `date_terminated`, `nature_of_suit`, `cause`, `url`, `state`, `associations`, `source`, `retrieved_at` | `source`, `court`, `docket_number` |
+| `opinion` | `courts/opinions.jsonl` | `case_name`, `court`, `date_filed`, `url`, `state`, `associations`, `source`, `retrieved_at` | `url` |
+| `bulk_docket` | `courts/bulk_dockets.jsonl` | the `docket` keys, plus `docket_id` and `jurisdiction` | `docket_id` |
+| `bulk_opinion` | `courts/bulk_opinions.jsonl` | the `opinion` keys, plus `cluster_id`, `docket_id` and `jurisdiction` | `cluster_id` |
+| `news` | `news/*.jsonl` | `title`, `url`, `domain`, `date`, `queries` | `url` |
+
+Checkpoints and logs beside an output file (`.trial_<KEY>_partial.jsonl`,
+`*_done.jsonl`, `*_raw.jsonl`, …) belong to no family and are not checked.
+Keys the contract does not name are left alone — collectors carry
+source-specific extras — except that every value is scanned for contact
+details.
+
+**Value shapes.** `state` is a two-letter US state or territory code.
+Court dates (`date_filed`, `date_terminated`, a complaint's `date`) are
+`YYYY-MM-DD` or empty, because the site sorts and compares them as text. A
+recorder's date (`recorded_date`, `recorded_ymd`, `incorporated`) may be
+`YYYY-MM-DD`, `YYYYMMDD` or `M/D/YYYY`, as the source prints it. `year` is a
+number. A source link (`url`, `source_url`, `source_page`) is an `http(s)`
+address. `associations`, `respondents` and `filers` are lists of names.
+Some keys must be present but may be empty: a lien's `association` and
+`county`, a docket's `case_name`, `court`, the two dates, `nature_of_suit`
+and `cause`.
+
+**Three severities.**
+
+| Severity | What it means | Examples |
+| --- | --- | --- |
+| `error` | the row cannot be used | a required key missing or empty; `year` kept as text; `state: "Florida"`; `date_filed: "03/14/2024"`; a source link that is not an address; a line that is not JSON |
+| `contact` | a phone number or an e-mail address in a field — collectors never store either | a managing entity's phone number typed into its address line; an e-mail address where the association's name goes |
+| `warning` | usable, but worth a look | a date after tomorrow; a `year` before 1900; a row that names no association, or (court files) no state; digits stored as text; a date where a status belongs (a shifted column); no `retrieved_at`; a repeated row |
+
+`contract.strip_contacts(text)` removes phone numbers and e-mail addresses
+and keeps the rest (`"954-555-0134 7700 NW 5TH COURT"` →
+`"7700 NW 5TH COURT"`); a collector calls it on any free-text field a filer
+typed into. Links are never scanned, and neither are digit runs that belong
+to a longer id (a parcel number, a case number).
+
+**The command.**
+
+```bash
+./venv/bin/python -m hoaspy.lib.validate                          # every output file under records/ liens/ courts/ news/
+./venv/bin/python -m hoaspy.lib.validate liens/liens_cook.jsonl   # some files
+./venv/bin/python -m hoaspy.lib.validate --family lien bundle.jsonl   # a file whose name does not say what it is
+./venv/bin/python -m hoaspy.lib.validate --json report.json       # the same report as JSON ("-" for stdout)
+```
+
+It prints, per file, the row count and one line per kind of problem with the
+first line number it occurs on, and exits 1 when any file has an `error` or a
+`contact` (`--strict`: a warning too), 2 when a file's family cannot be told.
+A contact detail is reported by line and key only — the report never repeats
+the phone number or the address.
+
+**In the site build.** `Builder.rows(path, family)` is how `build_site.py`
+reads every collector file. It strips a contact detail from the field that
+holds it, so none reaches the site whatever a collector let through, and
+drops a row that is still unusable — an e-mail address where the name goes
+leaves no name. The tallies are logged and written to `meta.json` as
+`stats.contract` (`rows`, `dropped`, `stripped`, and per affected file the
+count of each problem). A few unusable rows are a source's own mess; when
+one file has at least 20 of them and they are more than 1% of its rows
+(`MIN_UNUSABLE_ROWS`, `MAX_UNUSABLE_SHARE`), that is a collector bug and the
+build stops before it writes anything.
+
 ## Where a community is (`hoaspy/build/places.py`)
 
 A community's `city` / `zip` / `address` come from the first record that

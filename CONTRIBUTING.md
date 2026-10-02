@@ -75,6 +75,11 @@ Copy the nearest existing module: a trial-court portal is one adapter file in
   **atomic write** of its output file;
 - a **module docstring** that states the source, the access path, the output
   file and the caveats;
+- output that **conforms to the record contract** (`hoaspy/lib/contract.py`):
+  run `./venv/bin/python -m hoaspy.lib.validate <your output file>` and fix
+  what it reports. Pass free-text fields a filer typed into through
+  `contract.strip_contacts()` — it removes phone numbers and e-mail
+  addresses;
 - a **fixture** under `tests/fixtures/` — a page or response saved from the
   source — and a **test class** in `tests/test_collectors.py` that parses it.
   Tests never touch the network;

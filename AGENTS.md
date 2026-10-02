@@ -21,7 +21,9 @@ For each source that means:
    paced requests, a checkpoint so a long run resumes, an atomic write of
    the output, and a module
    docstring that states the source, the access path, the output file and
-   the caveats.
+   the caveats. Its rows must conform to the record contract
+   (`hoaspy/lib/contract.py`): run `python -m hoaspy.lib.validate <file>`
+   on the output and leave no error and no contact detail.
 2. **A fixture and a parsing test**: a captured sample under
    `tests/fixtures/` and a class in `tests/test_collectors.py`. No network in
    tests. This repository is public, so replace individuals' names and
@@ -57,6 +59,7 @@ the attempt.
 
 ```bash
 ./venv/bin/python -m unittest discover -s tests -t . -v     # the whole suite, no network; CI runs the same on every pull request
+./venv/bin/python -m hoaspy.lib.validate                    # collector output against the record contract
 ./venv/bin/python -m hoaspy.collect.courts.get_state_courts --list
 ./venv/bin/python -m hoaspy.collect.<family>.<module> --help
 ```
