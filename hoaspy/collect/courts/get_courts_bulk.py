@@ -256,7 +256,7 @@ NOT_ASSOC = re.compile(
     r"COMMUNITY ASSOCIATIONS INSTITUTE|UNDERWRITERS|\bTAX\b|\bUNITED STATES\b|STANDARDBRED|"
     r"THOROUGHBRED|HORSE|CATTLE|\bTAXI|\bCAB\b|TRUCK|\bBOAT|VESSEL|AIRCRAFT|PILOTS|LIQUOR|"
     r"THEAT(?:RE|ER)|HOTEL|MOTEL|SERVICE STATION|BUSINESS OWNERS|RESTAURANT|TAVERN|"
-    r"NATIONAL ASSOCIATION|\bREPAIR\b|CONSULTING|\bBEHALF\b")
+    r"NATIONAL ASSOCIATION|\bREPAIR\b|CONSULTING|\bBEHALF\b|\bLOCATED\b")
 _NOT_A_PARTY = re.compile(
     r"(?:ON BEHALF|SUING|PROCEEDS|ALL OTHER|CERTAIN|UNKNOWN|REAL PROPERTY|INDIVIDUALLY|INDIV|REPRESENTING|"
     r"AS (?:OFFICERS?|MEMBERS?|REPRESENTATIVES?|TRUSTEES?|PRESIDENT|TREASURER|DIRECTORS?|INDIVIDUAL)|"
@@ -279,7 +279,7 @@ ALL OTHER I II III IV V 1 2 3 4 5""".split())
 
 _ROLE = re.compile(
     r",?\s*\b(?:et\.? ?al\.?|etc\.?|petitioners?(?:\(s\))?|respondents?(?:\(s\))?|appellants?|appellees?|"
-    r"plaintiffs?|defendants?|cross-\w+|intervenors?|individually|a/k/a.*|aka\b.*|f/k/a.*|n/k/a.*|d/b/a.*|"
+    r"plaintiffs?|defendants?|cross-\w+|intervenors?|individually|a/k/a.*|aka\b.*|f/k/a.*|n/k/a.*|d/b/a.*|c/o\b.*|"
     r"\.\s*appeal of.*|"
     r"an? [a-z -]*(?:corporation|company|association)\b.*)\s*$", re.I)
 _LEAD = re.compile(
@@ -291,13 +291,16 @@ _SUFFIX = re.compile(
     r"^(?:inc|incorporated|llc|l\.l\.c|ltd|lp|l\.p|n\.a|corp|co|etc|et\.? ?al|jr|sr|ii|iii|iv|"
     r"trustee|as trustee.*|an? [a-z -]*(?:corporation|company|association|partnership).*)\.?$", re.I)
 _TAG = re.compile(r"<[^>]+>")
+# California's appellate captions end with the district/division: "… CA1/2".
+_DIVISION = re.compile(r"\s+CA\d(?:/\d)?$")
 
 
 def clean_caption(s: str | None) -> str:
     """A caption as text: entities decoded (the files carry a bare `&39;`),
     markup dropped ("<b><font color=red>Jointly Administered…")."""
-    s = html.unescape((s or "").replace("&39;", "'"))
-    return " ".join(_TAG.sub(" ", s).split())
+    s = html.unescape((s or "").replace("&39;", "'")).replace("\u2019", "'").replace("\u2018", "'")
+    s = " ".join(_TAG.sub(" ", s).split())
+    return _DIVISION.sub("", s)
 
 
 _EXPANSIONS = [(re.compile(p, re.I), w) for p, w in (
@@ -318,6 +321,11 @@ def expand(s: str) -> str:
     return s
 
 
+def _cut_off(token: str) -> bool:
+    """A caption cut mid-word: "HOMEOWNERS ASS", "… CONDOMINIUM ASSOCIATIO"."""
+    return len(token) >= 2 and any(w.startswith(token) for w in ("ASSOCIATION", "CONDOMINIUM", "HOMEOWNERS"))
+
+
 def is_association(party: str) -> bool:
     """True when one caption party is a community association by its own
     words: an association word, no lender / insurer / builder / public-body
@@ -328,7 +336,7 @@ def is_association(party: str) -> bool:
     if not n or NOT_ASSOC.search(n) or _NOT_A_PARTY.match(n) or has_business_form(party):
         return False
     words = n.split()
-    if all(t in GENERIC for t in words) or len(words) > MAX_NAME_WORDS or _CLASS.search(n):
+    if all(t in GENERIC or _cut_off(t) for t in words) or len(words) > MAX_NAME_WORDS or _CLASS.search(n):
         return False
     if words.count("ASSOCIATION") > 1 and not n.startswith("ASSOCIATION"):
         return False            # two parties run together in the caption

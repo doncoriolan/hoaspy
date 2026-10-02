@@ -2583,6 +2583,7 @@ class TestCourtListenerBulk(unittest.TestCase):
                      "on Behalf of Themselves and All Other Property Owners in the Subdivision",
                      "Community Associations Institute", "Empire Indemnity Insurance Company",
                      "Roseland Townhomes",                                 # a rental complex as often as not
+                     "HOMEOWNERS ASS", "Two Condominiums located at 465 Ocean Drive",
                      "Individually and as President of the Board of Managers of Elm Court Condominium",
                      "as an Individual and as a Representative of a Class of Homeowners Residing in Keauhou",
                      "Tribeca Community Association 67 Vestry Street Tenants Association",   # two parties run together
@@ -2627,6 +2628,12 @@ class TestCourtListenerBulk(unittest.TestCase):
                          {"CHESTNUT HILL COMMUNITY ASSOCIATION": ""})
         self.assertEqual(f("Roe v. Ass'n of Owners of Kukui Plaza"), {"Association of Owners of Kukui Plaza": "defendant"})
         self.assertEqual(f("In re: Port Louis Owners Association, Inc."), {"Port Louis Owners Association, Inc": ""})
+        # a curly apostrophe, California's division tag, a "c/o" manager
+        self.assertEqual(f("Roe v. Wexford Plantation Home Owners\u2019 Association, Inc"),
+                         {"Wexford Plantation Homeowners Association, Inc": "defendant"})
+        self.assertEqual(f("Roe v. 1545 Broadway Homeowners Association CA1/2"),
+                         {"1545 Broadway Homeowners Association": "defendant"})
+        self.assertEqual(f("Solar Condominium c/o John Doe v. Roe"), {"Solar Condominium": "plaintiff"})
         self.assertEqual(f("Malcolm Roe v. Lakeshore Estates Homeowner&39;s Association, Inc"),
                          {"Lakeshore Estates Homeowners Association, Inc": "defendant"})
         for caption in ("State v. Hoa Van Doe", "Doe v. Home Owners Loan Corporation",
