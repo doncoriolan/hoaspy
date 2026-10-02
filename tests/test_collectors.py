@@ -2201,5 +2201,275 @@ class TestOhSupremeParsing(unittest.TestCase):
 
 
 
+class TestCookLiensParsing(unittest.TestCase):
+    """Cook County (IL) recorder liens (`get_cook_liens` + `records_cook`)
+    against three pages captured from the Clerk's Recordings System
+    (`tests/fixtures/cook_crs_*.html`: an Advanced Search results page and
+    two document pages; document numbers, PINs, addresses and every
+    individual's or contractor's name replaced by placeholders) — no
+    network. Guards the results-page and detail-page parsing, the choice of
+    the association among the parties, the document-type vocabulary, the
+    walk back through the 1,000-row cap, and a whole run against a stand-in
+    for the site."""
+
+    @classmethod
+    def setUpClass(cls):
+        try:
+            from hoaspy.collect.liens import get_cook_liens, records_cook
+        except Exception as exc:
+            raise unittest.SkipTest(f"cook liens import failed: {exc}")
+        cls.rc, cls.driver = records_cook, get_cook_liens
+        fx = ROOT / "tests" / "fixtures"
+        cls.results = (fx / "cook_crs_results.html").read_text()
+        cls.lien = (fx / "cook_crs_detail_lien.html").read_text()
+        cls.mechanics = (fx / "cook_crs_detail_mechanics.html").read_text()
+
+    def test_results_page_rows_pages_and_total(self):
+        rows, npages = self.rc.parse_result_page(self.results)
+        self.assertEqual((len(rows), npages, self.rc.result_total(self.results)), (6, 4, 340))
+        lien = next(r for r in rows if r["doc_number"] == "2600000006")
+        self.assertEqual((lien["recorded"], lien["executed"], lien["doc_type_label"], lien["consideration"]),
+                         ("1/29/2026", "1/28/2026", "LIEN", "$1,520.20"))
+        self.assertEqual((lien["grantor1"], lien["grantee1"], lien["pin"]),
+                         ("ENCLAVE AT GALEWOOD CROSSINGS MASTER ASSN", "DOE RICHARD", "00-00-000-000-1004"))
+        self.assertEqual(lien["detail_href"], "/Document/Detail?dId=SAMPLEDID&hId=SAMPLEHID")   # &amp; decoded
+        self.assertEqual([r["doc_type_label"] for r in rows],
+                         ["LIS PENDENS FORECLOSURE"] * 3 + ["LIEN", "LIEN", "MECHANICS LIEN"])
+        self.assertEqual(self.rc.parse_result_page("<html><body>no table</body></html>"), ([], 1))
+        self.assertIsNone(self.rc.result_total("<html></html>"))
+        # a search with no matches is an answer (zero documents, term finished), not a lost session
+        from datetime import date
+        from types import SimpleNamespace
+        empty = ('<form><input name="__RequestVerificationToken" value="t"></form>'
+                 '<div class="alert">No Document(s) found</div>')
+        self.assertEqual(self.rc.result_total(empty), 0)
+        self.assertEqual(self.rc.parse_result_page(empty)[0], [])
+        self.assertIsNone(self.rc.next_cursor([], 0, date(2026, 10, 1)))
+        crs = self.rc.CookCRS(pace=0)
+        url = self.rc.BASE + "/Search/ResultAddt?id1=%23collapse2"
+        self.assertFalse(crs._lost(SimpleNamespace(url=url, text=empty)))
+        self.assertTrue(crs._lost(SimpleNamespace(url=url, text=empty.replace("No Document(s) found", ""))),
+                        "the search form coming back with neither rows nor that message is a lost session")
+
+    def test_detail_page_keeps_parties_apart_and_decodes_entities(self):
+        p = self.rc.parse_detail(self.lien)
+        self.assertEqual((p["doc_number"], p["doc_type"], p["recorded"], p["executed"]),
+                         ("2600000001", "LIEN", "4/14/2025", "4/14/2025"))
+        self.assertEqual(p["filers"], ["ARTHUR & CALIFORNIA CONDO ASSN INC"])      # "&amp;" in the page
+        self.assertIn("ARTHUR &amp; CALIFORNIA", self.lien)
+        self.assertEqual(len(p["respondents"]), 6, "one entry per party, never a joined string")
+        self.assertEqual(p["respondents"][:2], ["DOE SUSAN TR", "DOE JOHN TRUST"])
+        self.assertEqual((p["amount"], p["pin"], p["address"]),
+                         (10005.91, "00-00-000-000-1001", "100 SAMPLE ST UNIT 1, CHICAGO"))
+
+    def test_association_gate_rejects_banks_llcs_and_owners_at_large(self):
+        ok = self.rc.is_association_party
+        for name in ("WESTGATE TERR CONDO ASSN", "ARTHUR & CALIFORNIA CONDO ASSN INC",
+                     "1216 ASTOR CONDOMINIUM UNIT OWNERS ASSOCIATION", "BROOKSIDE PROPERTY OWNERS ASSN",
+                     "1030 NATL HONORE CONDO ASSN", "LAKE SHORE BK CONDO ASSN", "BANKSTON MEADOWS HOMEOWNERS ASSN",
+                     "SAUGANASH VLG ASSOCIATION", "1317 N LARRABEE ASSN", "RIVERSIDE CONDO ASSOC",
+                     "BOARD OF MANAGERS MALIBU"):
+            self.assertTrue(ok(name), name)
+        for name in ("US BK NATL ASSN", "JPMORGAN CHASE BK NATL ASSN", "WELLS FARGO BANK NATIONAL ASSOCIATION",
+                     "FEDERAL NATIONAL MTGE ASSN", "TALMAN HOME FED SAV & LOAN ASSN", "TEACHERS INS & ANNUITY ASSN",
+                     "CONSUMERS COOPERATIVE CU",
+                     # ASSOC = "Associates": architects and contractors, not communities
+                     "TENG & ASSOC INC", "SEARL & ASSOC ARCHITECTS PC", "MIDWEST CONST ASSOC INC",
+                     "ALEXANDER GAMMIE ASSOC PLUMBING & HEATING CO", "JOHN BELMONT & ASSN INC", "SMITH ASSOC",
+                     "BOARD OF MANAGERS",
+                     "VILLAGE GREENE CONDO ASSN ALSIP LLC", "ROCKET MTG LLC", "DOE JOHN", "",
+                     "401 INDIVIDUAL UNIT OWNERS", "ALL UNIT OWNERS AND NEWPORT RLTY MGMT", "UNKNOWN OWNERS"):
+            self.assertFalse(ok(name), name)
+        # the filer side wins; a bank beside the association is never picked
+        self.assertEqual(self.rc.pick_association(["US BK NATL ASSN", "A CONDO ASSN"], ["B CONDO ASSN"]),
+                         ("A CONDO ASSN", "filer"))
+        self.assertEqual(self.rc.pick_association(["US BK NATL ASSN"], ["DOE JOHN", "B CONDO ASSN"]),
+                         ("B CONDO ASSN", "respondent"))
+        self.assertEqual(self.rc.pick_association(["ROCKET MTG LLC"], ["DOE JOHN"]), ("", ""))
+
+    def test_lien_record_has_the_shared_shape(self):
+        rec = self.rc.to_record(self.rc.parse_detail(self.lien), "2026-10-01T00:00:00+00:00")
+        self.assertEqual((rec["doc_id"], rec["doc_type"], rec["doc_type_label"]), ("2600000001", "LIE", "claim_of_lien"))
+        self.assertEqual((rec["recorded_date"], rec["recorded_ymd"], rec["year"]), ("2025-04-14", "2025-04-14", 2025))
+        self.assertEqual((rec["state"], rec["county"], rec["association"]),
+                         ("IL", "Cook", "ARTHUR & CALIFORNIA CONDO ASSN INC"))
+        self.assertEqual((rec["filers"], len(rec["respondents"]), rec["n_parties"]),
+                         (["ARTHUR & CALIFORNIA CONDO ASSN INC"], 6, 7))
+        self.assertEqual((rec["amount"], rec["parcel_id"], rec["property_address"]),
+                         (10005.91, "00-00-000-000-1001", "100 SAMPLE ST UNIT 1, CHICAGO"))
+        self.assertEqual((rec["case_number"], rec["legal_description"], rec["source"], rec["source_page"]),
+                         ("", "", "cook-crs", "https://crs.cookcountyclerkil.gov/Search"))
+        shared = {"doc_id", "doc_type", "doc_type_label", "recorded_date", "recorded_ymd", "year", "state", "county",
+                  "association", "filers", "respondents", "n_parties", "amount", "case_number", "parcel_id",
+                  "legal_description", "property_address", "source", "source_page", "retrieved_at"}
+        self.assertEqual(set(rec), shared)
+        self.assertNotIn("&amp;", json.dumps(rec))
+
+    def test_mechanics_lien_naming_a_bank_is_a_lien_against_the_association(self):
+        p = self.rc.parse_detail(self.mechanics)
+        self.assertEqual(p["doc_type"], "MECHANICS LIEN")
+        self.assertEqual(p["filers"], ["SAMPLE CONST CORP", "ARGENT MTG CO LLC", "MERS INC", "US BK NATL ASSN"])
+        self.assertIn("4068 S LAKE PK AVE CONDO ASSN", p["respondents"])
+        rec = self.rc.to_record(p, "t")
+        self.assertEqual((rec["doc_type"], rec["doc_type_label"]), ("LXA", "lien_against_association"),
+                         "the bank's ASSN must not make this a lien the association filed")
+        self.assertEqual(rec["association"], "4068 S LAKE PK AVE CONDO ASSN")
+        self.assertEqual((rec["year"], rec["amount"], rec["n_parties"]), (2021, 14732.0, 11))
+
+    def test_document_types_and_what_is_dropped(self):
+        assn, owner, bank = ["A CONDO ASSN"], ["DOE JOHN"], ["US BK NATL ASSN"]
+        kind = lambda t, f, r: (self.rc.classify(t, f, r) or (None,))[0]        # noqa: E731
+        for t in ("LIEN", "CORRECTED LIEN", "MECHANICS LIEN"):
+            self.assertEqual(kind(t, assn, owner), "LIE", t)
+        for t in ("LIS PENDENS FORECLOSURE", "AMENDED LIS PENDENS FORECLOSURE", "CORRECTED LIS PENDENS FORECLOSURE"):
+            self.assertEqual(self.rc.classify(t, assn, owner), ("LP", "lis_pendens", "A CONDO ASSN"), t)
+        self.assertEqual(kind("LIEN", ["SAMPLE CONST CORP"], assn), "LXA")
+        self.assertEqual(kind(" mechanics   lien ", ["SAMPLE CONST CORP"], assn), "LXA")
+        why = self.rc.drop_reason
+        self.assertEqual(why("LIEN", assn, owner), "")
+        self.assertEqual(why("LIS PENDENS FORECLOSURE", bank, owner + assn), "foreclosure_by_another_party")
+        self.assertIsNone(self.rc.classify("LIS PENDENS FORECLOSURE", bank, owner + assn))
+        self.assertEqual(why("FEDERAL LIEN", ["INTERNAL REVENUE SERVICE"], assn), "excluded_type")
+        self.assertEqual(why("RELEASE", assn, owner), "excluded_type")
+        self.assertEqual(why("LIEN", bank, owner), "no_association_party")
+        self.assertEqual(why("NOTICE", assn, owner), "unmapped_type")
+        self.assertEqual(why("", assn, owner), "excluded_type")
+
+    def test_results_row_is_enough_when_a_first_party_is_the_association(self):
+        rows, _ = self.rc.parse_result_page(self.results)
+        need = {r["doc_number"]: self.rc.needs_detail(r) for r in rows}
+        self.assertEqual(need, {"2600000001": True, "2600000003": True, "2600000004": True,
+                                "2600000006": False, "2600000007": False, "2600000008": False})
+        lien = next(r for r in rows if r["doc_number"] == "2600000006")
+        rec = self.rc.to_record(self.rc.row_to_parsed(lien), "t")
+        self.assertEqual((rec["doc_type"], rec["association"], rec["respondents"], rec["amount"]),
+                         ("LIE", "ENCLAVE AT GALEWOOD CROSSINGS MASTER ASSN", ["DOE RICHARD"], 1520.2))
+        self.assertEqual((rec["recorded_ymd"], rec["parcel_id"], rec["property_address"], rec["n_parties"]),
+                         ("2026-01-29", "00-00-000-000-1004", "", 2))
+        mech = next(r for r in rows if r["doc_number"] == "2600000008")
+        rec = self.rc.to_record(self.rc.row_to_parsed(mech), "t")
+        self.assertEqual((rec["doc_type"], rec["association"]), ("LXA", "LAKE ARLINGTON TOWNE MASTER ASSN"))
+        # the results page cuts names at 50 characters: such a row is recorded, and its page is wanted
+        cut = dict(lien, doc_number="2600000099", grantor1="LEXINGTON COMMONS COACH HOUSES CONDOMINIUM ASSOCIA")
+        self.assertEqual(len(cut["grantor1"]), self.rc.NAME_CAP)
+        self.assertTrue(self.rc.truncated(cut))
+        self.assertFalse(self.rc.truncated(lien))
+        self.assertFalse(self.rc.needs_detail(cut))
+        index = {r["doc_number"]: r for r in rows + [cut]}
+        with tempfile.TemporaryDirectory() as tmp, mock.patch.object(self.driver, "DETAILS", Path(tmp)):
+            decided = {k: r for k, r in index.items() if not self.rc.needs_detail(r)}
+            self.assertEqual([r["doc_number"] for r in self.driver.detail_queue(decided, "needed")], ["2600000099"])
+            self.assertEqual([r["doc_number"] for r in self.driver.detail_queue(decided, "all")],
+                             ["2600000099", "2600000006", "2600000007", "2600000008"])
+
+    def test_walk_back_through_the_row_cap(self):
+        from datetime import date
+        rc, to = self.rc, date(2026, 10, 1)
+        self.assertEqual((rc.ROW_CAP, rc.PAGE_CAP), (1000, 10))
+        self.assertEqual(rc.us_date(date(2026, 1, 2)), "01/02/2026")
+        self.assertEqual(rc.parse_us_date("9/23/2026"), date(2026, 9, 23))
+        self.assertIsNone(rc.parse_us_date(""))
+        rows = [{"recorded": "9/23/2026"}] * 400 + [{"recorded": "1/2/2026"}] * 600
+        self.assertIsNone(rc.next_cursor(rows[:340], 340, to), "under the cap the term is finished")
+        self.assertEqual(rc.next_cursor(rows, 1000, to), date(2026, 1, 2),
+                         "capped: the next window ends on the oldest day seen, inclusive")
+        self.assertEqual(rc.next_cursor(rows, None, to), date(2026, 1, 2), "1,000 rows read is capped too")
+        one_day = [{"recorded": "1/2/2026"}] * 1000
+        self.assertEqual(rc.next_cursor(one_day, 1000, date(2026, 1, 2)), date(2026, 1, 1),
+                         "a day that fills the cap by itself is stepped past")
+        self.assertIsNone(rc.next_cursor([], 1000, to))
+
+    def test_run_sweeps_shapes_and_resumes_against_a_stand_in_site(self):
+        """get_cook_liens end to end with the three fixtures served by a fake
+        client: one window finishes the term, rows are indexed once however
+        often they are read, lender foreclosures are neither fetched nor
+        recorded, the output and its sources file are written, coverage.json
+        gains the Cook lien index and loses the 'search-only' entry, a
+        second run posts nothing, and a cached detail page replaces the
+        results row."""
+        run = self.driver
+
+        class FakeCRS:
+            posts, pages, details = [], [], []
+
+            def post_window(self, term, frm, to, types=None, side=""):
+                self.posts.append((term, frm, to, tuple(types or ()), side))
+                return TestCookLiensParsing.results, 4
+
+            def page(self, n):
+                self.pages.append(n)
+                return TestCookLiensParsing.results
+
+            def detail(self, href):
+                self.details.append(href)
+                return TestCookLiensParsing.lien
+
+            def warm(self):
+                pass
+
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "coverage.json").write_text(json.dumps({"states": {"IL": {"name": "Illinois", "collected": {}, "unavailable": [
+                {"source": "Cook County Clerk current recordings", "why": "search-only"},
+                {"source": "SOS corporate bulk", "why": "paid"}]}}}))
+            paths = {"OUT": root / "liens" / "liens_cook.jsonl", "SOURCES": root / "liens" / "sources_cook.json",
+                     "COVERAGE": root / "coverage.json", "CACHE": root / "cache", "DETAILS": root / "cache" / "details",
+                     "INDEX": root / "cache" / "index.jsonl", "SWEEP": root / "cache" / "sweep.json"}
+            with contextlib.ExitStack() as stack:
+                for name, value in paths.items():
+                    stack.enter_context(mock.patch.object(run, name, value))
+                from datetime import date
+                crs, index, sweep, fails = FakeCRS(), run.load_index(), run.load_sweep(), [0]
+                run.sweep_term(crs, "MASTER ASSN", sweep, index, date(1980, 1, 1), None, fails)
+                # two passes: the lien types on either side, the lis pendens types on the grantor side
+                self.assertEqual([(p[0], p[1], p[3], p[4]) for p in crs.posts],
+                                 [("MASTER ASSN", "01/01/1980", ("LIEN", "CORL", "MECL"), ""),
+                                  ("MASTER ASSN", "01/01/1980", ("LISF", "AMLF", "COLF"), "D")])
+                self.assertEqual(crs.pages, [2, 3, 4, 2, 3, 4])
+                self.assertEqual(len(index), 6, "the same rows on every page of both passes are indexed once")
+                self.assertEqual({r["pass"] for r in index.values()}, {"liens"})
+                st = sweep["terms"]["MASTER ASSN / liens"]
+                self.assertEqual((st["done"], st["windows"], st["rows"], st["new"], st["oldest"], st["newest"]),
+                                 (True, 1, 24, 6, "2023-07-18", "2026-09-10"))
+                self.assertEqual(sweep["terms"]["MASTER ASSN / foreclosures"]["new"], 0)
+                self.assertEqual([r["doc_number"] for r in run.detail_queue(index, "needed")],
+                                 ["2600000001", "2600000003", "2600000004"],
+                                 "rows whose first parties are not an association need their page, newest first")
+                self.assertEqual([r["doc_number"] for r in run.detail_queue(index, "all")],
+                                 ["2600000001", "2600000003", "2600000004", "2600000006", "2600000007", "2600000008"])
+                self.assertEqual(run.detail_queue(index, "none"), [])
+
+                records = run.write_outputs(index, sweep, 0.0)
+                self.assertEqual([(r["doc_id"], r["doc_type"], r["detail_page"]) for r in records],
+                                 [("2600000006", "LIE", False), ("2600000007", "LIE", False), ("2600000008", "LXA", False)])
+                self.assertEqual([json.loads(line)["doc_id"] for line in paths["OUT"].read_text().splitlines()],
+                                 ["2600000006", "2600000007", "2600000008"], "newest first")
+                src = json.loads(paths["SOURCES"].read_text())
+                self.assertEqual((src["records"], src["associations"], src["years"], src["documents_indexed"]),
+                                 (3, 2, "2023-2026", 6))
+                self.assertEqual(src["counts"], {"from_results_row": 3, "awaiting_detail_page": 3})
+                self.assertEqual(src["document_types"], {"claim_of_lien": 2, "lien_against_association": 1})
+                self.assertFalse(src["sweep_complete"], "one term of the list is not the whole sweep")
+                self.assertEqual(sorted(src["terms"]), ["MASTER ASSN / foreclosures", "MASTER ASSN / liens"])
+                il = json.loads(paths["COVERAGE"].read_text())["states"]["IL"]
+                cook = il["counties"]["Cook"]["liens"]
+                self.assertEqual((cook["collector"], cook["records"], cook["associations"], cook["years"]),
+                                 ("get_cook_liens.py", 3, 2, "2023-2026"))
+                self.assertIn("sweep unfinished", cook["coverage"])
+                self.assertEqual([u["source"] for u in il["unavailable"]], ["SOS corporate bulk"])
+
+                # a second run finds the term finished and asks the site for nothing
+                run.sweep_term(crs, "MASTER ASSN", run.load_sweep(), run.load_index(), date(1980, 1, 1), None, fails)
+                self.assertEqual(len(crs.posts), 2)
+                # a cached detail page wins over the results row: full parties and the address
+                run.DETAILS.mkdir(parents=True)
+                run.detail_path("2600000006").write_text(self.lien)
+                records = run.write_outputs(run.load_index(), run.load_sweep(), 0.0)
+                full = next(r for r in records if r["detail_page"])
+                self.assertEqual((full["association"], full["n_parties"], full["property_address"]),
+                                 ("ARTHUR & CALIFORNIA CONDO ASSN INC", 7, "100 SAMPLE ST UNIT 1, CHICAGO"))
+                self.assertEqual(len(records), 3)
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)

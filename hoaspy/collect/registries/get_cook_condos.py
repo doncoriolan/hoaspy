@@ -4,8 +4,9 @@
     ./venv/bin/python -m hoaspy.collect.registries.get_cook_condos
     ./venv/bin/python -m hoaspy.collect.registries.get_cook_condos --limit 500   # smoke test
 
-Illinois has no association registry and the Cook County recorder publishes
-no usable index, but the Assessor classifies every residential condominium
+Illinois has no association registry, and the Cook County recorder's index
+names an association only on the documents it is a party to (get_cook_liens
+reads those), but the Assessor classifies every residential condominium
 unit (class 299) and publishes the parcels with coordinates, plus a unit
 characteristics table and a parcel-address table. Grouping the unit PINs by
 their 10-digit building PIN gives every condo building in the county:

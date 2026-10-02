@@ -1,0 +1,474 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <meta name="format-detection" content="telephone=no">
+    <title>Document Detail | Clerk's Recordings System</title>
+    <noscript>
+        <meta http-equiv="refresh" content="0;URL=http://crs.cookcountyclerkil.gov/Home/EnableJavascript" />
+    </noscript>
+    <link href="/Content/css?v=rsU2Eji0u9P2WvZEOnL1IuAZ4thNyibej24hJDWdkAY1" rel="stylesheet"/>
+    <link href="/Content/font-awesome.min.css" rel="stylesheet" />
+    <link href="/Content/PagedList.css" rel="stylesheet" type="text/css" />
+    <link href="/Content/jquery-ui.css" rel="stylesheet" />
+    <link rel="icon" href="https://www.cookcountyclerkil.gov/themes/custom/clerk/cookcountyclerk.ico" />
+    <link href="/Content/Site.css?v=1" rel="stylesheet" />
+</head>
+<body>
+    <div class="bg-light container">
+        <div class="mRow">
+            <div class="Column" style="width:8%;">
+                <div class="nav-clerk-logo-link">
+                    <a href="/Search" title="Home">
+                        <img src="/Images/seal.png" alt="Home" />
+                    </a>
+                </div>
+            </div>
+            <div class="Column p-0 m-0 pt-3" style="vertical-align:top;">
+                <div class="text-end" id="cartDisplay">
+                    <div class="shoppingCart ms-2">
+    <a href="/Cart" class="no-textdecoration" id="lnkCart">
+0    </a>
+</div>
+                </div>
+                <div class="font-weight-boldOld text-uppercase float-left" style="font-size:12px;">Recordings</div>
+                <div class="smallFont text-uppercase float-left">
+                    Cook County Clerk's Office
+                </div>
+                <hr class="w-100 float-left p-0 mt-0 mb-0" />
+                <div class="float-left">
+                    <span class="appTitle small"><small></small></span>
+                    <div class="text-end">
+                        <nav class="navbar navbar-expand-lg navbar-light bg-light">
+                            <div class="container-fluid ps-0">
+                                <div class="ms-auto">
+                                    <button class="navbar-toggler btn btn-primary text-white" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+                                        <span class="navbar-toggler-icon1"><i class="fa fa-bars fa-lg" style="background-color:#337AB7;color:white; "></i></span>
+                                    </button>
+                                </div>
+                                <div class="collapse navbar-collapse collapse w-100 order-3 dual-collapse2 text-end" id="navbarSupportedContent">
+                                    <ul class="navbar-nav ms-auto" style="font-size :15px;">
+                                        <li class="nav-item text-start">
+                                            <a href="/Search" class="nav-link menuActiveLink"><i class="fa fa-search"></i> Search</a>
+                                        </li>
+                                        <li class="nav-item text-start">
+                                            <a href="/Public" class="nav-link "><i class="fa fa-commenting-o"></i> Property Fraud Alert</a>
+                                        </li>
+                                        <li class="nav-item text-start">
+                                            <a href="/MailTracking?returnUrl=%2FDocument%2FDetail%3FdId%3DNDM3MzMwMTI1%26hId%3DYjVmZTk4NTZjYTgxZGVmOTY2NWVlNGJhMDNhYWJlOTFhZDQ3NTA5NGFkZTVkNGI2NjYwNmQ5YmIwZDlhNDhjMw2" class="nav-link "><i class="fa fa-envelope-o"></i> Mail Tracking</a>
+                                        </li>
+                                        <li class="nav-item text-start">
+                                            <a href="/ChangeRequest" class="nav-link "><i class="fa fa-table"></i> Indexing Corrections</a>
+                                        </li>
+                                            <li class="nav-item text-start">
+                                                <a href="/Order/Search?column=OrderDate&amp;direction=desc" class="nav-link "><i class="fa fa-table"></i> Orders</a>
+                                            </li>
+                                                                                    <li class="nav-item text-start">
+                                                <a href="/Account/Login?returnUrl=%2FDocument%2FDetail%3FdId%3DNDM3MzMwMTI1%26hId%3DYjVmZTk4NTZjYTgxZGVmOTY2NWVlNGJhMDNhYWJlOTFhZDQ3NTA5NGFkZTVkNGI2NjYwNmQ5YmIwZDlhNDhjMw2" class="nav-link "><i class="fa fa-sign-in"></i> Account</a>
+                                            </li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </nav>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="container">
+        <div class="row ">
+            <div class="breadcrumb container m-0 p-0">
+                <p class="float-right m-0">
+    <text x-ms-format-detection="none">Document Details</text>
+                </p>
+            </div>
+            <div class="bg-white">
+            </div>
+            <div class="container mt-1">
+                <div class="row container-box" style="padding:5px 20px;" role="main">
+<div>
+    <div class="row mt-2">
+        <div class="cold-md-12">
+                <span class="">You may remove documents from your cart by clicking the “Shopping Cart”, which is located on the upper right corner of the page.</span>
+        </div>
+    </div>
+    <div class="row mt-1">
+        <div class="col-md-10">
+            <span id="cartAddedMsg"></span>
+            <span id="cartAddedCertMsg"></span>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-md-1 pt-3">
+            <strong><a href="javascript: window.history.back();"> <i class="fa fa-arrow-circle-left fa-lg" style="color:black;"></i> Back</a></strong>
+        </div>
+                    <div class="col-md-3 pt-3 productlist">
+                        <a href="1" id="btnAddItem" class="" style="font-size:15px;"> <i class="fa fa-file-pdf-o" style="color:blue;"></i> Add Document to Cart</a>
+                    </div>
+                    <div class="col-md-4 pt-3 productlist">
+                        <a href="2" id="btnAddCertItem" class="" style="font-size:15px;"> <i class="fa fa-certificate" style="color:blue;"></i> Add Certified Document to Cart</a>
+                    </div>
+            <div class="col-md-4 pt-2">
+            </div>
+        </div>
+        <input data-val="true" data-val-number="The field DocId must be a number." id="DocId" name="DocId" type="hidden" value="43733012" />
+        <fieldset>
+            <legend class="border-bottom">Viewing Document: 2600000001</legend>
+            <div class="row mt-1">
+                <div class="col-md-6" id="divcol1">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <tbody>
+                                <tr>
+                                    <th><label>Document Number:</label></th>
+                                    <td>2600000001</td>
+                                </tr>
+                                <tr>
+                                    <th><label>Document Type:</label></th>
+                                    <td>MECHANICS LIEN</td>
+                                </tr>
+                                <tr>
+                                    <th><label>Date Recorded:</label></th>
+                                    <td>12/28/2021</td>
+                                </tr>
+                                <tr>
+                                    <th><label>Date Executed:</label></th>
+                                    <td>12/27/2021</td>
+                                </tr>
+                                <tr>
+                                    <th><label># of Pages:</label></th>
+                                    <td>3</td>
+                                </tr>
+                                <tr>
+                                    <th><label>Address:</label></th>
+                                    <td><span>100 SAMPLE ST UNIT 1, CHICAGO</span></td>
+                                </tr>
+                                    <tr>
+                                        <th><label>Consideration Amount:</label></th>
+                                        <td>$14,732.00 </td>
+                                    </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="row mt-3">
+                        <div class="col-md-12">
+                            <span class="fs-5">Grantors</span>
+                                <table class="table table-hover table-responsive">
+                                    <thead>
+                                        <tr>
+                                            <th scope="col"><span >Name</span></th>
+                                            <th scope="col">
+                                                <span >Trust#</span>
+                                            </th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                            <tr>
+                                                <td class="align-middle">
+                                                    <a href="/Search/ResultByName?id1=MTYwMTY4ODU1">SAMPLE CONST CORP</a>
+                                                </td>
+                                                <td class="align-middle">
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <td class="align-middle">
+                                                    <a href="/Search/ResultByName?id1=Mjk0NzM2OQ2">ARGENT MTG CO LLC</a>
+                                                </td>
+                                                <td class="align-middle">
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <td class="align-middle">
+                                                    <a href="/Search/ResultByName?id1=Njc4NzY0Nw2">MERS INC</a>
+                                                </td>
+                                                <td class="align-middle">
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <td class="align-middle">
+                                                    <a href="/Search/ResultByName?id1=NTM1NDEwMA2">US BK NATL ASSN</a>
+                                                </td>
+                                                <td class="align-middle">
+                                                </td>
+                                            </tr>
+                                    </tbody>
+                                </table>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-12">
+                            <span class="fs-5">Grantees</span>
+                                <table class="table table-hover table-responsive">
+                                    <thead>
+                                        <tr>
+                                            <th scope="col">
+                                                <span >Name</span>
+                                            </th>
+                                            <th scope="col">
+                                                <span >Trust#</span>
+                                            </th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                            <tr>
+                                                <td class="align-middle">
+                                                    <a href="/Search/ResultByName?id1=MTU1NzAwNTE1">DOE JOHN TRUST</a>
+                                                </td>
+                                                <td class="align-middle">
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <td class="align-middle">
+                                                    <a href="/Search/ResultByName?id1=MTU1NzAwNTI1">DOE JANE TRUST</a>
+                                                </td>
+                                                <td class="align-middle">
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <td class="align-middle">
+                                                    <a href="/Search/ResultByName?id1=NjI0NzQwNw2">DOE JAMES</a>
+                                                </td>
+                                                <td class="align-middle">
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <td class="align-middle">
+                                                    <a href="/Search/ResultByName?id1=MTYwMTY4MTM1">4068 S LAKE PK AVE CONDO ASSN</a>
+                                                </td>
+                                                <td class="align-middle">
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <td class="align-middle">
+                                                    <a href="/Search/ResultByName?id1=MjQwMDg1OA2">LAKE PK CONDO ASSN</a>
+                                                </td>
+                                                <td class="align-middle">
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <td class="align-middle">
+                                                    <a href="/Search/ResultByName?id1=MTYwMTY4MTQ1">4068 S LAKE PK AVE CONDO ASSN AKALAKE PK CONDO ASSN</a>
+                                                </td>
+                                                <td class="align-middle">
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <td class="align-middle">
+                                                    <a href="/Search/ResultByName?id1=MTYwMTY4MTI1">4068 LAKE PK PL CONDO</a>
+                                                </td>
+                                                <td class="align-middle">
+                                                </td>
+                                            </tr>
+                                    </tbody>
+                                </table>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-12">
+                                <span class="fs-5">Prior Documents</span>
+                                <table class="table table-hover table-responsive">
+                                    <thead>
+                                        <tr>
+                                            <th scope="col" class="text-center">
+                                                View
+                                            </th>
+                                            <th scope="col"><span >Doc #</span></th>
+                                            <th scope="col">
+                                                <span >Type</span>
+                                            </th>
+                                            <th scope="col" class="text-center">
+                                                <span >Date Recorded</span>
+                                            </th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                            <tr>
+                                                <td class="align-middle text-center">
+                                                    <a href="/Document/Detail?dId=SAMPLEDID&amp;hId=SAMPLEHID" style="display:block;" title="View">View</a>
+                                                </td>
+                                                <td class="align-middle">
+                                                    <span>2600000002</span>
+                                                </td>
+                                                <td class="align-middle">
+                                                    <span>RELEASE</span>
+                                                </td>
+                                                <td class="align-middle text-center">
+                                                    <span>9/29/2023</span>
+                                                </td>
+                                            </tr>
+                                    </tbody>
+                                </table>
+                        </div>
+                    </div>
+                </div>
+                        <div class="col-md-6" id="divcol2">
+                            <div class="row">
+                                <div class="col-md-12">
+                                    <div class="mb-3 pt-1 float-start">
+                                        <a href="/ChangeRequest?pin=20021070611001&amp;docNum=2600000001" id="btnSubmitCorrection" class="" style="font-size: 15px; float: right; text-decoration: none; color: orange;"> <i class="fa fa-question" style="color:orange;"></i> Submit Correction</a>
+                                    </div>
+                                    <div class="text-end mb-3 pt-1">
+                                        <a target="_blank" href="/Document/DisplayPdf?dId=SAMPLEDID&amp;hId=SAMPLEHID" class="no-textdecoration btnAdaLink"><i class="fa fa-file-pdf-o"></i> View Document in New Window</a>
+                                    </div>
+                                    <iframe src="/Document/DisplayPdf?dId=SAMPLEDID&amp;hId=SAMPLEHID" style="width: 100%; height:500px;" frameborder="0" scrolling="yes" id="iframe" title="PDF Document">
+                                        <p>It appears you don't have Adobe Reader or PDF support in this web browser.</p>
+                                    </iframe>
+                                </div>
+                            </div>
+                        </div>
+            </div>
+            <div class="accordion pt-3" id="accordionExample">
+                    <div class="accordion-item">
+                        <h2 class="accordion-header" id="ItemOne">
+                            <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#collapse1" aria-expanded="true" aria-controls="collapse1">
+                                Legal Description and Subdivision
+                            </button>
+                        </h2>
+                        <div id="collapse1" class="accordion-collapse collapse show" aria-labelledby="ItemOne" data-bs-parent="#accordionExample">
+                            <div class="accordion-body">
+                                <div class="row mt-3" id="result">
+                                    <div class="table-responsive">
+    <table class="table table-hover">
+        <thead>
+            <tr>
+                <th scope="col" class="text-start">
+                    <a href='/Document/sortpinresult?dId=SAMPLEDID&hId=SAMPLEHID&column=PIN&direction=desc&page=' class='searchresult'><i class='fa fa-sort-down' style='color:orange;'></i> Property Index # (PIN)</a>
+                </th>
+                <th scope="col">
+                    <a href='/Document/sortpinresult?dId=SAMPLEDID&hId=SAMPLEHID&column=Address&direction=desc&page=' class='searchresult'> Address</a>
+                </th>
+                <th scope="col" class="text-center">
+                    <a href='/Document/sortpinresult?dId=SAMPLEDID&hId=SAMPLEHID&column=PropType&direction=desc&page=' class='searchresult'> PropType</a>
+                </th>
+                <th scope="col" class="text-center">
+                    <a href='/Document/sortpinresult?dId=SAMPLEDID&hId=SAMPLEHID&column=Unit&direction=desc&page=' class='searchresult'> Unit</a>
+                </th>
+                <th scope="col" class="text-center">
+                    <a href='/Document/sortpinresult?dId=SAMPLEDID&hId=SAMPLEHID&column=StrSection&direction=desc&page=' class='searchresult'> S</a>
+                </th>
+                <th scope="col" class="text-center">
+                    <a href='/Document/sortpinresult?dId=SAMPLEDID&hId=SAMPLEHID&column=StrTownship&direction=desc&page=' class='searchresult'> T</a>
+                </th>
+                <th scope="col" class="text-center">
+                    <a href='/Document/sortpinresult?dId=SAMPLEDID&hId=SAMPLEHID&column=StrRange&direction=desc&page=' class='searchresult'> R</a>
+                </th>
+                <th scope="col" class="text-center">
+                    <a href='/Document/sortpinresult?dId=SAMPLEDID&hId=SAMPLEHID&column=Subdivision&direction=desc&page=' class='searchresult'> Subdiv</a>
+                </th>
+                <th scope="col" class="text-center">
+                    <a href='/Document/sortpinresult?dId=SAMPLEDID&hId=SAMPLEHID&column=LotNum&direction=desc&page=' class='searchresult'> Lot</a>
+                </th>
+                <th scope="col" class="text-center">
+                    <a href='/Document/sortpinresult?dId=SAMPLEDID&hId=SAMPLEHID&column=BlockNum&direction=desc&page=' class='searchresult'> Block</a>
+                </th>
+                <th scope="col" class="text-center">
+                    <a href='/Document/sortpinresult?dId=SAMPLEDID&hId=SAMPLEHID&column=PartLot&direction=desc&page=' class='searchresult'> Part Lot</a>
+                </th>
+                <th scope="col" class="text-center">
+                    <a href='/Document/sortpinresult?dId=SAMPLEDID&hId=SAMPLEHID&column=BuildingNum&direction=desc&page=' class='searchresult'> Bldg</a>
+                </th>
+            </tr>
+        </thead>
+        <tbody>
+                <tr>
+                    <td class="align-middle text-start">
+                        <a href="/Search/ResultByPin?id1=20021070611001&amp;sr=d">00-00-000-000-1001</a>
+                    </td>
+                    <td class="align-middle">
+                        <span></span>
+                    </td>
+                    <td class="align-middle text-center">
+                        <span></span>
+                    </td>
+                    <td class="align-middle text-center">
+                        <span></span>
+                    </td>
+                    <td class="align-middle text-center">
+                        <span></span>
+                    </td>
+                    <td class="align-middle text-center">
+                        <span></span>
+                    </td>
+                    <td class="align-middle text-center">
+                        <span></span>
+                    </td>
+                    <td class="align-middle text-center">
+                        <span></span>
+                    </td>
+                    <td class="align-middle text-center">
+                    </td>
+                    <td class="align-middle text-center">
+                    </td>
+                    <td class="align-middle text-center">
+                    </td>
+                    <td class="align-middle text-center">
+                    </td>
+                </tr>
+        </tbody>
+    </table>
+</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                                    <div class="accordion-item">
+                        <h2 class="accordion-header" id="ItemTwo">
+                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapse2" aria-expanded="true" aria-controls="collapse2">
+                                PIN & Under PIN
+                            </button>
+                        </h2>
+                        <div id="collapse2" class="accordion-collapse collapse" aria-labelledby="ItemTwo" data-bs-parent="#accordionExample">
+                            <div class="accordion-body">
+                                <div class="row mt-3" id="upinresult">
+                                    <div class="table-responsive">
+    <table class="table table-hover">
+        <thead>
+            <tr>
+                <th scope="col">
+                    <a href='/Document/sortupinresult?dId=SAMPLEDID&hId=SAMPLEHID&column=PIN&direction=desc&page=' class='searchupinresult'><i class='fa fa-sort-down' style='color:orange;'></i> PIN</a>
+                </th>
+                <th scope="col">
+                    <a href='/Document/sortupinresult?dId=SAMPLEDID&hId=SAMPLEHID&column=UPIN&direction=desc&page=' class='searchupinresult'> Under PIN</a>
+                </th>
+            </tr>
+        </thead>
+        <tbody>
+                <tr>
+                    <td class="align-middle">
+                        <a href="/Search/ResultByPin?id1=20021070611001&amp;sr=d">00-00-000-000-1001</a>
+                    </td>
+                    <td class="align-middle">
+                        <a href="/Search/ResultByPin?id1=20021070340000&amp;sr=d">00-00-000-000-1002</a>
+                    </td>
+                </tr>
+        </tbody>
+    </table>
+</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+            </div>
+            <br />
+            <p class="small">The CCCO indexes documents by Legal Description, grantor/grantee name, Property Index Number, and Document Number.   Address is only for informational purposes and should not be relied upon.   CCCO does not guarantee legality or accuracy of address information. CCCO accepts no liability for damages incurred directly, indirectly, incidental, punitive or consequential, as a result of address errors, omissions or discrepancies</p>
+        </fieldset>
+    </div>
+                </div>
+            </div>
+        </div>
+        <hr />
+        <footer style="margin-top:10px;">
+            <div class="footerLeft">
+                <p>&copy; Copyright 2026 Cook County Clerk's Office. All Rights Reserved.</p>
+            </div>
+            <div class="footerRight">
+                <p class="cookCounty"><a href="https://www.cookcountyclerkil.gov/recordings/search-recordings" target="_blank" class="cookCountyLink" title="Cook County Website">Go To Cook County Clerk's Website</a></p>
+            </div>
+            <div class="clear">
+            </div>
+        </footer>
+    </div>
+</body>
+</html>
