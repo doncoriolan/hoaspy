@@ -96,15 +96,18 @@ in its module docstring and in `docs/`:
 ## Tests
 
 ```bash
-./venv/bin/python -m unittest tests.test_collectors -v
+./venv/bin/python -m unittest discover -s tests -t . -v
 ```
 
 Parsing and row-shaping tests against captured fixtures in `tests/fixtures/`
-— no network. The live collectors are exercised by running them.
+(`tests/test_collectors.py`) and checks on the repository itself
+(`tests/test_repo.py`) — no network. The same command runs on every pull
+request. The live collectors are exercised by running them.
 
 ## Contributing
 
-The most valuable contribution is a new source: a county recorder index, a
+[CONTRIBUTING.md](CONTRIBUTING.md) is the guide. The most valuable
+contribution is a new source: a county recorder index, a
 state registry, a trial-court portal that can be searched by association
 name. Open an issue with the URL and what it publishes, or send a pull
 request with a collector — the trial-court adapters under
@@ -119,6 +122,8 @@ configs are the two patterns to copy. Rules for any source:
 4. Add a fixture and a test in `tests/test_collectors.py` — with
    individuals' names replaced by placeholders (Doe/Roe) — and describe the
    source in the matching page in `docs/`.
+5. Never commit collected data or attach it to an issue or a pull request:
+   the records name private individuals.
 
 `docs/STATES.md`, `docs/states/` and `coverage.json` are generated and
 published from the HOA Spy site build, so edits to them in a pull request

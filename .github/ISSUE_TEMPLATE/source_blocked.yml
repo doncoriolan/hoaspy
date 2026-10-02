@@ -1,0 +1,52 @@
+name: Source blocked or paid
+description: You tried a source and it cannot be collected — record it so the next person does not repeat the attempt
+title: "Blocked: "
+labels: ["source", "unavailable"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        A source that turns out to be blocked, paid or closed to scripts is worth recording:
+        it goes on the state's page so nobody tries it twice.
+  - type: input
+    id: url
+    attributes:
+      label: Address
+      placeholder: https://
+    validations:
+      required: true
+  - type: input
+    id: place
+    attributes:
+      label: State and county or city
+      placeholder: IL, Cook County
+    validations:
+      required: true
+  - type: dropdown
+    id: reason
+    attributes:
+      label: Why it cannot be collected
+      options:
+        - Its terms forbid automated access
+        - Paid subscription or per-search fee
+        - Captcha on every search
+        - Blocks scripted requests (firewall, bot detection)
+        - No search by association name
+        - Taken offline or moved
+        - Something else
+    validations:
+      required: true
+  - type: input
+    id: tried
+    attributes:
+      label: Date you tried
+      placeholder: "2026-10-02"
+    validations:
+      required: true
+  - type: textarea
+    id: detail
+    attributes:
+      label: What you tried and what happened
+      description: The request or search, and the response. Quote the terms if they are the reason.
+    validations:
+      required: true
