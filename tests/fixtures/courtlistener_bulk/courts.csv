@@ -1,0 +1,13 @@
+id,pacer_court_id,pacer_has_rss_feed,pacer_rss_entry_types,date_last_pacer_contact,fjc_court_id,date_modified,in_use,has_opinion_scraper,has_oral_argument_scraper,position,citation_string,short_name,full_name,url,start_date,end_date,jurisdiction,notes,parent_court_id
+"nc",,,"",,"","2023-10-03 01:23:43.88265+00","t","t","f","1","N.C.","Supreme Court of North Carolina","Supreme Court of North Carolina","",,,"S","Created by Lawbox
+Start date: http://www.carolana.com/NC/Courts/nc_supreme_court_history.html",
+"connappct",,,"",,"","2023-10-03 01:23:43.88265+00","t","t","f","1","Conn. App. Ct.","Connecticut Appellate Court","Connecticut Appellate Court","",,,"SA","Lawbox",
+"gactapp",,,"",,"","2023-10-03 01:23:43.88265+00","t","t","f","1","Ga. Ct. App.","Court of Appeals of Georgia","Court of Appeals of Georgia","",,,"SA","Lawbox",
+"massappct",,,"",,"","2023-10-03 01:23:43.88265+00","t","t","f","1","Mass. App. Ct.","Massachusetts Appeals Court","Massachusetts Appeals Court","",,,"SA","",
+"md",,,"",,"","2023-10-03 01:23:43.88265+00","t","t","f","1","Md.","Court of Appeals of Maryland","Court of Appeals of Maryland","",,,"S","Lawbox",
+"mdctspecapp",,,"",,"","2023-10-03 01:23:43.88265+00","t","t","f","1","Md. Ct. Spec. App.","Court of Special Appeals of Maryland","Court of Special Appeals of Maryland","",,,"SA","Lawbox",
+"moctapp",,,"",,"","2023-10-03 01:23:43.88265+00","t","t","f","1","Mo. Ct. App.","Missouri Court of Appeals","Missouri Court of Appeals","",,,"SA","Lawbox",
+"ca11","11","t","",,"","2023-10-03 01:23:43.88265+00","t","t","f","1","11th Cir.","Eleventh Circuit","Court of Appeals for the Eleventh Circuit","",,,"F","",
+"mied","97","t","",,"","2023-10-03 01:23:43.88265+00","t","t","f","1","E.D. Mich.","E.D. Michigan","District Court, E.D. Michigan","",,,"FD","","usdistct"
+"flmd","47","t","",,"","2023-10-03 01:23:43.88265+00","t","t","f","1","M.D. Fla.","M.D. Florida","District Court, M.D. Florida","",,,"FD","Lawbox","usdistct"
+"fladistctapp4",,,"",,"","2023-10-03 01:23:43.88265+00","t","t","f","1","Fla. Dist. Ct. App. 4th Dist.","Florida Fourth District Court of Appeal","Florida Fourth District Court of Appeal","",,,"SA","Created as part of import of Case.Law data.","fladistctapp"
