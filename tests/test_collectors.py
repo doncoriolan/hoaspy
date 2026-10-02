@@ -2571,7 +2571,9 @@ class TestCourtListenerBulk(unittest.TestCase):
         for name in ("Twelve Hills Community Association", "FALLS GARDEN CONDOMINIUM ASSOCIATION, INC",
                      "Council of Unit Owners of Annen Woods Condominium No. 4", "Sunset Lakes HOA",
                      "SAWGRASS LAKES HOMEOWNERS", "Board of Managers of the 432 Park Condominium",
-                     "Relay Improvement Association", "Bradford Village Condo Trust"):
+                     "Relay Improvement Association", "Bradford Village Condo Trust",
+                     "Association of Owners of Kahala Kua", "Kendall Walk Townhomes, Inc",
+                     "HIGH POINT OF DELRAY WEST CONDOMINIUM ASSOCIATION SECTION 3, INC"):
             self.assertTrue(ok(name), name)
         for name in ("Hoa Van Doe", "Nguyen Hoa", "HOA VAN DOE",        # a given name, not an HOA
                      "Home Owners Loan Corporation", "Homeowners Choice Property & Casualty Insurance Company",
@@ -2579,7 +2581,13 @@ class TestCourtListenerBulk(unittest.TestCase):
                      "Standardbred Owners Association, Inc", "Sportsman's Park and Club Association",
                      "Homeowners", "Property Owners", "Condos",           # truncated captions
                      "on Behalf of Themselves and All Other Property Owners in the Subdivision",
-                     "Community Associations Institute", "Empire Indemnity Insurance Company"):
+                     "Community Associations Institute", "Empire Indemnity Insurance Company",
+                     "Roseland Townhomes",                                 # a rental complex as often as not
+                     "Individually and as President of the Board of Managers of Elm Court Condominium",
+                     "as an Individual and as a Representative of a Class of Homeowners Residing in Keauhou",
+                     "Tribeca Community Association 67 Vestry Street Tenants Association",   # two parties run together
+                     "Roe Tours Roe Adventures Doe Cycle and Sled Roe Outfitters Doe Guides Roe Ranch Middlefork "
+                     "Property Owners Association"):
             self.assertFalse(ok(name), name)
 
     def test_captions_are_split_into_parties_with_roles(self):
@@ -2588,7 +2596,7 @@ class TestCourtListenerBulk(unittest.TestCase):
         self.assertEqual(f("Falls Garden Condominium Ass'n v. Falls Homeowners Ass'n",
                            "FALLS GARDEN CONDOMINIUM ASSOCIATION, INC. v. The FALLS HOMEOWNERS ASSOCIATION, INC."),
                          {"FALLS GARDEN CONDOMINIUM ASSOCIATION, INC": "plaintiff",
-                          "FALLS Homeowners ASSOCIATION, INC": "defendant"})
+                          "FALLS HOMEOWNERS ASSOCIATION, INC": "defendant"})
         self.assertEqual(f("Lake Point Tower Condo. Ass'n v. Roe"),
                          {"Lake Point Tower Condominium Association": "plaintiff"})
         self.assertEqual(f("Board of Mgrs. of the 432 Park Condominium v. 56th & Park (NY) Owner, LLC"),
@@ -2596,12 +2604,28 @@ class TestCourtListenerBulk(unittest.TestCase):
         # Florida's shortened case_name, the association only in the full caption
         self.assertEqual(f("JANE DOE and JOHN v. SAWGRASS LAKES HOMEOWNERS",
                            "JANE DOE and JOHN DOE v. SAWGRASS LAKES HOMEOWNERS ASSOC."),
-                         {"SAWGRASS LAKES Homeowners Association": "defendant"})
+                         {"SAWGRASS LAKES HOMEOWNERS ASSOCIATION": "defendant"})
         # one of several defendants; ", Inc." stays on its name; role words go
         self.assertEqual(f("Roe v. Wells Fargo Bank, N.A., Arbor Ridge Community Association, Inc., et al."),
                          {"Arbor Ridge Community Association, Inc": "defendant"})
         self.assertEqual(f("Sand and Sea Homeowners Association and John Doe v. Roe"),
                          {"Sand and Sea Homeowners Association": "plaintiff"})
+        # a person listed ahead of the association is not part of its name …
+        self.assertEqual(f("Roe v. JANE DOE and KENDALL ACRES CONDO ASSOC."),
+                         {"KENDALL ACRES CONDO ASSOCIATION": "defendant"})
+        self.assertEqual(f("Roe v. Plaintiff-Appellee and John Doe and Mauna Kea Homeowners Association"),
+                         {"Mauna Kea Homeowners Association": "defendant"})
+        # … but words that pair up inside one name are
+        for whole in ("HOLLYBROOK GOLF AND TENNIS CLUB CONDOMINIUM, INC", "Hazelcrest I & II Condominium Association",
+                      "Kingspark and Whitehall Civic Improvement Association", "65 & 67 W. 107th St. Condominium",
+                      "Saphire Beach Resort & Marina Condominium Association"):
+            self.assertEqual(f(f"{whole} v. Roe"), {whole.rstrip("."): "plaintiff"}, whole)
+        # an insurer suing in the association's shoes; a caption that repeats itself
+        self.assertEqual(f("Roe Underwriters of America a/s/o Country Woods Condominium Association, Inc. v. Doe"),
+                         {"Country Woods Condominium Association, Inc": "plaintiff"})
+        self.assertEqual(f("Appeal of CHESTNUT HILL COMMUNITY ASSOCIATION. Appeal Of: Chestnut Hill Community Association"),
+                         {"CHESTNUT HILL COMMUNITY ASSOCIATION": ""})
+        self.assertEqual(f("Roe v. Ass'n of Owners of Kukui Plaza"), {"Association of Owners of Kukui Plaza": "defendant"})
         self.assertEqual(f("In re: Port Louis Owners Association, Inc."), {"Port Louis Owners Association, Inc": ""})
         self.assertEqual(f("Malcolm Roe v. Lakeshore Estates Homeowner&39;s Association, Inc"),
                          {"Lakeshore Estates Homeowners Association, Inc": "defendant"})
@@ -2640,7 +2664,7 @@ class TestCourtListenerBulk(unittest.TestCase):
             "docket_number": "2:23-cv-12481", "date_filed": "2023-10-02", "date_terminated": "2024-06-24",
             "nature_of_suit": "Civil Rights: Other", "cause": "42:1981 Civil Rights", "state": "MI",
             "associations": ["Poinsettia Homeowners Association, Inc"],
-            "association_role": {"Poinsettia Homeowners Association, Inc": "defendant"},
+            "association_role": ["defendant"],
             "url": "https://www.courtlistener.com/docket/67847660/doe-v-poinsettia-homeowners-association-inc/",
             "source": "courtlistener-bulk", "queries": ["bulk-data 2026-09-30"],
             "retrieved_at": "2026-10-01T00:00:00+00:00"})
@@ -2651,8 +2675,8 @@ class TestCourtListenerBulk(unittest.TestCase):
                 self.assertIn(key, rec)
         # a federal court of appeals has no state of its own: the district appealed from gives it
         self.assertEqual((by_id[67400605]["state"], by_id[67400605]["jurisdiction"]), ("FL", "F"))
-        self.assertEqual(by_id[74274459]["associations"], ["SAWGRASS LAKES Homeowners Association"])
-        self.assertEqual(by_id[73645368]["association_role"], {"CASH ENERGY CONDOMINIUM ASSOCIATION": "plaintiff"})
+        self.assertEqual(by_id[74274459]["associations"], ["SAWGRASS LAKES HOMEOWNERS ASSOCIATION"])
+        self.assertEqual(by_id[73645368]["association_role"], ["plaintiff"])
 
         by_cluster = {o["cluster_id"]: o for o in opinions}
         self.assertEqual(sorted(by_cluster), [4488611, 7967752, 7974835])
@@ -2662,12 +2686,13 @@ class TestCourtListenerBulk(unittest.TestCase):
             "court": "Court of Appeals of Maryland", "court_id": "md", "jurisdiction": "S",
             "docket_number": "No. 13", "state": "MD", "date_filed": "2005-10-12", "status": "Published",
             "associations": ["TWELVE HILLS COMMUNITY ASSOCIATION"],
-            "association_role": {"TWELVE HILLS COMMUNITY ASSOCIATION": "defendant"},
+            "association_role": ["defendant"],
             "url": "https://www.courtlistener.com/opinion/7967752/doe-v-twelve-hills-community-assn/",
             "source": "courtlistener-bulk-opinions", "queries": ["bulk-data 2026-09-30"],
             "retrieved_at": "2026-10-01T00:00:00+00:00"})
         self.assertEqual(by_cluster[7974835]["associations"],
-                         ["FALLS GARDEN CONDOMINIUM ASSOCIATION, INC", "FALLS Homeowners ASSOCIATION, INC"])
+                         ["FALLS GARDEN CONDOMINIUM ASSOCIATION, INC", "FALLS HOMEOWNERS ASSOCIATION, INC"])
+        self.assertEqual(by_cluster[7974835]["association_role"], ["defendant", "plaintiff"])   # one on each side
         self.assertEqual(stats["dockets kept"], 7)
         self.assertEqual(stats["opinions kept"], 3)
         self.assertEqual(stats["docket captions without an association party"], 2)
@@ -2680,6 +2705,31 @@ class TestCourtListenerBulk(unittest.TestCase):
         self.assertIsNone(m.opinion_record(row, None, self.courts, "2026-09-30", "now"))
         dockets, opinions, stats = m.refine([row], [], self.courts, "2026-09-30", "now")
         self.assertEqual((opinions, stats["opinions without a docket row"]), ([], 1))
+
+    def test_coverage_counts_touch_only_their_own_keys(self):
+        m = self.m
+        dockets, opinions, _ = self._refined()
+        entries = m.coverage_entries(dockets, opinions, "2026-09-30")
+        self.assertEqual(entries["MD"], {
+            "courts_bulk_dockets": {"source": "CourtListener bulk data — docket captions", "url": m.SOURCE_PAGE,
+                                    "dockets": 2, "snapshot": "2026-09-30"},
+            "courts_bulk_opinions": {"source": "CourtListener bulk data — opinion captions", "url": m.SOURCE_PAGE,
+                                     "opinions": 2, "snapshot": "2026-09-30"}})
+        self.assertEqual(entries["FL"]["courts_bulk_dockets"]["dockets"], 2)     # the DCA docket and the 11th Circuit appeal
+        self.assertNotIn("", entries)
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "coverage.json"
+            path.write_text(json.dumps({"states": {"MD": {"name": "Maryland", "status": "collected", "collected": {
+                "courts_federal": {"source": "CourtListener RECAP", "dockets": 9}},
+                "counties": {"Montgomery": {"liens": True}}}}}))
+            m.write_coverage(path, entries)
+            cov = json.loads(path.read_text())
+            md = cov["states"]["MD"]
+            self.assertEqual(md["collected"]["courts_federal"], {"source": "CourtListener RECAP", "dockets": 9})
+            self.assertEqual(md["counties"], {"Montgomery": {"liens": True}})
+            self.assertEqual(md["collected"]["courts_bulk_opinions"]["opinions"], 2)
+            self.assertEqual(cov["states"]["MI"]["name"], "Michigan")          # a state the file did not have yet
+            self.assertIn("updated_at", cov)
 
     def test_sources_entry_is_merged_not_overwritten(self):
         with tempfile.TemporaryDirectory() as tmp:

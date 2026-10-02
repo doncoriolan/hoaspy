@@ -28,8 +28,10 @@ Three steps, each skipped when its result is already in the cache
 3. refine: split each caption into parties, keep the association-shaped
    ones, and write the records.
 
-Output (default ./courts/): bulk_dockets.jsonl, bulk_opinions.jsonl, and a
-`courtlistener_bulk` entry merged into sources.json. The docket records
+Output (default ./courts/): bulk_dockets.jsonl, bulk_opinions.jsonl, a
+`courtlistener_bulk` entry merged into sources.json and, when writing to the
+default folder, per-state counts in coverage.json (`courts_bulk_dockets`,
+`courts_bulk_opinions`). The docket records
 share the shape of dockets.jsonl and the opinion records the shape of
 opinions.jsonl; both overlap with what `get_courts` finds (same
 `docket_id` / `url`), so a consumer of both dedupes on those.
@@ -68,6 +70,7 @@ from hoaspy.collect.courts.get_courts import STATE_NAMES, USER_AGENT
 
 DEFAULT_OUT = ROOT / "courts"
 DEFAULT_CACHE = ROOT / ".cache" / "courtlistener_bulk"
+COVERAGE = ROOT / "coverage.json"
 
 BUCKET = "https://com-courtlistener-storage.s3-us-west-2.amazonaws.com/"
 PREFIX = "bulk-data/"
@@ -228,7 +231,8 @@ BROAD = re.compile(
     r"homes ass|residents'? ass|cooperative apartment|housing co-?op|"
     r"apartment owners|lot owners|landowners'? ass|property ass|"
     r"maintenance ass|recreation ass|neighborhood ass|villas? ass|"
-    r"estates ass|village ass|lakes? ass|council of (?:unit|co)",
+    r"estates ass|village ass|lakes? ass|council of (?:unit|co)|"
+    r"ass(?:ociation|'?n\.?|oc\.?) of (?:\w+ )?owners|cmty\.? ass|bd\.? of mgrs",
     re.I)
 
 # Association words that decide on their own, matched on normalize()d text
@@ -238,7 +242,8 @@ STRICT = re.compile(
     r"LOT OWNERS?\b|APARTMENT OWNERS\b|\bCO OWNERS\b|TOWNHOMES?\b|TOWNHOUSES?\b|"
     r"\b(?:OWNERS|COMMUNITY|MASTER|CIVIC|IMPROVEMENT|HOMES|RESIDENTS|NEIGHBORHOOD|MAINTENANCE|"
     r"RECREATION|PROPERTY|VILLAS?|ESTATES|VILLAGE|LAKES?|LANDOWNERS) ASSOCIATION\b|"
-    r"COUNCIL (?:UNIT |CO )?OWNERS\b|COOPERATIVE APARTMENTS?\b|HOUSING COOPERATIVE\b")
+    r"COUNCIL (?:UNIT |CO )?OWNERS\b|COOPERATIVE APARTMENTS?\b|HOUSING COOPERATIVE\b|"
+    r"\bASSOCIATION (?:APARTMENT |UNIT |HOME |PROPERTY |LOT |CO )?OWNERS\b")
 ABBR = re.compile(r"\b(HOA|POA)\b")
 # Lenders, insurers, builders, public bodies and trade groups that carry an
 # association word: "Home Owners' Loan Corporation", "Bank of America,
@@ -252,7 +257,19 @@ NOT_ASSOC = re.compile(
     r"THOROUGHBRED|HORSE|CATTLE|\bTAXI|\bCAB\b|TRUCK|\bBOAT|VESSEL|AIRCRAFT|PILOTS|LIQUOR|"
     r"THEAT(?:RE|ER)|HOTEL|MOTEL|SERVICE STATION|BUSINESS OWNERS|RESTAURANT|TAVERN|"
     r"NATIONAL ASSOCIATION|\bREPAIR\b|CONSULTING|\bBEHALF\b")
-_NOT_A_PARTY = re.compile(r"(?:ON BEHALF|SUING|PROCEEDS|ALL OTHER|CERTAIN|UNKNOWN|REAL PROPERTY)\b")
+_NOT_A_PARTY = re.compile(
+    r"(?:ON BEHALF|SUING|PROCEEDS|ALL OTHER|CERTAIN|UNKNOWN|REAL PROPERTY|INDIVIDUALLY|INDIV|REPRESENTING|"
+    r"AS (?:OFFICERS?|MEMBERS?|REPRESENTATIVES?|TRUSTEES?|PRESIDENT|TREASURER|DIRECTORS?|INDIVIDUAL)|"
+    r"HUSBAND|ALL INDIVIDUALLY|CIVIL NO|PARCEL|PARENTS)\b")
+# A class of owners, not an association: "… and All Other Property Owners
+# in the Subdivision", "a Class of Homeowners Residing in Keauhou".
+_CLASS = re.compile(r"\bOTHER (?:PROPERTY )?OWNERS\b|TAXPAYERS|\bCLASS\b|SIMILARLY SITUATED|\bRESIDING\b|"
+                    r"\bOTHER HOMEOWNERS\b|OTHER RESIDENTS")
+# "Roseland Townhomes" is as often a rental complex as an association;
+# alone, the word counts only on a corporation ("Kendall Walk Townhomes, Inc").
+_TOWNHOME_ONLY = re.compile(r"TOWNHOMES?\b|TOWNHOUSES?\b")
+_BEYOND_TOWNHOME = re.compile(r"ASSOCIATION|OWNERS|CONDO|\bHOA\b|\bPOA\b|COUNCIL|COOPERATIVE|HOMEOWNER")
+MAX_NAME_WORDS = 12
 # Words that name no particular association: a party made only of these
 # ("Homeowners", "Property Owners", "Condos") is a truncated caption.
 GENERIC = frozenset("""ASSOCIATION ASSOCIATIONS HOMEOWNERS HOMEOWNER HOME OWNERS OWNER PROPERTY
@@ -262,10 +279,13 @@ ALL OTHER I II III IV V 1 2 3 4 5""".split())
 
 _ROLE = re.compile(
     r",?\s*\b(?:et\.? ?al\.?|etc\.?|petitioners?(?:\(s\))?|respondents?(?:\(s\))?|appellants?|appellees?|"
-    r"plaintiffs?|defendants?|cross-\w+|intervenors?|individually|a/k/a.*|f/k/a.*|n/k/a.*|d/b/a.*|"
+    r"plaintiffs?|defendants?|cross-\w+|intervenors?|individually|a/k/a.*|aka\b.*|f/k/a.*|n/k/a.*|d/b/a.*|"
+    r"\.\s*appeal of.*|"
     r"an? [a-z -]*(?:corporation|company|association)\b.*)\s*$", re.I)
 _LEAD = re.compile(
-    r"^(?:(?:in re:?|in the matter of|matter of|ex parte|estate of|the arbitration between|"
+    r"^(?:(?:in re:?|in the matter of|matter of|ex parte|estate of|the arbitration between|appeal of:?|"
+    r"(?:plaintiffs?|defendants?|appellants?|appellees?|petitioners?|respondents?|intervenors?)(?:-\w+)? (?:and|&)|"
+    r"(?:inc|llc|ltd|corp)\.,?(?= [A-Z])|(?:i{2,3}|iv|jr\.?|sr\.?) (?:and|&)|"
     r"(?:inc|llc|ltd|corp|n\.a|etc)\.?,? (?:and|&)|and|the)\s+)+", re.I)
 _SUFFIX = re.compile(
     r"^(?:inc|incorporated|llc|l\.l\.c|ltd|lp|l\.p|n\.a|corp|co|etc|et\.? ?al|jr|sr|ii|iii|iv|"
@@ -280,15 +300,22 @@ def clean_caption(s: str | None) -> str:
     return " ".join(_TAG.sub(" ", s).split())
 
 
+_EXPANSIONS = [(re.compile(p, re.I), w) for p, w in (
+    (r"\bAss'?n\b\.?|\bAssoc?\b\.?|\bAsso\b\.?|\bAssocation\b", "Association"),
+    (r"\bCondo\b\.", "Condominium"),
+    (r"\bBd\.", "Board"), (r"\bMgrs\.", "Managers"),
+    (r"\bProp\.", "Property"), (r"\bCmty\.", "Community"),
+    (r"\bHome[- ]?owner'?s?'?(?=\s|,|$)", "Homeowners"),
+)]
+
+
 def expand(s: str) -> str:
     """Reporter abbreviations spelled out, so one set of rules reads both
     "Lake Point Tower Condo. Ass'n" and "… Condominium Association"."""
-    s = re.sub(r"\bAss'?n\b\.?|\bAssoc?\b\.?|\bAsso\b\.?|\bAssocation\b", "Association", s, flags=re.I)
-    s = re.sub(r"\bCondo\b\.", "Condominium", s, flags=re.I)
     s = re.sub(r"\bH\.O\.A\.?", "HOA", s)
-    s = re.sub(r"\bBd\.", "Board", re.sub(r"\bMgrs\.", "Managers", s, flags=re.I), flags=re.I)
-    s = re.sub(r"\bProp\.", "Property", re.sub(r"\bCmty\.", "Community", s, flags=re.I), flags=re.I)
-    return re.sub(r"\bHome[- ]?owner'?s?'?(?=\s|,|$)", "Homeowners", s, flags=re.I)
+    for pattern, word in _EXPANSIONS:
+        s = pattern.sub(lambda m, word=word: word.upper() if m.group(0).isupper() else word, s)
+    return s
 
 
 def is_association(party: str) -> bool:
@@ -300,7 +327,13 @@ def is_association(party: str) -> bool:
     n = normalize(party)
     if not n or NOT_ASSOC.search(n) or _NOT_A_PARTY.match(n) or has_business_form(party):
         return False
-    if all(t in GENERIC for t in n.split()):
+    words = n.split()
+    if all(t in GENERIC for t in words) or len(words) > MAX_NAME_WORDS or _CLASS.search(n):
+        return False
+    if words.count("ASSOCIATION") > 1 and not n.startswith("ASSOCIATION"):
+        return False            # two parties run together in the caption
+    if _TOWNHOME_ONLY.search(n) and not _BEYOND_TOWNHOME.search(n) \
+            and not re.search(r"\b(?:inc|incorporated)\b", party, re.I):
         return False
     if STRICT.search(n):
         return True
@@ -341,12 +374,49 @@ def trim_party(party: str) -> str:
     p = re.sub(r"\s*\([^)]*\)?", " ", party).strip(" ,.")
     for _ in range(3):
         p = _ROLE.sub("", p).strip(" ,.")
+    p = re.sub(r"^.*\ba/s/o\s+", "", p, flags=re.I)           # an insurer suing in the association's shoes
     p = _LEAD.sub("", p).strip(" ,.")
-    pieces = re.split(r"\s+(?:and|&)\s+", p)
+    pieces = re.split(r"\s+(?:and|&)\s+", p, flags=re.I)
     while len(pieces) > 1 and not _marked(pieces[-1]) and _marked(" ".join(pieces[:-1])):
-        p = re.sub(r"\s+(?:and|&)$", "", p[:p.rfind(pieces[-1])].rstrip())
+        p = re.sub(r"\s+(?:and|&)$", "", p[:p.rfind(pieces[-1])].rstrip(), flags=re.I)
         pieces = pieces[:-1]
-    return " ".join(p.split())
+    return " ".join(_drop_leading_coparty(p).split())
+
+
+# Words on either side of an "and" that belong to one name: "Golf and Tennis
+# Club", "Beach & Bay Resort", "Town and Country", "Sand and Sea".
+_PAIR_WORDS = frozenset("""GOLF TENNIS BEACH BAY YACHT RACQUET RACKET COUNTRY TOWN SWIM RESORT SPA MARINA
+CLUB LAKE LAKES RIVER OCEAN SEA SAND SURF SUN HUNT BATH PARK GARDEN GARDENS VILLAS ESTATES HILLS DALES
+WOODS TOWER TOWERS HARBOR HARBOUR RESIDENCES BUILDING LAND IMPROVEMENT CIVIC EAST WEST NORTH SOUTH
+I II III IV V""".split())
+
+
+_OFFICER_LEAD = frozenset({"AS", "INDIVIDUALLY", "INDIV", "ALL", "REPRESENTING", "ON"})
+
+
+def _drop_leading_coparty(p: str) -> str:
+    """"Jane Doe and Kendall Acres Condo Association" → the association.
+    The cut is made only when what comes before the "and" is at least two
+    words with no association word, what follows names an association with
+    a distinctive word of its own, and the two sides of the "and" are not
+    words that pair up inside one name — so "Sand and Sea Homeowners
+    Association", "Hollybrook Golf and Tennis Club Condominium" and
+    "Kingspark and Whitehall Civic Improvement Association" stay whole. A
+    party that opens "Individually and as President of …" is a person and
+    is left alone for the gate to refuse."""
+    pieces = re.split(r"\s+(?:and|&)\s+", p, flags=re.I)
+    first = next((i for i, piece in enumerate(pieces) if _marked(piece)), 0)
+    if first == 0:
+        return p
+    left = normalize(" ".join(pieces[:first])).split()
+    right = normalize(pieces[first]).split()
+    if len(left) < 2 or (left[-1] in _PAIR_WORDS and right[0] in _PAIR_WORDS) \
+            or left[-1].isdigit() or right[0].isdigit() or left[0] in _OFFICER_LEAD:
+        return p
+    if all(t in GENERIC for t in right):
+        return p
+    rest = re.split(r"\s+(?:and|&)\s+", p, maxsplit=first, flags=re.I)[-1]
+    return re.sub(r"^the\s+", "", rest, flags=re.I)
 
 
 def find_associations(case_name: str, case_name_full: str = "") -> dict[str, str]:
@@ -455,7 +525,7 @@ def docket_record(row: dict, courts: dict, snapshot: str, now: str) -> dict | No
         "docket_number": row["docket_number"],
         "date_filed": row["date_filed"], "date_terminated": row["date_terminated"],
         "nature_of_suit": row["nature_of_suit"], "cause": row["cause"],
-        "state": state, "associations": sorted(assocs), "association_role": assocs,
+        "state": state, "associations": sorted(assocs), "association_role": sorted({r for r in assocs.values() if r}),
         "url": f"{BASE_URL}/docket/{row['id']}/{row['slug']}/",
         "source": "courtlistener-bulk", "queries": [f"bulk-data {snapshot}"],
         "retrieved_at": now,
@@ -478,7 +548,7 @@ def opinion_record(row: dict, docket: dict | None, courts: dict, snapshot: str, 
         "docket_number": docket["docket_number"],
         "state": state, "date_filed": row["date_filed"],
         "status": row["precedential_status"],
-        "associations": sorted(assocs), "association_role": assocs,
+        "associations": sorted(assocs), "association_role": sorted({r for r in assocs.values() if r}),
         "url": f"{BASE_URL}/opinion/{row['id']}/{row['slug']}/",
         "source": "courtlistener-bulk-opinions", "queries": [f"bulk-data {snapshot}"],
         "retrieved_at": now,
@@ -521,6 +591,32 @@ def write_jsonl(path: Path, records: list[dict]) -> None:
         for rec in records:
             fh.write(json.dumps(rec, ensure_ascii=False) + "\n")
     tmp.replace(path)
+
+
+def coverage_entries(dockets: list[dict], opinions: list[dict], snapshot: str) -> dict[str, dict]:
+    """{state: {coverage key: info}} — what this run found per state, in
+    the shape coverage.json's `collected` block holds."""
+    out: dict[str, dict] = {}
+    for key, label, items in (("courts_bulk_dockets", "dockets", dockets),
+                              ("courts_bulk_opinions", "opinions", opinions)):
+        for state, n in Counter(d["state"] for d in items if d["state"]).items():
+            out.setdefault(state, {})[key] = {
+                "source": f"CourtListener bulk data — {label[:-1]} captions",
+                "url": SOURCE_PAGE, label: n, "snapshot": snapshot}
+    return out
+
+
+def write_coverage(path: Path, entries: dict[str, dict]) -> None:
+    """Record the per-state counts in coverage.json: one read, one write,
+    only this collector's two keys touched."""
+    cov = json.loads(path.read_text()) if path.exists() else {"states": {}}
+    for state, keys in entries.items():
+        entry = cov["states"].setdefault(state, {"name": STATE_NAMES.get(state, state), "collected": {}})
+        entry.setdefault("collected", {}).update(keys)
+        if entry.get("status") in (None, "pending", "researching"):
+            entry["status"] = "collected"
+    cov["updated_at"] = datetime.now(timezone.utc).isoformat()
+    path.write_text(json.dumps(cov, indent=2))
 
 
 def merge_sources(path: Path, entry: dict) -> None:
@@ -608,6 +704,8 @@ def main() -> int:
         "dockets": len(dockets), "opinions": len(opinions),
         "retrieved_at": now, "duration_seconds": round(time.time() - started, 1),
     })
+    if args.out.resolve() == DEFAULT_OUT.resolve():
+        write_coverage(COVERAGE, coverage_entries(dockets, opinions, snapshot))
     for key, n in sorted(stats.items()):
         log.info("%-48s %s", key, f"{n:,}")
     for label, items in (("bulk dockets", dockets), ("bulk opinions", opinions)):
