@@ -1,5 +1,5 @@
 {
-  "updated_at": "2026-10-02T05:31:47.021817+00:00",
+  "updated_at": "2026-10-02T05:33:07.251444+00:00",
   "_schema": {
     "collected": "sources actually collected, with record counts",
     "available": "sources that exist and are free but not yet collected",
@@ -31,6 +31,18 @@
           "url": "https://www.birminghamal.gov/live/about-birmingham/23-communities-99-neighborhoods",
           "coverage": "partial",
           "note": "county/city inventories, not a statewide registry \u2014 absence means nothing"
+        },
+        "courts_bulk_dockets": {
+          "source": "CourtListener bulk data \u2014 docket captions",
+          "url": "https://www.courtlistener.com/help/api/bulk-data/",
+          "dockets": 229,
+          "snapshot": "2026-09-30"
+        },
+        "courts_bulk_opinions": {
+          "source": "CourtListener bulk data \u2014 opinion captions",
+          "url": "https://www.courtlistener.com/help/api/bulk-data/",
+          "opinions": 170,
+          "snapshot": "2026-09-30"
         }
       },
       "available": [
@@ -74,6 +86,18 @@
           "records": 22,
           "url": "https://www.irs.gov/charities-non-profits/exempt-organizations-business-master-file-extract-eo-bmf",
           "note": "501(c) HOAs/condos only (NTEE L50 or association name); 1120-H filers absent"
+        },
+        "courts_bulk_dockets": {
+          "source": "CourtListener bulk data \u2014 docket captions",
+          "url": "https://www.courtlistener.com/help/api/bulk-data/",
+          "dockets": 32,
+          "snapshot": "2026-09-30"
+        },
+        "courts_bulk_opinions": {
+          "source": "CourtListener bulk data \u2014 opinion captions",
+          "url": "https://www.courtlistener.com/help/api/bulk-data/",
+          "opinions": 29,
+          "snapshot": "2026-09-30"
         }
       },
       "available": [],
@@ -114,6 +138,18 @@
           "note": "Associations named in developer subdivision Public Reports (A.R.S. 32-2183), not a registry: only subdivisions registered since the cut-off year, and only where the report names the HOA. City/ZIP are the subdivision's town, from the report's location and local-services addresses (town-level placement).",
           "retrieved_at": "2026-09-29T07:17:42.208737+00:00",
           "duration_seconds": 142.3
+        },
+        "courts_bulk_dockets": {
+          "source": "CourtListener bulk data \u2014 docket captions",
+          "url": "https://www.courtlistener.com/help/api/bulk-data/",
+          "dockets": 190,
+          "snapshot": "2026-09-30"
+        },
+        "courts_bulk_opinions": {
+          "source": "CourtListener bulk data \u2014 opinion captions",
+          "url": "https://www.courtlistener.com/help/api/bulk-data/",
+          "opinions": 125,
+          "snapshot": "2026-09-30"
         }
       },
       "available": [],
@@ -160,6 +196,18 @@
           "url": "https://maps.littlerock.gov/server/rest/services/Neighborhood_Associations/MapServer/0",
           "coverage": "partial",
           "note": "county/city inventories, not a statewide registry \u2014 absence means nothing"
+        },
+        "courts_bulk_dockets": {
+          "source": "CourtListener bulk data \u2014 docket captions",
+          "url": "https://www.courtlistener.com/help/api/bulk-data/",
+          "dockets": 63,
+          "snapshot": "2026-09-30"
+        },
+        "courts_bulk_opinions": {
+          "source": "CourtListener bulk data \u2014 opinion captions",
+          "url": "https://www.courtlistener.com/help/api/bulk-data/",
+          "opinions": 57,
+          "snapshot": "2026-09-30"
         }
       },
       "available": [],
@@ -214,6 +262,18 @@
           "years": "2011-2026",
           "url": "https://bizfileonline.sos.ca.gov/search/ucc",
           "note": "Personal-property judgment liens filed with the SOS; county-recorder abstracts of judgment are not covered."
+        },
+        "courts_bulk_dockets": {
+          "source": "CourtListener bulk data \u2014 docket captions",
+          "url": "https://www.courtlistener.com/help/api/bulk-data/",
+          "dockets": 912,
+          "snapshot": "2026-09-30"
+        },
+        "courts_bulk_opinions": {
+          "source": "CourtListener bulk data \u2014 opinion captions",
+          "url": "https://www.courtlistener.com/help/api/bulk-data/",
+          "opinions": 508,
+          "snapshot": "2026-09-30"
         }
       },
       "available": [],
@@ -259,6 +319,18 @@
           "records": 115,
           "url": "https://www.irs.gov/charities-non-profits/exempt-organizations-business-master-file-extract-eo-bmf",
           "note": "501(c) HOAs/condos only (NTEE L50 or association name); 1120-H filers absent"
+        },
+        "courts_bulk_dockets": {
+          "source": "CourtListener bulk data \u2014 docket captions",
+          "url": "https://www.courtlistener.com/help/api/bulk-data/",
+          "dockets": 494,
+          "snapshot": "2026-09-30"
+        },
+        "courts_bulk_opinions": {
+          "source": "CourtListener bulk data \u2014 opinion captions",
+          "url": "https://www.courtlistener.com/help/api/bulk-data/",
+          "opinions": 264,
+          "snapshot": "2026-09-30"
         }
       },
       "available": [],
@@ -298,6 +370,18 @@
           "records": 59,
           "url": "https://www.irs.gov/charities-non-profits/exempt-organizations-business-master-file-extract-eo-bmf",
           "note": "501(c) HOAs/condos only (NTEE L50 or association name); 1120-H filers absent"
+        },
+        "courts_bulk_dockets": {
+          "source": "CourtListener bulk data \u2014 docket captions",
+          "url": "https://www.courtlistener.com/help/api/bulk-data/",
+          "dockets": 290,
+          "snapshot": "2026-09-30"
+        },
+        "courts_bulk_opinions": {
+          "source": "CourtListener bulk data \u2014 opinion captions",
+          "url": "https://www.courtlistener.com/help/api/bulk-data/",
+          "opinions": 245,
+          "snapshot": "2026-09-30"
         }
       },
       "available": [],
@@ -331,6 +415,18 @@
           "url": "https://gis.nccde.org/agsserver/rest/services/BaseMaps/Civic/MapServer/1",
           "coverage": "partial",
           "note": "county/city inventories, not a statewide registry \u2014 absence means nothing"
+        },
+        "courts_bulk_dockets": {
+          "source": "CourtListener bulk data \u2014 docket captions",
+          "url": "https://www.courtlistener.com/help/api/bulk-data/",
+          "dockets": 184,
+          "snapshot": "2026-09-30"
+        },
+        "courts_bulk_opinions": {
+          "source": "CourtListener bulk data \u2014 opinion captions",
+          "url": "https://www.courtlistener.com/help/api/bulk-data/",
+          "opinions": 180,
+          "snapshot": "2026-09-30"
         }
       },
       "available": [],
@@ -376,6 +472,18 @@
           "records": 285,
           "url": "https://www.irs.gov/charities-non-profits/exempt-organizations-business-master-file-extract-eo-bmf",
           "note": "501(c) HOAs/condos only (NTEE L50 or association name); 1120-H filers absent"
+        },
+        "courts_bulk_dockets": {
+          "source": "CourtListener bulk data \u2014 docket captions",
+          "url": "https://www.courtlistener.com/help/api/bulk-data/",
+          "dockets": 12832,
+          "snapshot": "2026-09-30"
+        },
+        "courts_bulk_opinions": {
+          "source": "CourtListener bulk data \u2014 opinion captions",
+          "url": "https://www.courtlistener.com/help/api/bulk-data/",
+          "opinions": 3602,
+          "snapshot": "2026-09-30"
         }
       },
       "available": [],
@@ -457,6 +565,18 @@
           "url": "https://dcgis-dekalbgis.hub.arcgis.com/datasets/hoa-and-neighborhoods",
           "coverage": "partial",
           "note": "county/city inventories, not a statewide registry \u2014 absence means nothing"
+        },
+        "courts_bulk_dockets": {
+          "source": "CourtListener bulk data \u2014 docket captions",
+          "url": "https://www.courtlistener.com/help/api/bulk-data/",
+          "dockets": 704,
+          "snapshot": "2026-09-30"
+        },
+        "courts_bulk_opinions": {
+          "source": "CourtListener bulk data \u2014 opinion captions",
+          "url": "https://www.courtlistener.com/help/api/bulk-data/",
+          "opinions": 549,
+          "snapshot": "2026-09-30"
         }
       },
       "available": [],
@@ -495,6 +615,18 @@
           "records": 71,
           "url": "https://www.irs.gov/charities-non-profits/exempt-organizations-business-master-file-extract-eo-bmf",
           "note": "501(c) HOAs/condos only (NTEE L50 or association name); 1120-H filers absent"
+        },
+        "courts_bulk_dockets": {
+          "source": "CourtListener bulk data \u2014 docket captions",
+          "url": "https://www.courtlistener.com/help/api/bulk-data/",
+          "dockets": 623,
+          "snapshot": "2026-09-30"
+        },
+        "courts_bulk_opinions": {
+          "source": "CourtListener bulk data \u2014 opinion captions",
+          "url": "https://www.courtlistener.com/help/api/bulk-data/",
+          "opinions": 375,
+          "snapshot": "2026-09-30"
         }
       },
       "available": [
@@ -541,6 +673,18 @@
           "records": 31,
           "url": "https://www.irs.gov/charities-non-profits/exempt-organizations-business-master-file-extract-eo-bmf",
           "note": "501(c) HOAs/condos only (NTEE L50 or association name); 1120-H filers absent"
+        },
+        "courts_bulk_dockets": {
+          "source": "CourtListener bulk data \u2014 docket captions",
+          "url": "https://www.courtlistener.com/help/api/bulk-data/",
+          "dockets": 57,
+          "snapshot": "2026-09-30"
+        },
+        "courts_bulk_opinions": {
+          "source": "CourtListener bulk data \u2014 opinion captions",
+          "url": "https://www.courtlistener.com/help/api/bulk-data/",
+          "opinions": 56,
+          "snapshot": "2026-09-30"
         }
       },
       "available": [],
@@ -584,6 +728,18 @@
           "note": "Every Assessor class-299 condominium building in Cook County, named by street address (the data carries no association names): where condo associations exist, not who runs them. Unit count = unit PINs minus parking/common PINs.",
           "retrieved_at": "2026-09-28T23:16:56.401769+00:00",
           "duration_seconds": 730.0
+        },
+        "courts_bulk_dockets": {
+          "source": "CourtListener bulk data \u2014 docket captions",
+          "url": "https://www.courtlistener.com/help/api/bulk-data/",
+          "dockets": 996,
+          "snapshot": "2026-09-30"
+        },
+        "courts_bulk_opinions": {
+          "source": "CourtListener bulk data \u2014 opinion captions",
+          "url": "https://www.courtlistener.com/help/api/bulk-data/",
+          "opinions": 506,
+          "snapshot": "2026-09-30"
         }
       },
       "available": [],
@@ -642,6 +798,18 @@
           "url": "https://data.indy.gov/datasets/IndyGIS::registered-community-organizations",
           "coverage": "partial",
           "note": "county/city inventories, not a statewide registry \u2014 absence means nothing"
+        },
+        "courts_bulk_dockets": {
+          "source": "CourtListener bulk data \u2014 docket captions",
+          "url": "https://www.courtlistener.com/help/api/bulk-data/",
+          "dockets": 211,
+          "snapshot": "2026-09-30"
+        },
+        "courts_bulk_opinions": {
+          "source": "CourtListener bulk data \u2014 opinion captions",
+          "url": "https://www.courtlistener.com/help/api/bulk-data/",
+          "opinions": 187,
+          "snapshot": "2026-09-30"
         }
       },
       "available": [],
@@ -681,6 +849,18 @@
           "records": 26,
           "url": "https://www.irs.gov/charities-non-profits/exempt-organizations-business-master-file-extract-eo-bmf",
           "note": "501(c) HOAs/condos only (NTEE L50 or association name); 1120-H filers absent"
+        },
+        "courts_bulk_dockets": {
+          "source": "CourtListener bulk data \u2014 docket captions",
+          "url": "https://www.courtlistener.com/help/api/bulk-data/",
+          "dockets": 56,
+          "snapshot": "2026-09-30"
+        },
+        "courts_bulk_opinions": {
+          "source": "CourtListener bulk data \u2014 opinion captions",
+          "url": "https://www.courtlistener.com/help/api/bulk-data/",
+          "opinions": 45,
+          "snapshot": "2026-09-30"
         }
       },
       "available": [],
@@ -714,6 +894,18 @@
           "url": "https://gismaps.wichita.gov/ageweb/rest/services/COWGIS/Districts/MapServer/6",
           "coverage": "partial",
           "note": "county/city inventories, not a statewide registry \u2014 absence means nothing"
+        },
+        "courts_bulk_dockets": {
+          "source": "CourtListener bulk data \u2014 docket captions",
+          "url": "https://www.courtlistener.com/help/api/bulk-data/",
+          "dockets": 48,
+          "snapshot": "2026-09-30"
+        },
+        "courts_bulk_opinions": {
+          "source": "CourtListener bulk data \u2014 opinion captions",
+          "url": "https://www.courtlistener.com/help/api/bulk-data/",
+          "opinions": 42,
+          "snapshot": "2026-09-30"
         }
       },
       "available": [],
@@ -750,6 +942,18 @@
           "url": "https://data.lexingtonky.gov/datasets/neighborhood-association",
           "coverage": "partial",
           "note": "county/city inventories, not a statewide registry \u2014 absence means nothing"
+        },
+        "courts_bulk_dockets": {
+          "source": "CourtListener bulk data \u2014 docket captions",
+          "url": "https://www.courtlistener.com/help/api/bulk-data/",
+          "dockets": 67,
+          "snapshot": "2026-09-30"
+        },
+        "courts_bulk_opinions": {
+          "source": "CourtListener bulk data \u2014 opinion captions",
+          "url": "https://www.courtlistener.com/help/api/bulk-data/",
+          "opinions": 45,
+          "snapshot": "2026-09-30"
         }
       },
       "available": [],
@@ -786,6 +990,18 @@
           "url": "https://data.brla.gov/Housing-and-Development/Neighborhood-Association/m7ct-r5ua",
           "coverage": "partial",
           "note": "county/city inventories, not a statewide registry \u2014 absence means nothing"
+        },
+        "courts_bulk_dockets": {
+          "source": "CourtListener bulk data \u2014 docket captions",
+          "url": "https://www.courtlistener.com/help/api/bulk-data/",
+          "dockets": 704,
+          "snapshot": "2026-09-30"
+        },
+        "courts_bulk_opinions": {
+          "source": "CourtListener bulk data \u2014 opinion captions",
+          "url": "https://www.courtlistener.com/help/api/bulk-data/",
+          "opinions": 493,
+          "snapshot": "2026-09-30"
         }
       },
       "available": [],
@@ -821,6 +1037,18 @@
           "records": 35,
           "url": "https://www.irs.gov/charities-non-profits/exempt-organizations-business-master-file-extract-eo-bmf",
           "note": "501(c) HOAs/condos only (NTEE L50 or association name); 1120-H filers absent"
+        },
+        "courts_bulk_dockets": {
+          "source": "CourtListener bulk data \u2014 docket captions",
+          "url": "https://www.courtlistener.com/help/api/bulk-data/",
+          "dockets": 99,
+          "snapshot": "2026-09-30"
+        },
+        "courts_bulk_opinions": {
+          "source": "CourtListener bulk data \u2014 opinion captions",
+          "url": "https://www.courtlistener.com/help/api/bulk-data/",
+          "opinions": 37,
+          "snapshot": "2026-09-30"
         }
       },
       "available": [],
@@ -861,6 +1089,18 @@
           "source": "Montgomery County DHCA \u2014 registered common ownership communities (CCOC)",
           "records": 1256,
           "url": "https://www.montgomerycountymd.gov/department-housing-community-affairs/common-ownership-communities-coc"
+        },
+        "courts_bulk_dockets": {
+          "source": "CourtListener bulk data \u2014 docket captions",
+          "url": "https://www.courtlistener.com/help/api/bulk-data/",
+          "dockets": 235,
+          "snapshot": "2026-09-30"
+        },
+        "courts_bulk_opinions": {
+          "source": "CourtListener bulk data \u2014 opinion captions",
+          "url": "https://www.courtlistener.com/help/api/bulk-data/",
+          "opinions": 201,
+          "snapshot": "2026-09-30"
         }
       },
       "available": [],
@@ -904,6 +1144,18 @@
           "url": "https://www.mass.gov/info-details/massgis-data-property-tax-parcels",
           "coverage": "partial",
           "note": "county/city inventories, not a statewide registry \u2014 absence means nothing"
+        },
+        "courts_bulk_dockets": {
+          "source": "CourtListener bulk data \u2014 docket captions",
+          "url": "https://www.courtlistener.com/help/api/bulk-data/",
+          "dockets": 272,
+          "snapshot": "2026-09-30"
+        },
+        "courts_bulk_opinions": {
+          "source": "CourtListener bulk data \u2014 opinion captions",
+          "url": "https://www.courtlistener.com/help/api/bulk-data/",
+          "opinions": 165,
+          "snapshot": "2026-09-30"
         }
       },
       "available": [],
@@ -942,6 +1194,18 @@
           "url": "https://accessoakland.oakgov.com/",
           "coverage": "partial",
           "note": "county/city inventories, not a statewide registry \u2014 absence means nothing"
+        },
+        "courts_bulk_dockets": {
+          "source": "CourtListener bulk data \u2014 docket captions",
+          "url": "https://www.courtlistener.com/help/api/bulk-data/",
+          "dockets": 412,
+          "snapshot": "2026-09-30"
+        },
+        "courts_bulk_opinions": {
+          "source": "CourtListener bulk data \u2014 opinion captions",
+          "url": "https://www.courtlistener.com/help/api/bulk-data/",
+          "opinions": 270,
+          "snapshot": "2026-09-30"
         }
       },
       "available": [],
@@ -982,6 +1246,18 @@
           "url": "https://opendata.minneapolismn.gov/datasets/6d3c4cca729f41818f38d267afc323a8_0/about",
           "coverage": "partial",
           "note": "county/city inventories, not a statewide registry \u2014 absence means nothing"
+        },
+        "courts_bulk_dockets": {
+          "source": "CourtListener bulk data \u2014 docket captions",
+          "url": "https://www.courtlistener.com/help/api/bulk-data/",
+          "dockets": 146,
+          "snapshot": "2026-09-30"
+        },
+        "courts_bulk_opinions": {
+          "source": "CourtListener bulk data \u2014 opinion captions",
+          "url": "https://www.courtlistener.com/help/api/bulk-data/",
+          "opinions": 83,
+          "snapshot": "2026-09-30"
         }
       },
       "available": [],
@@ -1021,6 +1297,18 @@
           "records": 21,
           "url": "https://www.irs.gov/charities-non-profits/exempt-organizations-business-master-file-extract-eo-bmf",
           "note": "501(c) HOAs/condos only (NTEE L50 or association name); 1120-H filers absent"
+        },
+        "courts_bulk_dockets": {
+          "source": "CourtListener bulk data \u2014 docket captions",
+          "url": "https://www.courtlistener.com/help/api/bulk-data/",
+          "dockets": 118,
+          "snapshot": "2026-09-30"
+        },
+        "courts_bulk_opinions": {
+          "source": "CourtListener bulk data \u2014 opinion captions",
+          "url": "https://www.courtlistener.com/help/api/bulk-data/",
+          "opinions": 74,
+          "snapshot": "2026-09-30"
         }
       },
       "available": [],
@@ -1055,6 +1343,18 @@
           "url": "https://data.kcmo.org/dataset/Registered-Neighborhood-Homes-Associations/gctf-zc2y",
           "coverage": "partial",
           "note": "county/city inventories, not a statewide registry \u2014 absence means nothing"
+        },
+        "courts_bulk_dockets": {
+          "source": "CourtListener bulk data \u2014 docket captions",
+          "url": "https://www.courtlistener.com/help/api/bulk-data/",
+          "dockets": 280,
+          "snapshot": "2026-09-30"
+        },
+        "courts_bulk_opinions": {
+          "source": "CourtListener bulk data \u2014 opinion captions",
+          "url": "https://www.courtlistener.com/help/api/bulk-data/",
+          "opinions": 235,
+          "snapshot": "2026-09-30"
         }
       },
       "available": [],
@@ -1093,6 +1393,18 @@
           "url": "https://msl.mt.gov/geoinfo/msdi/cadastral",
           "coverage": "partial",
           "note": "county/city inventories, not a statewide registry \u2014 absence means nothing"
+        },
+        "courts_bulk_dockets": {
+          "source": "CourtListener bulk data \u2014 docket captions",
+          "url": "https://www.courtlistener.com/help/api/bulk-data/",
+          "dockets": 42,
+          "snapshot": "2026-09-30"
+        },
+        "courts_bulk_opinions": {
+          "source": "CourtListener bulk data \u2014 opinion captions",
+          "url": "https://www.courtlistener.com/help/api/bulk-data/",
+          "opinions": 58,
+          "snapshot": "2026-09-30"
         }
       },
       "available": [],
@@ -1133,6 +1445,18 @@
           "url": "https://opendata.lincoln.ne.gov/datasets/homeowners-association-contacts",
           "coverage": "partial",
           "note": "county/city inventories, not a statewide registry \u2014 absence means nothing"
+        },
+        "courts_bulk_dockets": {
+          "source": "CourtListener bulk data \u2014 docket captions",
+          "url": "https://www.courtlistener.com/help/api/bulk-data/",
+          "dockets": 45,
+          "snapshot": "2026-09-30"
+        },
+        "courts_bulk_opinions": {
+          "source": "CourtListener bulk data \u2014 opinion captions",
+          "url": "https://www.courtlistener.com/help/api/bulk-data/",
+          "opinions": 44,
+          "snapshot": "2026-09-30"
         }
       },
       "available": [],
@@ -1169,6 +1493,18 @@
           "url": "https://maps.clarkcountynv.gov/arcgis/rest/services/AdminServ/Clark_County_HOA/FeatureServer/0",
           "coverage": "partial",
           "note": "Clark County only (clark 1016, henderson 366, henderson_master 24, las_vegas 508; 1914 rows merged to 1835). NRED registers ~3,700 statewide but publishes no roster; Washoe/Carson/Douglas (~700) have no public layer"
+        },
+        "courts_bulk_dockets": {
+          "source": "CourtListener bulk data \u2014 docket captions",
+          "url": "https://www.courtlistener.com/help/api/bulk-data/",
+          "dockets": 889,
+          "snapshot": "2026-09-30"
+        },
+        "courts_bulk_opinions": {
+          "source": "CourtListener bulk data \u2014 opinion captions",
+          "url": "https://www.courtlistener.com/help/api/bulk-data/",
+          "opinions": 467,
+          "snapshot": "2026-09-30"
         }
       },
       "available": [],
@@ -1209,6 +1545,18 @@
           "records": 27,
           "url": "https://www.irs.gov/charities-non-profits/exempt-organizations-business-master-file-extract-eo-bmf",
           "note": "501(c) HOAs/condos only (NTEE L50 or association name); 1120-H filers absent"
+        },
+        "courts_bulk_dockets": {
+          "source": "CourtListener bulk data \u2014 docket captions",
+          "url": "https://www.courtlistener.com/help/api/bulk-data/",
+          "dockets": 112,
+          "snapshot": "2026-09-30"
+        },
+        "courts_bulk_opinions": {
+          "source": "CourtListener bulk data \u2014 opinion captions",
+          "url": "https://www.courtlistener.com/help/api/bulk-data/",
+          "opinions": 66,
+          "snapshot": "2026-09-30"
         }
       },
       "available": [],
@@ -1245,6 +1593,18 @@
           "records": 132,
           "url": "https://www.irs.gov/charities-non-profits/exempt-organizations-business-master-file-extract-eo-bmf",
           "note": "501(c) HOAs/condos only (NTEE L50 or association name); 1120-H filers absent"
+        },
+        "courts_bulk_dockets": {
+          "source": "CourtListener bulk data \u2014 docket captions",
+          "url": "https://www.courtlistener.com/help/api/bulk-data/",
+          "dockets": 646,
+          "snapshot": "2026-09-30"
+        },
+        "courts_bulk_opinions": {
+          "source": "CourtListener bulk data \u2014 opinion captions",
+          "url": "https://www.courtlistener.com/help/api/bulk-data/",
+          "opinions": 388,
+          "snapshot": "2026-09-30"
         }
       },
       "available": [],
@@ -1288,6 +1648,18 @@
           "url": "https://www.arcgis.com/home/item.html?id=ea84772907ae48c5b667b4fcfab15439",
           "coverage": "partial",
           "note": "county/city inventories, not a statewide registry \u2014 absence means nothing"
+        },
+        "courts_bulk_dockets": {
+          "source": "CourtListener bulk data \u2014 docket captions",
+          "url": "https://www.courtlistener.com/help/api/bulk-data/",
+          "dockets": 61,
+          "snapshot": "2026-09-30"
+        },
+        "courts_bulk_opinions": {
+          "source": "CourtListener bulk data \u2014 opinion captions",
+          "url": "https://www.courtlistener.com/help/api/bulk-data/",
+          "opinions": 47,
+          "snapshot": "2026-09-30"
         }
       },
       "available": [],
@@ -1325,6 +1697,18 @@
           "records": 272,
           "url": "https://www.irs.gov/charities-non-profits/exempt-organizations-business-master-file-extract-eo-bmf",
           "note": "501(c) HOAs/condos only (NTEE L50 or association name); 1120-H filers absent"
+        },
+        "courts_bulk_dockets": {
+          "source": "CourtListener bulk data \u2014 docket captions",
+          "url": "https://www.courtlistener.com/help/api/bulk-data/",
+          "dockets": 2263,
+          "snapshot": "2026-09-30"
+        },
+        "courts_bulk_opinions": {
+          "source": "CourtListener bulk data \u2014 opinion captions",
+          "url": "https://www.courtlistener.com/help/api/bulk-data/",
+          "opinions": 1903,
+          "snapshot": "2026-09-30"
         }
       },
       "available": [],
@@ -1372,6 +1756,18 @@
           "url": "https://www.nconemap.gov/pages/parcels",
           "coverage": "partial",
           "note": "county/city inventories, not a statewide registry \u2014 absence means nothing"
+        },
+        "courts_bulk_dockets": {
+          "source": "CourtListener bulk data \u2014 docket captions",
+          "url": "https://www.courtlistener.com/help/api/bulk-data/",
+          "dockets": 504,
+          "snapshot": "2026-09-30"
+        },
+        "courts_bulk_opinions": {
+          "source": "CourtListener bulk data \u2014 opinion captions",
+          "url": "https://www.courtlistener.com/help/api/bulk-data/",
+          "opinions": 464,
+          "snapshot": "2026-09-30"
         }
       },
       "available": [],
@@ -1411,6 +1807,18 @@
           "records": 7,
           "url": "https://www.irs.gov/charities-non-profits/exempt-organizations-business-master-file-extract-eo-bmf",
           "note": "501(c) HOAs/condos only (NTEE L50 or association name); 1120-H filers absent"
+        },
+        "courts_bulk_dockets": {
+          "source": "CourtListener bulk data \u2014 docket captions",
+          "url": "https://www.courtlistener.com/help/api/bulk-data/",
+          "dockets": 17,
+          "snapshot": "2026-09-30"
+        },
+        "courts_bulk_opinions": {
+          "source": "CourtListener bulk data \u2014 opinion captions",
+          "url": "https://www.courtlistener.com/help/api/bulk-data/",
+          "opinions": 14,
+          "snapshot": "2026-09-30"
         }
       },
       "available": [],
@@ -1443,6 +1851,18 @@
           "records": 129,
           "url": "https://www.irs.gov/charities-non-profits/exempt-organizations-business-master-file-extract-eo-bmf",
           "note": "501(c) HOAs/condos only (NTEE L50 or association name); 1120-H filers absent"
+        },
+        "courts_bulk_dockets": {
+          "source": "CourtListener bulk data \u2014 docket captions",
+          "url": "https://www.courtlistener.com/help/api/bulk-data/",
+          "dockets": 445,
+          "snapshot": "2026-09-30"
+        },
+        "courts_bulk_opinions": {
+          "source": "CourtListener bulk data \u2014 opinion captions",
+          "url": "https://www.courtlistener.com/help/api/bulk-data/",
+          "opinions": 364,
+          "snapshot": "2026-09-30"
         }
       },
       "available": [
@@ -1488,6 +1908,18 @@
           "url": "https://data.okc.gov/portal/page/viewer?datasetName=Neighborhood+Associations&view=table",
           "coverage": "partial",
           "note": "county/city inventories, not a statewide registry \u2014 absence means nothing"
+        },
+        "courts_bulk_dockets": {
+          "source": "CourtListener bulk data \u2014 docket captions",
+          "url": "https://www.courtlistener.com/help/api/bulk-data/",
+          "dockets": 63,
+          "snapshot": "2026-09-30"
+        },
+        "courts_bulk_opinions": {
+          "source": "CourtListener bulk data \u2014 opinion captions",
+          "url": "https://www.courtlistener.com/help/api/bulk-data/",
+          "opinions": 50,
+          "snapshot": "2026-09-30"
         }
       },
       "available": [],
@@ -1529,6 +1961,18 @@
           "records": 71,
           "url": "https://www.irs.gov/charities-non-profits/exempt-organizations-business-master-file-extract-eo-bmf",
           "note": "501(c) HOAs/condos only (NTEE L50 or association name); 1120-H filers absent"
+        },
+        "courts_bulk_dockets": {
+          "source": "CourtListener bulk data \u2014 docket captions",
+          "url": "https://www.courtlistener.com/help/api/bulk-data/",
+          "dockets": 201,
+          "snapshot": "2026-09-30"
+        },
+        "courts_bulk_opinions": {
+          "source": "CourtListener bulk data \u2014 opinion captions",
+          "url": "https://www.courtlistener.com/help/api/bulk-data/",
+          "opinions": 171,
+          "snapshot": "2026-09-30"
         }
       },
       "available": [],
@@ -1568,6 +2012,18 @@
           "records": 166,
           "url": "https://www.irs.gov/charities-non-profits/exempt-organizations-business-master-file-extract-eo-bmf",
           "note": "501(c) HOAs/condos only (NTEE L50 or association name); 1120-H filers absent"
+        },
+        "courts_bulk_dockets": {
+          "source": "CourtListener bulk data \u2014 docket captions",
+          "url": "https://www.courtlistener.com/help/api/bulk-data/",
+          "dockets": 810,
+          "snapshot": "2026-09-30"
+        },
+        "courts_bulk_opinions": {
+          "source": "CourtListener bulk data \u2014 opinion captions",
+          "url": "https://www.courtlistener.com/help/api/bulk-data/",
+          "opinions": 664,
+          "snapshot": "2026-09-30"
         }
       },
       "available": [],
@@ -1594,6 +2050,18 @@
           "records": 18,
           "url": "https://www.irs.gov/charities-non-profits/exempt-organizations-business-master-file-extract-eo-bmf",
           "note": "501(c) HOAs/condos only (NTEE L50 or association name); 1120-H filers absent"
+        },
+        "courts_bulk_dockets": {
+          "source": "CourtListener bulk data \u2014 docket captions",
+          "url": "https://www.courtlistener.com/help/api/bulk-data/",
+          "dockets": 102,
+          "snapshot": "2026-09-30"
+        },
+        "courts_bulk_opinions": {
+          "source": "CourtListener bulk data \u2014 opinion captions",
+          "url": "https://www.courtlistener.com/help/api/bulk-data/",
+          "opinions": 89,
+          "snapshot": "2026-09-30"
         }
       },
       "available": [],
@@ -1630,6 +2098,18 @@
           "records": 53,
           "url": "https://www.irs.gov/charities-non-profits/exempt-organizations-business-master-file-extract-eo-bmf",
           "note": "501(c) HOAs/condos only (NTEE L50 or association name); 1120-H filers absent"
+        },
+        "courts_bulk_dockets": {
+          "source": "CourtListener bulk data \u2014 docket captions",
+          "url": "https://www.courtlistener.com/help/api/bulk-data/",
+          "dockets": 348,
+          "snapshot": "2026-09-30"
+        },
+        "courts_bulk_opinions": {
+          "source": "CourtListener bulk data \u2014 opinion captions",
+          "url": "https://www.courtlistener.com/help/api/bulk-data/",
+          "opinions": 163,
+          "snapshot": "2026-09-30"
         }
       },
       "available": [],
@@ -1661,6 +2141,18 @@
           "records": 15,
           "url": "https://www.irs.gov/charities-non-profits/exempt-organizations-business-master-file-extract-eo-bmf",
           "note": "501(c) HOAs/condos only (NTEE L50 or association name); 1120-H filers absent"
+        },
+        "courts_bulk_dockets": {
+          "source": "CourtListener bulk data \u2014 docket captions",
+          "url": "https://www.courtlistener.com/help/api/bulk-data/",
+          "dockets": 8,
+          "snapshot": "2026-09-30"
+        },
+        "courts_bulk_opinions": {
+          "source": "CourtListener bulk data \u2014 opinion captions",
+          "url": "https://www.courtlistener.com/help/api/bulk-data/",
+          "opinions": 14,
+          "snapshot": "2026-09-30"
         }
       },
       "available": [],
@@ -1697,6 +2189,18 @@
           "url": "https://www.chattadata.org/Public-Safety/Neighborhood-Association-Boundaries/dxzz-idjy",
           "coverage": "partial",
           "note": "county/city inventories, not a statewide registry \u2014 absence means nothing"
+        },
+        "courts_bulk_dockets": {
+          "source": "CourtListener bulk data \u2014 docket captions",
+          "url": "https://www.courtlistener.com/help/api/bulk-data/",
+          "dockets": 182,
+          "snapshot": "2026-09-30"
+        },
+        "courts_bulk_opinions": {
+          "source": "CourtListener bulk data \u2014 opinion captions",
+          "url": "https://www.courtlistener.com/help/api/bulk-data/",
+          "opinions": 118,
+          "snapshot": "2026-09-30"
         }
       },
       "available": [
@@ -1738,6 +2242,18 @@
           "records": 1098,
           "url": "https://www.irs.gov/charities-non-profits/exempt-organizations-business-master-file-extract-eo-bmf",
           "note": "501(c) HOAs/condos only (NTEE L50 or association name); 1120-H filers absent"
+        },
+        "courts_bulk_dockets": {
+          "source": "CourtListener bulk data \u2014 docket captions",
+          "url": "https://www.courtlistener.com/help/api/bulk-data/",
+          "dockets": 3320,
+          "snapshot": "2026-09-30"
+        },
+        "courts_bulk_opinions": {
+          "source": "CourtListener bulk data \u2014 opinion captions",
+          "url": "https://www.courtlistener.com/help/api/bulk-data/",
+          "opinions": 2024,
+          "snapshot": "2026-09-30"
         }
       },
       "available": [],
@@ -1777,6 +2293,18 @@
           "records": 4126,
           "url": "https://services.commerce.utah.gov/hoa/",
           "note": "mandatory statewide registry; current registrations only"
+        },
+        "courts_bulk_dockets": {
+          "source": "CourtListener bulk data \u2014 docket captions",
+          "url": "https://www.courtlistener.com/help/api/bulk-data/",
+          "dockets": 124,
+          "snapshot": "2026-09-30"
+        },
+        "courts_bulk_opinions": {
+          "source": "CourtListener bulk data \u2014 opinion captions",
+          "url": "https://www.courtlistener.com/help/api/bulk-data/",
+          "opinions": 105,
+          "snapshot": "2026-09-30"
         }
       },
       "available": [],
@@ -1815,6 +2343,18 @@
           "url": "https://geodata.vermont.gov/pages/parcels",
           "coverage": "partial",
           "note": "county/city inventories, not a statewide registry \u2014 absence means nothing"
+        },
+        "courts_bulk_dockets": {
+          "source": "CourtListener bulk data \u2014 docket captions",
+          "url": "https://www.courtlistener.com/help/api/bulk-data/",
+          "dockets": 115,
+          "snapshot": "2026-09-30"
+        },
+        "courts_bulk_opinions": {
+          "source": "CourtListener bulk data \u2014 opinion captions",
+          "url": "https://www.courtlistener.com/help/api/bulk-data/",
+          "opinions": 111,
+          "snapshot": "2026-09-30"
         }
       },
       "available": [],
@@ -1849,6 +2389,18 @@
           "records": 182,
           "url": "https://www.irs.gov/charities-non-profits/exempt-organizations-business-master-file-extract-eo-bmf",
           "note": "501(c) HOAs/condos only (NTEE L50 or association name); 1120-H filers absent"
+        },
+        "courts_bulk_dockets": {
+          "source": "CourtListener bulk data \u2014 docket captions",
+          "url": "https://www.courtlistener.com/help/api/bulk-data/",
+          "dockets": 220,
+          "snapshot": "2026-09-30"
+        },
+        "courts_bulk_opinions": {
+          "source": "CourtListener bulk data \u2014 opinion captions",
+          "url": "https://www.courtlistener.com/help/api/bulk-data/",
+          "opinions": 94,
+          "snapshot": "2026-09-30"
         }
       },
       "available": [],
@@ -1903,6 +2455,18 @@
             "Merged": 8
           },
           "collected_at": "2026-09-03"
+        },
+        "courts_bulk_dockets": {
+          "source": "CourtListener bulk data \u2014 docket captions",
+          "url": "https://www.courtlistener.com/help/api/bulk-data/",
+          "dockets": 862,
+          "snapshot": "2026-09-30"
+        },
+        "courts_bulk_opinions": {
+          "source": "CourtListener bulk data \u2014 opinion captions",
+          "url": "https://www.courtlistener.com/help/api/bulk-data/",
+          "opinions": 569,
+          "snapshot": "2026-09-30"
         }
       },
       "available": [],
@@ -1946,6 +2510,18 @@
           "url": "https://wvgis.wvu.edu/data/dataset.php?ID=371",
           "coverage": "partial",
           "note": "county/city inventories, not a statewide registry \u2014 absence means nothing"
+        },
+        "courts_bulk_dockets": {
+          "source": "CourtListener bulk data \u2014 docket captions",
+          "url": "https://www.courtlistener.com/help/api/bulk-data/",
+          "dockets": 57,
+          "snapshot": "2026-09-30"
+        },
+        "courts_bulk_opinions": {
+          "source": "CourtListener bulk data \u2014 opinion captions",
+          "url": "https://www.courtlistener.com/help/api/bulk-data/",
+          "opinions": 47,
+          "snapshot": "2026-09-30"
         }
       },
       "available": [],
@@ -1988,6 +2564,18 @@
           "records": 638,
           "url": "https://apps.dfi.wi.gov/apps/HomeOwnersAssociation/Search",
           "note": "HOAs only (no condos), filings since 2022"
+        },
+        "courts_bulk_dockets": {
+          "source": "CourtListener bulk data \u2014 docket captions",
+          "url": "https://www.courtlistener.com/help/api/bulk-data/",
+          "dockets": 123,
+          "snapshot": "2026-09-30"
+        },
+        "courts_bulk_opinions": {
+          "source": "CourtListener bulk data \u2014 opinion captions",
+          "url": "https://www.courtlistener.com/help/api/bulk-data/",
+          "opinions": 114,
+          "snapshot": "2026-09-30"
         }
       },
       "available": [
@@ -2035,6 +2623,18 @@
           "url": "https://maps.terragis.net/tetonwy/mapserver/download/download.html",
           "coverage": "partial",
           "note": "county/city inventories, not a statewide registry \u2014 absence means nothing"
+        },
+        "courts_bulk_dockets": {
+          "source": "CourtListener bulk data \u2014 docket captions",
+          "url": "https://www.courtlistener.com/help/api/bulk-data/",
+          "dockets": 35,
+          "snapshot": "2026-09-30"
+        },
+        "courts_bulk_opinions": {
+          "source": "CourtListener bulk data \u2014 opinion captions",
+          "url": "https://www.courtlistener.com/help/api/bulk-data/",
+          "opinions": 31,
+          "snapshot": "2026-09-30"
         }
       },
       "available": [],
@@ -2070,6 +2670,18 @@
           "records": 27,
           "url": "https://www.irs.gov/charities-non-profits/exempt-organizations-business-master-file-extract-eo-bmf",
           "note": "501(c) HOAs/condos only (NTEE L50 or association name); 1120-H filers absent"
+        },
+        "courts_bulk_dockets": {
+          "source": "CourtListener bulk data \u2014 docket captions",
+          "url": "https://www.courtlistener.com/help/api/bulk-data/",
+          "dockets": 148,
+          "snapshot": "2026-09-30"
+        },
+        "courts_bulk_opinions": {
+          "source": "CourtListener bulk data \u2014 opinion captions",
+          "url": "https://www.courtlistener.com/help/api/bulk-data/",
+          "opinions": 97,
+          "snapshot": "2026-09-30"
         }
       },
       "available": [],
