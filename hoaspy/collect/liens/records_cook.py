@@ -162,6 +162,7 @@ _OWNERS_AT_LARGE_RE = re.compile(
 
 
 _CREDIT_UNION_RE = re.compile(r"CREDIT UNION|\bF?CU$")
+_ASSN_RE = re.compile(r"\bASS(?:OCIATIO)?N\b")
 
 
 def is_financial_name(name: str) -> bool:
@@ -172,8 +173,8 @@ def is_financial_name(name: str) -> bool:
         return True
     if _COMMUNITY_TOKEN_RE.search(norm):
         return False
-    if _BANKISH_RE.search(norm) and _FIN_CTX_RE.search(norm):
-        return True
+    if _BANKISH_RE.search(norm) and (_FIN_CTX_RE.search(norm) or _ASSN_RE.search(norm)):
+        return True                         # "LASALLE BK NALT ASSN": a bank however NATL is typed
     return bool(_FIN_ONLY_RE.search(norm))
 
 
@@ -184,7 +185,15 @@ _ASSOCIATES_RE = re.compile(r"(?:&|\bAND)\s*ASS(?:OC|N)\w*|\bASSOCS?\b|\bASSOCIA
 _COMMUNITY_WORD_RE = re.compile(
     r"CONDO|HOME ?OWNER|TOWN ?HOME|TOWN ?HOUSE|\bOWNERS\b|\bMASTER\b|COMMUNITY|IMPROVEMENT|"
     r"\bCO ?OP\b|COOPERATIVE|\bBOARD\b")
-_BARE_BOARD_RE = re.compile(r"^(?:THE )?BOARD (?:OF )?(?:MANAGERS|DIRECTORS)$")
+# "BOARD OF MANAGERS", "CONDIMINIUM ASSOCIATION": the tail of a name the clerk
+# split over two party entries. With these words taken out nothing is left.
+_GENERIC_WORD_RE = re.compile(
+    r"\b(?:THE|OF|AND|BOARD|MANAGERS|DIRECTORS|COND\w*|HOME ?OWNERS?|TOWN ?HOMES?|TOWN ?HOUSES?|UNIT|"
+    r"PROPERTY|OWNERS|MASTER|COMMUNITY|ASSOCIATION|ASSN|ASSOC|ASN|INC|NFP|NO)\b|[^A-Z0-9]")
+
+
+def is_generic_name(name: str) -> bool:
+    return not _GENERIC_WORD_RE.sub("", (name or "").upper())
 
 
 def is_association_party(name: str) -> bool:
@@ -195,7 +204,7 @@ def is_association_party(name: str) -> bool:
     if not name:
         return False
     upper = name.upper()
-    if has_business_form(name) or _OWNERS_AT_LARGE_RE.search(upper) or _BARE_BOARD_RE.match(upper):
+    if has_business_form(name) or _OWNERS_AT_LARGE_RE.search(upper) or is_generic_name(upper):
         return False
     if _ASSOCIATES_RE.search(upper) and not _COMMUNITY_WORD_RE.search(upper):
         return False
@@ -204,13 +213,13 @@ def is_association_party(name: str) -> bool:
 
 def pick_association(filers: list[str], respondents: list[str]) -> tuple[str, str]:
     """(association, side) — the filer side wins, then the respondent side,
-    exactly like Broward/Miami-Dade. side is 'filer', 'respondent' or ''."""
-    for p in filers:
-        if is_association_party(p):
-            return p, "filer"
-    for p in respondents:
-        if is_association_party(p):
-            return p, "respondent"
+    exactly like Broward/Miami-Dade. side is 'filer', 'respondent' or ''.
+    On a side with several candidates (a mechanics lien can name fifteen
+    respondents) the one whose name says community is taken first."""
+    for side, parties in (("filer", filers), ("respondent", respondents)):
+        found = [p for p in parties if is_association_party(p)]
+        if found:
+            return next((p for p in found if _COMMUNITY_WORD_RE.search(p.upper())), found[0]), side
     return "", ""
 
 

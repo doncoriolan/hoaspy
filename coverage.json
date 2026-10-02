@@ -1,5 +1,5 @@
 {
-  "updated_at": "2026-10-02T05:06:40.109602+00:00",
+  "updated_at": "2026-10-02T05:31:47.021817+00:00",
   "_schema": {
     "collected": "sources actually collected, with record counts",
     "available": "sources that exist and are free but not yet collected",
@@ -602,14 +602,14 @@
           "liens": {
             "source": "Cook County Clerk \u2014 Recordings System (CRS), Advanced Search by party name",
             "collector": "get_cook_liens.py",
-            "coverage": "party-name sweep: liens naming an association on either side, foreclosures it filed; complete back to 1985-10-01; 44,103 records shaped from the results row (first parties only, no address); lender foreclosures naming an association not collected",
-            "records": 48084,
-            "associations": 15688,
+            "coverage": "party-name sweep: liens naming an association on either side, foreclosures it filed; complete back to 1985-10-01; 44,084 records shaped from the results row (first parties only, no address); lender foreclosures naming an association not collected",
+            "records": 48647,
+            "associations": 15885,
             "years": "1985-2026",
             "document_types": {
-              "claim_of_lien": 45284,
-              "lien_against_association": 2480,
-              "lis_pendens": 320
+              "claim_of_lien": 45341,
+              "lien_against_association": 2987,
+              "lis_pendens": 319
             }
           }
         }

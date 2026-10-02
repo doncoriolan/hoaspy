@@ -238,7 +238,11 @@ both from a GET of the search page; no login and no captcha.
   UNIT OWNERS" or "UNKNOWN OWNERS", nor a firm of associates (`TENG & ASSOC
   INC`, an architect's mechanics lien): without a word that says community,
   a bare `ASSOC` is not an association, so a few real ones recorded that
-  way are missed. The filer side wins. An association
+  way are missed. A bare fragment the clerk split off a
+  longer name (`BOARD OF MANAGERS`, `CONDOMINIUM ASSOCIATION`) is not a
+  name either. The filer side wins, and among several candidates on one
+  side — a mechanics lien can name fifteen respondents — the one whose name
+  says community is taken first. An association
   filer makes the document `LIE` or `LP`; an association named only on the
   other side of a lien makes it `LXA`.
 - **Not collected.** A lis pendens somebody else filed: a lender foreclosing

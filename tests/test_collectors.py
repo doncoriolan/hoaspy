@@ -2262,13 +2262,19 @@ class TestCookLiensParsing(unittest.TestCase):
                      # ASSOC = "Associates": architects and contractors, not communities
                      "TENG & ASSOC INC", "SEARL & ASSOC ARCHITECTS PC", "MIDWEST CONST ASSOC INC",
                      "ALEXANDER GAMMIE ASSOC PLUMBING & HEATING CO", "JOHN BELMONT & ASSN INC", "SMITH ASSOC",
-                     "BOARD OF MANAGERS",
+                     "BOARD OF MANAGERS", "CONDIMINIUM ASSOCIATION", "THE CONDO ASSN INC", "LASALLE BK NALT ASSN",
                      "VILLAGE GREENE CONDO ASSN ALSIP LLC", "ROCKET MTG LLC", "DOE JOHN", "",
                      "401 INDIVIDUAL UNIT OWNERS", "ALL UNIT OWNERS AND NEWPORT RLTY MGMT", "UNKNOWN OWNERS"):
             self.assertFalse(ok(name), name)
         # the filer side wins; a bank beside the association is never picked
         self.assertEqual(self.rc.pick_association(["US BK NATL ASSN", "A CONDO ASSN"], ["B CONDO ASSN"]),
                          ("A CONDO ASSN", "filer"))
+        # among several respondents, the one whose name says community comes first
+        self.assertEqual(self.rc.pick_association(["SAMPLE FURNACE CO INC"],
+                                                  ["DOE JOHN", "SAMPLE FAMILY ASSN", "B CONDO ASSN"]),
+                         ("B CONDO ASSN", "respondent"))
+        self.assertEqual(self.rc.pick_association([], ["SAUGANASH VLG ASSOCIATION"]),
+                         ("SAUGANASH VLG ASSOCIATION", "respondent"))
         self.assertEqual(self.rc.pick_association(["US BK NATL ASSN"], ["DOE JOHN", "B CONDO ASSN"]),
                          ("B CONDO ASSN", "respondent"))
         self.assertEqual(self.rc.pick_association(["ROCKET MTG LLC"], ["DOE JOHN"]), ("", ""))
