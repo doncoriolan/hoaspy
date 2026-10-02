@@ -17,7 +17,7 @@ and the record shapes.
 ```
 hoaspy/                      the package (run modules from the repo root: python -m hoaspy.<pkg>.<module>)
   collect/registries/        who the associations are — state registries, corporate rosters, local inventories, IRS roster, complaints
-  collect/liens/             county lien / foreclosure-filing indexes (Broward, Miami-Dade, NYC ACRIS) and CA judgment liens
+  collect/liens/             county lien / foreclosure-filing indexes (Broward, Miami-Dade, NYC ACRIS, Cook County IL) and CA judgment liens
   collect/courts/            CourtListener (federal + appellate), re:SearchTX, trial-court portal adapters, Miami-Dade civil feed
   collect/news/              GDELT news index (retired 2026-09-07, kept for reference)
   lib/                       shared helpers: request pacing, optional S3 mirror
@@ -58,6 +58,7 @@ re-run. Examples:
 ./venv/bin/python -m hoaspy.collect.registries.get_cook_condos           # Cook County IL condo buildings
 ./venv/bin/python -m hoaspy.collect.liens.get_liens --no-upload          # Broward County official-records index
 ./venv/bin/python -m hoaspy.collect.liens.get_nyc_liens                  # NYC ACRIS
+./venv/bin/python -m hoaspy.collect.liens.get_cook_liens --no-upload     # Cook County IL recorder liens (resumable)
 ./venv/bin/python -m hoaspy.collect.courts.get_courts                    # CourtListener RECAP + state opinions
 ./venv/bin/python -m hoaspy.collect.courts.get_state_courts --list       # trial-court portal adapters
 ./venv/bin/python -m hoaspy.collect.courts.get_state_courts --portal va_gdc --limit 5   # one portal, five names

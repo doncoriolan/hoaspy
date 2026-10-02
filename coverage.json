@@ -1,5 +1,5 @@
 {
-  "updated_at": "2026-09-29T07:17:42.293487+00:00",
+  "updated_at": "2026-10-02T03:53:28.071331+00:00",
   "_schema": {
     "collected": "sources actually collected, with record counts",
     "available": "sources that exist and are free but not yet collected",
@@ -593,15 +593,27 @@
           "why": "paid"
         },
         {
-          "source": "Cook County Clerk current recordings",
-          "why": "search-only"
-        },
-        {
           "source": "Cook County recorder bulk indexes 2011-2015 (historic)",
           "why": "checked 2026-09-28: PIN, document type, date and amount only \u2014 no party names, so a lis pendens cannot be tied to an association; series ended March 2015"
         }
       ],
-      "counties": {},
+      "counties": {
+        "Cook": {
+          "liens": {
+            "source": "Cook County Clerk \u2014 Recordings System (CRS), Advanced Search by party name",
+            "collector": "get_cook_liens.py",
+            "coverage": "party-name sweep: liens naming an association on either side, foreclosures it filed; complete back to 1985-10-01; 44,819 records shaped from the results row (first parties only, no address); lender foreclosures naming an association not collected",
+            "records": 46697,
+            "associations": 15005,
+            "years": "1985-2026",
+            "document_types": {
+              "claim_of_lien": 45230,
+              "lien_against_association": 1211,
+              "lis_pendens": 256
+            }
+          }
+        }
+      },
       "notes": [
         "condo ombudsperson registration requirement repealed 2017 \u2014 no registry"
       ]

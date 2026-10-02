@@ -5,7 +5,7 @@ foreclosure it filed against an owner, the owner who sued the board, the
 federal housing-discrimination or debt-collection suit. No free national
 index of state *trial* courts exists, so `courts/` is built in layers: one
 nationwide source for federal dockets and state appellate opinions
-(CourtListener), Texas' statewide portal (re:SearchTX), a per-portal adapter
+(CourtListener — its search API and its bulk files), Texas' statewide portal (re:SearchTX), a per-portal adapter
 for other states' and counties' trial-court sites, and one subscriber feed
 (Miami-Dade). Every layer writes the **same docket record shape**, and
 `hoaspy/build/build_site.py` folds each file in with `Builder.add_courts` /
@@ -14,6 +14,7 @@ for other states' and counties' trial-court sites, and one subscriber feed
 | Collector | Jurisdiction | Source | Access | Output |
 | --- | --- | --- | --- | --- |
 | `get_courts` | all 50 states + DC | CourtListener v4 search API: RECAP federal dockets, state supreme/appellate opinions | anonymous, paced | `courts/dockets.jsonl`, `courts/opinions.jsonl`, `courts/sources.json` (top level) |
+| `get_courts_bulk` | every court CourtListener holds, all 50 states + DC | CourtListener quarterly bulk data (public S3 bucket): every docket and opinion **caption** | anonymous download, no rate limit, ~7.7 GB | `courts/bulk_dockets.jsonl`, `courts/bulk_opinions.jsonl`, `sources.json["courtlistener_bulk"]` |
 | `get_tx_research` | Texas trial courts (participating county/district courts) | re:SearchTX (Office of Court Administration) | your own logged-in Cookie header; 200 searches/hour | `courts/tx_research.jsonl`, `sources.json["tx_research"]` |
 | `get_state_courts` + `court_portals/*` | AK, CT, MD, PA statewide; VA general district courts; Broward and Hillsborough counties FL; the Supreme Court of Ohio | each portal's own search (see the adapter table) | anonymous; Broward and Virginia through the local BrowserOS browser; Maryland with your own browser's DataDome cookie | `courts/trial_<KEY>.jsonl`, `sources.json["trial_courts"][KEY]` |
 | `records_miamidade_civil` | Miami-Dade County, FL | Clerk's Commercial Data Services **Civil** FTP feed | subscriber FTP files staged by hand; public per-case links | `courts/trial_fl_miamidade.jsonl`, `sources.json["trial_courts"]["fl_miamidade"]` |
@@ -28,6 +29,7 @@ blocked is NEEDS.md §3d.
 | File | Role |
 | --- | --- |
 | `hoaspy/collect/courts/get_courts.py` | CourtListener: court maps from the courts API, five party queries + five caption queries, checkpoint after every query, `STATE_NAMES` (also imported by `build_site`) |
+| `hoaspy/collect/courts/get_courts_bulk.py` | CourtListener bulk data: bucket listing (`snapshots`), resumable parallel download, the PostgreSQL-CSV reader (`open_rows`), the wide caption net (`BROAD`, `scan`), the caption splitter and association gate (`find_associations`, `is_association`), `docket_record` / `opinion_record`, `merge_sources` |
 | `hoaspy/collect/courts/get_tx_research.py` | re:SearchTX: session from a Cookie header, phrase query per association, `to_record`, `QuotaError`/`PermissionError`, per-name checkpoint |
 | `hoaspy/collect/courts/get_state_courts.py` | Portal driver: association names per state from `records/` (`association_names`) plus an adapter's `SWEEPS` (`portal_names`), checkpoint per portal, quota/permission handling, `dedupe`, `sources.json` catalog |
 | `hoaspy/collect/courts/court_portals/__init__.py` | The adapter contract, `RateLimited`, `registry()` (imports every non-underscore module in the package) |
@@ -89,6 +91,78 @@ half. There is no upload flag: this collector never uploads.
 that matches. `sources.json` records the district/appellate court counts,
 the queries and the caveat: RECAP holds what PACER users have shared, and
 state coverage is appellate only.
+
+## CourtListener bulk data — `get_courts_bulk`
+
+The search API answers five phrases and, anonymously, is throttled to five
+requests a minute with a daily cap behind that (see Limits). The Free Law
+Project also publishes its whole database every quarter as CSV files in a
+public S3 bucket
+(`com-courtlistener-storage.s3-us-west-2.amazonaws.com/bulk-data/`, described
+at [courtlistener.com/help/api/bulk-data](https://www.courtlistener.com/help/api/bulk-data/)).
+`get_courts_bulk` reads three of them — no account, no rate limit, no query
+grammar:
+
+| File (2026-09-30 snapshot) | Size | What is read |
+| --- | --- | --- |
+| `courts-<date>.csv.bz2` | 81 KB | each court's full name (→ state) and `jurisdiction` code |
+| `opinion-clusters-<date>.csv.bz2` | 2.5 GB | one row per decided case: `case_name`, `case_name_full`, `date_filed`, `precedential_status`, `docket_id`, `blocked` |
+| `dockets-<date>.csv.bz2` | 5.1 GB | one row per docket in any court: captions, `court_id`, `docket_number`, dates, `nature_of_suit`, `cause`, `appeal_from_id`, `blocked` |
+
+It works in three steps, each skipped when its result is already in the
+cache (`.cache/courtlistener_bulk/`, git-ignored):
+
+1. **Download.** `list_bucket` pages the bucket listing, `snapshots` keeps
+   the dates that have all three files (a quarter is uploaded over several
+   hours), and the latest is taken unless `--snapshot` names one. Each file
+   is fetched with `--connections` (default 8) parallel range requests
+   (`plan_parts`); every part resumes from the bytes already on disk and the
+   joined file must match the listed size.
+2. **Scan.** `open_rows` reads the file as PostgreSQL wrote it
+   (`COPY … WITH (FORMAT csv, ESCAPE '\')`: `\"` inside a field, fields that
+   span lines, an unquoted empty field for NULL), through the `bzip2` binary
+   when there is one. `scan` keeps the rows whose `case_name` or
+   `case_name_full` matches `BROAD` — a deliberately wide net of association
+   words, abbreviations included — cut down to the columns the next step
+   needs. Opinions are scanned first; the docket pass then also keeps the
+   docket of every kept opinion, because the cluster row does not say which
+   court decided it. Rows CourtListener marks `blocked` (kept out of search
+   engines, mostly bankruptcies) are skipped here and never reach the cache.
+   About an hour for both files, nearly all of it decompression.
+3. **Refine.** `find_associations` spells out reporter abbreviations
+   (`Ass'n`, `Assn.`, `Assoc.`, `Condo.`, `Bd. of Mgrs.`), splits the caption
+   at "v." into sides and each side into parties, trims role words, "In re"
+   and a trailing "… and John Doe", and keeps the parties `is_association`
+   accepts: an association word, no lender / insurer / builder / public-body
+   / trade-group vocabulary ("Home Owners' Loan Corporation", "Bank of
+   America, National Association", "Standardbred Owners Association"), no
+   LLC or LP form, more than generic words, and "HOA" only as the last word
+   of a longer name — never the given name in "Hoa Van Doe". The full
+   caption is read before the short one, because Florida's appellate dockets
+   shorten `case_name` to "X HOMEOWNERS v. DOE". `--refine-only` re-runs
+   this step alone after a rule change (seconds, not an hour).
+
+`bulk_dockets.jsonl` has the docket record shape with `source:
+courtlistener-bulk`, plus `docket_id`, `court_id`, `jurisdiction`
+(CourtListener's code: `FD` federal district, `FB` bankruptcy, `F` federal
+appellate, `S` / `SA` state supreme / appellate, `ST` state trial) and
+`association_role` (a name → `plaintiff` / `defendant` / `""` map; `""` when
+the caption has no "v."). A federal court of appeals has no state of its
+own, so `state` is the state of the district appealed from when the docket
+names one. `bulk_opinions.jsonl` has the opinion shape with `source:
+courtlistener-bulk-opinions`, plus `cluster_id`, `docket_id`,
+`docket_number`, `jurisdiction`, `status` and `association_role`. Both
+files overlap what `get_courts` finds — the same case has the same
+`docket_id` / opinion `url` — so a consumer of both dedupes on those.
+
+What it adds over the API sweep: state appellate **dockets** (Florida's
+district courts of appeal, New York's Appellate Division, the Texas courts
+of appeals — cases with no published opinion), bankruptcy and federal
+appellate captions, and the opinions whose captions are abbreviated — the
+five API phrases spell "association" out, so "Lake Point Tower Condo. Ass'n
+v. Roe" was never returned and Illinois had 40 opinions. What it cannot
+see: party lists. A bankruptcy captioned "In re John Doe" in which the
+association is a creditor is found only by `get_courts`' `party:` search.
 
 ## re:SearchTX — `get_tx_research`
 
@@ -296,6 +370,11 @@ entry adds link/ZIP/plaintiff/defendant counts and the feed statistics.
 ./venv/bin/python -m hoaspy.collect.courts.get_courts
 ./venv/bin/python -m hoaspy.collect.courts.get_courts --only-opinions --max-pages 50
 
+# every docket and opinion caption in CourtListener's bulk data (~7.7 GB download, about an hour to scan)
+./venv/bin/python -m hoaspy.collect.courts.get_courts_bulk                          # latest complete snapshot
+./venv/bin/python -m hoaspy.collect.courts.get_courts_bulk --snapshot 2026-09-30
+./venv/bin/python -m hoaspy.collect.courts.get_courts_bulk --refine-only            # re-run the name rules on the cached extract
+
 # Texas trial courts with your re:SearchTX session (resumable; 200 searches/hour)
 ./venv/bin/python -m hoaspy.collect.courts.get_tx_research --cookie-file tx_cookie.txt --no-upload
 ./venv/bin/python -m hoaspy.collect.courts.get_tx_research --cookie-file tx_cookie.txt --wait-on-quota
@@ -329,10 +408,12 @@ Exit codes from the trial collectors are meaningful: `2` missing cookie,
 | --- | --- | --- |
 | `records/associations.jsonl`, `state_corps.jsonl`, `state_registries.jsonl`, `irs_exempt_orgs.jsonl` | the registry collectors ([REGISTRIES.md](REGISTRIES.md)) | the association names the trial collectors query and the Miami-Dade feed whitelists against |
 | `courts/dockets.jsonl`, `courts/opinions.jsonl` | `get_courts` | RECAP dockets, appellate opinions (merged across runs) |
+| `courts/bulk_dockets.jsonl`, `courts/bulk_opinions.jsonl` | `get_courts_bulk` | every docket / opinion caption in CourtListener's bulk data that names an association (rewritten per run) |
+| `.cache/courtlistener_bulk/*.csv.bz2`, `hoa_clusters-<date>.jsonl`, `hoa_dockets-<date>.jsonl` | `get_courts_bulk` | the downloaded bulk files (~7.7 GB) and the step-2 extracts `--refine-only` re-reads |
 | `courts/tx_research.jsonl` | `get_tx_research` | TX trial dockets |
 | `courts/trial_<KEY>.jsonl` | `get_state_courts` | one file per adapter (`trial_ak_courtview`, `trial_ct_civil`, `trial_pa_ujs`, `trial_fl_broward`, `trial_fl_hillsborough`, `trial_md_casesearch`, `trial_va_gdc`, `trial_oh_supreme`) |
 | `courts/trial_fl_miamidade.jsonl` | `records_miamidade_civil` | Miami-Dade trial cases with `association_role`, `county`, `zip`, `has_public_link` |
-| `courts/sources.json` | all of the above | CourtListener provenance at the top level; `tx_research` and `trial_courts.<KEY>` entries merged in by the others |
+| `courts/sources.json` | all of the above | CourtListener provenance at the top level; `courtlistener_bulk`, `tx_research` and `trial_courts.<KEY>` entries merged in by the others |
 | `courts/.tx_research_*`, `courts/.trial_<KEY>_*` | trial collectors | resume checkpoints (git-ignored) |
 | `.cache/miamidade_civil/raw/*.zip`, `ocs_links.json` | you / the feed parser | staged FTP files and the public-link cache |
 | `site/portals.json` (`indexed: trial_<KEY>`) | hand-maintained | tells the Find & add records page which portals HOA Spy already indexes; a test checks each named file exists |
@@ -362,9 +443,17 @@ court flags into one row — the catalog is
 map's case rings, case-type labels and plaintiff/defendant split are built
 from the same case dicts by `hoaspy/build/build_map.py` (MAP.md).
 
+`bulk_dockets.jsonl` and `bulk_opinions.jsonl` are **collected but not yet
+folded into the site build**: `build_site` does not read them, so nothing
+from the bulk files is on the site. Their association names come out of
+captions by rule and still need the same review the trial adapters got
+before they attach cases to communities.
+
 ## Configuration & secrets
 
-- **CourtListener:** none; a `User-Agent` identifies the project.
+- **CourtListener:** none; a `User-Agent` identifies the project. The bulk
+  files are an anonymous download; a free CourtListener API token would
+  raise the search API's limits, and the collectors do not use one.
 - **re:SearchTX:** a personal, short-lived Cookie header in `tx_cookie.txt`
   (git-ignored via `tx_cookie.txt` / `*_cookie.txt`) or `HW_TXRESEARCH_COOKIE`.
   It is never uploaded.
@@ -404,6 +493,19 @@ from the same case dicts by `hoaspy/build/build_map.py` (MAP.md).
   Miami-Dade. Absence of a case is absence *in these sources*; the
   per-state "not checked" footers stay in force
   ([DATA.md](DATA.md#coverage-honesty-rules)).
+- **The CourtListener search API throttles anonymous use.** Measured
+  2026-10-01: 5 requests a minute ("Request was throttled. Rate limit
+  exceeded: 5/min"), and after roughly a hundred requests a `Retry-After` of
+  40 minutes, then 23 hours. `get_courts` backs off and resumes, but a full
+  anonymous sweep now takes days; a per-association-name search of even one
+  state's roster does not finish. `get_courts_bulk` is the route that has no
+  limit.
+- **Bulk captions are not party lists.** `get_courts_bulk` sees only what is
+  in the caption, names associations by rule (a truncated caption gives a
+  truncated name: "SAILFISH POINT PROPERTY OWNERS'"), and lets through
+  neighbourhood advocacy groups that call themselves a community or civic
+  association. The snapshot is quarterly, so it is up to three months
+  behind the API.
 - **Name-match recall is unmeasured.** Every trial collector queries the
   spelling we hold (starts-with or leading-word on most portals); a caption
   spelled differently is missed.
@@ -458,6 +560,11 @@ court after a session timeout, placeholder-only fixtures),
 twin, the same-community and sweep gates on real docket parties, the
 supreme-court record shape, amicus and alias rows left out, the 1,000-row
 date split and the per-case details cache),
+`TestCourtListenerBulk` (bucket listing and the latest complete snapshot,
+download ranges, the PostgreSQL CSV dialect, the association gate on
+people / lenders / trade groups / truncated captions, caption splitting with
+roles, blocked rows skipped, docket and opinion record shapes, the
+`sources.json` merge),
 `TestPortalGuide.test_indexed_portals_name_collected_files` (`portals.json`
 never claims an index that does not exist), `TestCaseLayer` (map labels and
 per-community case summaries). CourtListener paging and the live portal

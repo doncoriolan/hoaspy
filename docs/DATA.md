@@ -27,12 +27,16 @@ each able to create new entities or attach to existing ones:
    `get_wa_ccfs.py`, list rows only: status, formation date, agent,
    principal-office address; no governors yet)
 3. liens (`liens/liens.jsonl` Broward; `liens/liens_miamidade.jsonl`
-   Miami-Dade, best-effort per-association; `liens/liens_nyc.jsonl` ACRIS; `liens/liens_ca_ucc.jsonl` CA Secretary of
+   Miami-Dade, best-effort per-association; `liens/liens_nyc.jsonl` ACRIS; `liens/liens_cook.jsonl` Cook County IL
+   Clerk recordings, a party-name sweep (LXA = a lien against the association, counted under other);
+   `liens/liens_ca_ucc.jsonl` CA Secretary of
    State UCC index — judgment liens, statewide, `hoa_role` creditor/debtor,
    doc_type JL counts with claims of lien, JLX = judgment against the HOA)
 4. consumer complaints (`records/sc_complaints.jsonl`)
 5. court dockets + opinions (`courts/dockets.jsonl`, `courts/opinions.jsonl`
-   CourtListener; `courts/tx_research.jsonl` re:SearchTX TX trial courts,
+   CourtListener; `courts/bulk_dockets.jsonl`, `courts/bulk_opinions.jsonl`
+   CourtListener's bulk files, collected by `get_courts_bulk.py` and not yet
+   read by the build; `courts/tx_research.jsonl` re:SearchTX TX trial courts,
    best-effort per-association — same docket record shape; every
    `courts/trial_*.jsonl` written by `get_state_courts.py` — one file per
    state/county portal adapter in `hoaspy/collect/courts/court_portals/`, same shape plus an
