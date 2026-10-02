@@ -488,9 +488,11 @@ class TestCaSosParsing(unittest.TestCase):
         with tempfile.TemporaryDirectory() as d:
             path = Path(d) / "state_corps.jsonl"
             path.write_text(
-                json.dumps({"state": "CA", "name": "SEA PINES VILLAGE",
+                json.dumps({"state": "CA", "name": "SEA PINES VILLAGE", "source": "ca-sos",
+                            "source_url": "https://bizfileonline.sos.ca.gov/search/business",
                             "record_id": "1", "is_association": True}) + "\n"
-                + json.dumps({"state": "CA", "name": "SEA PINES VILLAGE LLC",
+                + json.dumps({"state": "CA", "name": "SEA PINES VILLAGE LLC", "source": "ca-sos",
+                              "source_url": "https://bizfileonline.sos.ca.gov/search/business",
                               "record_id": "2"}) + "\n")
             builder = b.Builder()
             builder.add_corps(None, path)
