@@ -60,7 +60,13 @@ re-run. Examples:
 ./venv/bin/python -m hoaspy.collect.liens.get_nyc_liens                  # NYC ACRIS
 ./venv/bin/python -m hoaspy.collect.courts.get_courts                    # CourtListener RECAP + state opinions
 ./venv/bin/python -m hoaspy.collect.courts.get_state_courts --list       # trial-court portal adapters
+./venv/bin/python -m hoaspy.collect.courts.get_state_courts --portal va_gdc --limit 5   # one portal, five names
 ```
+
+**How a given state is fetched** is on its own page: `docs/states/<ST>.md`
+lists what is collected for that state, each collector's source and the
+exact command to run it, the state's court portals, and what is known to be
+blocked or paid. [docs/STATES.md](docs/STATES.md) is the index.
 
 Each collector documents its source, access path, output file and caveats
 in its module docstring and in `docs/`:
@@ -72,7 +78,7 @@ in its module docstring and in `docs/`:
 | [docs/LIENS.md](docs/LIENS.md) | County lien indexes and California judgment liens |
 | [docs/COURTS.md](docs/COURTS.md) | CourtListener, re:SearchTX, trial-court portal adapters, Miami-Dade civil feed |
 | [docs/NEWS.md](docs/NEWS.md) | GDELT news index (retired) |
-| [docs/STATES.md](docs/STATES.md) | Per-state coverage, one page per state in `docs/states/` (a snapshot generated from `coverage.json`) |
+| [docs/STATES.md](docs/STATES.md) | Per-state coverage and how each state is fetched, one page per state in `docs/states/` (generated from `coverage.json`, `state_sources.yml`, `gov_layers/` and the trial-court adapters) |
 | [docs/S3.md](docs/S3.md) | The optional S3 mirror |
 
 ## Tests
@@ -98,8 +104,14 @@ configs are the two patterns to copy. Rules for any source:
 2. Keep names and roles as filed; never store phone numbers or e-mail
    addresses.
 3. Link every record to the issuing source; never re-host documents.
-4. Add a fixture and a test in `tests/test_collectors.py`, update
-   `coverage.json` and the matching page in `docs/`.
+4. Add a fixture and a test in `tests/test_collectors.py` — with
+   individuals' names replaced by placeholders (Doe/Roe) — and describe the
+   source in the matching page in `docs/`.
+
+`docs/STATES.md`, `docs/states/` and `coverage.json` are generated and
+published from the HOA Spy site build, so edits to them in a pull request
+are overwritten at the next publish; say in the pull request what the state
+page should list instead.
 
 `main` is protected: changes land through pull requests. Other ways to help
 (data access, donations, looking records up by hand) are on

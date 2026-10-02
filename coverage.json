@@ -1,5 +1,5 @@
 {
-  "updated_at": "2026-09-28T23:16:56.402340+00:00",
+  "updated_at": "2026-09-29T07:17:42.293487+00:00",
   "_schema": {
     "collected": "sources actually collected, with record counts",
     "available": "sources that exist and are free but not yet collected",
@@ -106,14 +106,14 @@
         "hoa_registry": {
           "source": "Arizona Department of Real Estate \u2014 subdivision Public Reports",
           "url": "https://services.azre.gov/PdbWeb/Development/SearchDevelopments",
-          "records": 7,
-          "reports": 11,
-          "reports_naming_an_association": 5,
+          "records": 2232,
+          "reports": 9404,
+          "reports_naming_an_association": 6245,
           "years": "2005-2026",
           "coverage": "partial",
           "note": "Associations named in developer subdivision Public Reports (A.R.S. 32-2183), not a registry: only subdivisions registered since the cut-off year, and only where the report names the HOA. City/ZIP are the subdivision's town, from the report's location and local-services addresses (town-level placement).",
-          "retrieved_at": "2026-09-28T23:01:19.221531+00:00",
-          "duration_seconds": 10.6
+          "retrieved_at": "2026-09-29T07:17:42.208737+00:00",
+          "duration_seconds": 142.3
         }
       },
       "available": [],
@@ -864,7 +864,8 @@
       ],
       "counties": {},
       "notes": [
-        "Montgomery County CCOC list collected 2026-09-02 as a csv_registry (DHCA COC/Export CSV, 1,256 communities). Prince George's COC program is behind a WAF (403 to plain requests); no other MD county registers COCs"
+        "Montgomery County CCOC list collected 2026-09-02 as a csv_registry (DHCA COC/Export CSV, 1,256 communities). Prince George's COC program is behind a WAF (403 to plain requests); no other MD county registers COCs",
+        "Maryland Judiciary Case Search swept 2026-09-30/10-01 (md_casesearch, docs/COURTS.md): statewide District + Circuit civil cases for the CCOC and IRS names plus the \"Council of Unit Owners\" / \"Board of Directors of\" / \"Homeowners Association of\" forms. DataDome held this host twice; 440 of 1,256 names done (15,412 cases), the rest and the statewide sweeps resume from the checkpoint when the hold lifts (or from another network)"
       ]
     },
     "MA": {
