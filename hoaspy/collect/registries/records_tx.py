@@ -20,6 +20,8 @@ import logging
 
 import requests
 
+from hoaspy.lib.contract import strip_contacts
+
 log = logging.getLogger("records.tx")
 
 ENDPOINT = "https://data.texas.gov/resource/8auc-hzdi.json"
@@ -48,6 +50,11 @@ def fetch(session: requests.Session, timeout: float = 60.0,
 
         for row in rows:
             county = (row.get("county") or "").strip()
+            # A few filers typed an e-mail address where the association's
+            # name goes: with it removed there is no name, so no row.
+            name = strip_contacts((row.get("name") or "").strip())
+            if not name:
+                continue
             out.append({
                 "state": "TX",
                 "source": "trec-management-certificate",
@@ -55,7 +62,7 @@ def fetch(session: requests.Session, timeout: float = 60.0,
                 "source_url": SOURCE_PAGE,
                 "record_id": "",
                 "file_number": "",
-                "name": (row.get("name") or "").strip(),
+                "name": name,
                 "type": (row.get("type") or "").strip().lower() or "poa",
                 "county": "" if county.upper() in BAD_COUNTIES else county,
                 "address": "",

@@ -70,6 +70,12 @@ def _get(row: dict, spec) -> str:
     return str(row.get(spec) or "").strip()
 
 
+def _units(v: str) -> int | None:
+    """A unit count as a number; None when the column is empty or not one."""
+    digits = v.replace(",", "").strip()
+    return int(digits) if digits.isdigit() else None
+
+
 def _iso_date(v: str) -> str:
     """Normalize '3/3/2004' / '7/20/1987 12:00:00 AM' / ISO-ish to YYYY-MM-DD."""
     v = (v or "").split()[0] if (v or "").split() else ""
@@ -154,7 +160,7 @@ def fetch_csv(session: requests.Session, cfg: dict, state: str,
                 "incorporated": _iso_date(_get(row, fields.get("incorporated"))),
                 "registered_agent": " ".join(_get(row, fields.get("agent")).split()),
                 "entity_type": _get(row, fields.get("type")),
-                "units": _get(row, fields.get("units")) or None,
+                "units": _units(_get(row, fields.get("units"))),
                 "manager_name": _get(row, fields.get("manager")),
                 "officers": officials.get(rid, []),
             })

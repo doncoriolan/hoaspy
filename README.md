@@ -20,7 +20,7 @@ hoaspy/                      the package (run modules from the repo root: python
   collect/liens/             county lien / foreclosure-filing indexes (Broward, Miami-Dade, NYC ACRIS, Cook County IL) and CA judgment liens
   collect/courts/            CourtListener (federal + appellate), re:SearchTX, trial-court portal adapters, Miami-Dade civil feed
   collect/news/              GDELT news index (retired 2026-09-07, kept for reference)
-  lib/                       shared helpers: request pacing
+  lib/                       shared helpers: request pacing, the record contract and its validator
 gov_layers/<ST>.yml          county/city HOA inventories (ArcGIS / Socrata / CSV / shapefile layers) per state
 state_sources.yml            state corporate registries and HOA registries for get_states
 coverage.json                what is collected / available / restricted per state (the master coverage file)
@@ -75,6 +75,19 @@ real browser or a session you opened yourself:
   copied from your own browser session, passed on the command line or in a
   git-ignored `*_cookie.txt` / `*_token.txt` file. Each module's docstring
   says what to copy and from where.
+
+**Check what you collected** against the record contract — the keys and
+value shapes every output row must carry — before you use it or hand it on:
+
+```bash
+./venv/bin/python -m hoaspy.lib.validate                          # every output file
+./venv/bin/python -m hoaspy.lib.validate liens/liens_cook.jsonl   # one file
+```
+
+It prints one line per kind of problem with the first line it occurs on, and
+exits 1 when a file has an unusable row or a phone number or e-mail address
+in a field. [docs/DATA.md](docs/DATA.md#the-record-contract) has the table
+per record family.
 
 **How a given state is fetched** is on its own page: `docs/states/<ST>.md`
 lists what is collected for that state, each collector's source and the

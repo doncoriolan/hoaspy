@@ -1189,7 +1189,7 @@ class TestStateSourceConstants(unittest.TestCase):
         self.assertEqual(len(rows), 1)
         self.assertEqual(rows[0]["county"], "Montgomery")
         self.assertEqual(rows[0]["status"], "registered COC")
-        self.assertEqual(rows[0]["units"], "12")
+        self.assertEqual(rows[0]["units"], 12)              # a number, not the text the export carries
 
 
 class TestMiamiDadeCivilFeed(unittest.TestCase):
@@ -2741,3 +2741,274 @@ class TestCourtListenerBulk(unittest.TestCase):
             self.assertEqual(data["courtlistener_bulk"], {"snapshot": "2026-09-30", "dockets": 3})
             self.m.write_jsonl(Path(tmp) / "bulk_dockets.jsonl", [{"a": 1}, {"a": 2}])
             self.assertEqual((Path(tmp) / "bulk_dockets.jsonl").read_text(), '{"a": 1}\n{"a": 2}\n')
+
+
+class TestRecordContract(unittest.TestCase):
+    """hoaspy/lib/contract.py — the keys and value shapes every row of
+    collector output must carry — and its command line,
+    `python -m hoaspy.lib.validate`."""
+
+    TODAY = __import__("datetime").date(2026, 10, 2)
+    LIEN = {"association": "PALM VILLAS CONDO ASSN INC", "state": "FL", "county": "Broward",
+            "doc_id": "118234567", "doc_type": "LIE", "doc_type_label": "Claim of lien", "year": 2024,
+            "recorded_date": "3/14/2024", "recorded_ymd": "20240314", "respondents": ["ROE JANE"],
+            "filers": ["PALM VILLAS CONDO ASSN INC"], "amount": "", "case_number": "",
+            "source": "broward-or-yearly-export", "source_page": "https://officialrecords.broward.org/",
+            "retrieved_at": "2026-09-01T10:00:00+00:00"}
+    DOCKET = {"case_name": "Palm Villas Condo Assn v. Roe", "court": "Broward County Court",
+              "docket_number": "COCE-24-001234", "date_filed": "2024-03-14", "date_terminated": "",
+              "nature_of_suit": "Condominium", "cause": "", "url": "https://www.browardclerk.org/case/1",
+              "state": "FL", "associations": ["Palm Villas Condo Assn"], "association_role": ["plaintiff"],
+              "queries": ["PALM VILLAS"], "source": "fl-broward", "retrieved_at": "2026-09-01T10:00:00+00:00"}
+    REGISTRY = {"name": "Palm Villas Condominium Association", "state": "FL", "source": "dbpr-condo-extract",
+                "source_url": "https://www2.myfloridalicense.com/", "record_id": "PR1234", "status": "Active",
+                "units": 120, "manager_name": "Acme Management", "retrieved_at": "2026-09-01T10:00:00+00:00"}
+
+    @classmethod
+    def setUpClass(cls):
+        from hoaspy.lib import contract, validate
+        cls.c, cls.v = contract, validate
+
+    def problems(self, row, family, **kw):
+        return [(p.severity, p.rule, p.key) for p in self.c.check(row, family, today=self.TODAY, **kw)]
+
+    def test_conforming_rows_have_no_problems(self):
+        """One good row per family passes clean, and `clean` hands the very
+        same object back."""
+        for row, family in ((self.LIEN, "lien"), (self.DOCKET, "docket"), (self.REGISTRY, "registry"),
+                            (self.REGISTRY, "corp")):
+            self.assertEqual(self.problems(row, family), [], family)
+            cleaned, problems = self.c.clean(row, family, today=self.TODAY)
+            self.assertIs(cleaned, row)
+            self.assertEqual(problems, [])
+        complaint = {"name": "Palm Villas HOA", "state": "SC", "source": "sc-dca", "year": 2023, "date": "",
+                     "source_url": "https://consumer.sc.gov/", "retrieved_at": "2026-09-01T10:00:00+00:00"}
+        self.assertEqual(self.problems(complaint, "complaint"), [])
+        bulk = {**self.DOCKET, "docket_id": 4411, "jurisdiction": "FD", "docket_number": ""}
+        self.assertEqual(self.problems(bulk, "bulk_docket"), [])
+        opinion = {"case_name": "Roe v. Palm Villas", "court": "Fla. Dist. Ct. App.", "date_filed": "2020-01-02",
+                   "url": "https://www.courtlistener.com/opinion/1/x/", "state": "FL", "associations": ["Palm Villas"],
+                   "source": "courtlistener", "retrieved_at": "2026-09-01T10:00:00+00:00"}
+        self.assertEqual(self.problems(opinion, "opinion"), [])
+        self.assertEqual(self.problems({**opinion, "cluster_id": 9, "docket_id": 4411, "jurisdiction": "SA"},
+                                       "bulk_opinion"), [])
+        news = {"title": "HOA sued", "url": "https://example.com/a", "domain": "example.com",
+                "date": "20260728T021500Z", "queries": [{"kind": "sweep"}], "retrieved_at": "2026-09-01"}
+        self.assertEqual(self.problems(news, "news"), [])
+
+    def test_every_family_and_kind_is_wired(self):
+        """Each kind a family names exists, and each family has an identity."""
+        for name, fam in self.c.FAMILIES.items():
+            for key, kind in {**fam.required, **fam.optional}.items():
+                self.assertIn(kind.rstrip("?"), self.c.KINDS, f"{name}.{key}")
+            self.assertTrue(fam.identity, name)
+            self.assertIn("source", {**fam.required, "source": 1} if name == "news" else fam.required, name)
+
+    def test_errors_make_a_row_unusable(self):
+        """A missing or empty required key, a wrong type, an unknown state, a
+        malformed date or source link — each is an error and `clean` drops
+        the row."""
+        cases = [
+            ({k: v for k, v in self.LIEN.items() if k != "doc_id"}, "lien", ("error", "missing", "doc_id")),
+            ({**self.LIEN, "doc_type": ""}, "lien", ("error", "empty", "doc_type")),
+            ({**self.LIEN, "year": "2024"}, "lien", ("error", "type", "year")),
+            ({**self.LIEN, "state": "Florida"}, "lien", ("error", "state", "state")),
+            ({**self.LIEN, "state": ""}, "lien", ("error", "empty", "state")),
+            ({**self.LIEN, "recorded_date": "March 14"}, "lien", ("error", "date", "recorded_date")),
+            ({**self.LIEN, "source_page": "officialrecords.broward.org"}, "lien", ("error", "url", "source_page")),
+            ({**self.LIEN, "respondents": "ROE JANE"}, "lien", ("error", "type", "respondents")),
+            ({**self.DOCKET, "date_filed": "03/14/2024"}, "docket", ("error", "date", "date_filed")),
+            ({**self.DOCKET, "associations": "Palm Villas"}, "docket", ("error", "type", "associations")),
+            ({**self.DOCKET, "url": "javascript:alert(1)"}, "docket", ("error", "url", "url")),
+            ({**self.REGISTRY, "name": ""}, "registry", ("error", "empty", "name")),
+            ({**self.REGISTRY, "units": "about 120"}, "registry", ("error", "type", "units")),
+            ({**self.REGISTRY, "source_url": ""}, "registry", ("error", "empty", "source_url")),
+            (["not", "an", "object"], "lien", ("error", "type", "")),
+        ]
+        for row, family, expected in cases:
+            self.assertIn(expected, self.problems(row, family), expected)
+            self.assertIsNone(self.c.clean(row, family, today=self.TODAY)[0], expected)
+
+    def test_warnings_keep_the_row(self):
+        """A future date, an implausible year, a row naming no association, a
+        court row with no state, digits stored as text, a date where a
+        status belongs and a missing retrieved_at are reported and kept."""
+        cases = [
+            ({**self.LIEN, "recorded_date": "2031-01-01"}, "lien", ("warning", "future-date", "recorded_date")),
+            ({**self.LIEN, "recorded_date": "12/31/2031"}, "lien", ("warning", "future-date", "recorded_date")),
+            ({**self.LIEN, "year": 1776}, "lien", ("warning", "year-range", "year")),
+            ({**self.LIEN, "association": ""}, "lien", ("warning", "no-association", "association")),
+            ({**self.DOCKET, "associations": []}, "docket", ("warning", "no-association", "associations")),
+            ({**self.DOCKET, "docket_id": 1, "jurisdiction": "FD", "state": ""}, "bulk_docket",
+             ("warning", "no-state", "state")),
+            ({**self.DOCKET, "date_filed": "2026-10-09"}, "docket", ("warning", "future-date", "date_filed")),
+            ({**self.REGISTRY, "units": "240"}, "registry", ("warning", "number-as-text", "units")),
+            ({**self.REGISTRY, "status": "02/05/1997"}, "registry", ("warning", "shifted", "status")),
+            ({k: v for k, v in self.REGISTRY.items() if k != "retrieved_at"}, "registry",
+             ("warning", "no-retrieved-at", "retrieved_at")),
+        ]
+        for row, family, expected in cases:
+            found = self.problems(row, family)
+            self.assertEqual(found, [expected])
+            self.assertIsNotNone(self.c.clean(row, family, today=self.TODAY)[0], expected)
+        # tomorrow is not the future: a source may sit in a later time zone
+        self.assertEqual(self.problems({**self.DOCKET, "date_filed": "2026-10-03"}, "docket"), [])
+
+    def test_contact_details_are_found_and_stripped(self):
+        """A phone number or an e-mail address in any field (links aside) is
+        a `contact` problem. `strip_contacts` removes it and keeps the rest;
+        `clean` strips the field and keeps the row unless what is left is
+        unusable — an e-mail address where the name goes leaves no name."""
+        s = self.c.strip_contacts
+        self.assertEqual(s("954-555-0134 7700 NW 5TH COURT"), "7700 NW 5TH COURT")
+        self.assertEqual(s("Acme Management (801) 555-0155"), "Acme Management")
+        self.assertEqual(s("801.555.0155"), "")
+        self.assertEqual(s("board@example.org"), "")
+        self.assertEqual(s("Call Jane Roe, jane.roe@example.org"), "Call Jane Roe")
+        for untouched in ("2024-012345-CA-01", "12-345-678-9012", "2007-11-07", "PIN 14-21-100-018-1094",
+                          "The Villas @ Lake Nona", "305 5550134"):
+            self.assertEqual(s(untouched), untouched)
+            self.assertFalse(self.c.may_have_contact(untouched) and self.c._has_contact(untouched))
+        # the cheap line test never misses what the full scan finds
+        for text in ("954-555-0134 7700 NW", "(801) 555-0155", "801.555.0155", "a@b.co"):
+            self.assertTrue(self.c.may_have_contact(json.dumps({"x": text})), text)
+
+        row = {**self.REGISTRY, "manager_address": "954-555-0134 7700 NW 5TH COURT",
+               "officers": [{"name": "(801) 555-0155", "title": "President"}, {"name": "Jane Roe", "title": "Board member"}],
+               "source_url": "https://example.gov/files/a@b.co/1"}          # a link is never scanned
+        self.assertEqual(self.problems(row, "registry"),
+                         [("contact", "contact", "manager_address"), ("contact", "contact", "officers")])
+        self.assertEqual(self.problems(row, "registry", contacts=False), [])
+        cleaned, problems = self.c.clean(row, "registry", today=self.TODAY)
+        self.assertEqual(cleaned["manager_address"], "7700 NW 5TH COURT")
+        self.assertEqual(cleaned["officers"], [{"name": "", "title": "President"}, {"name": "Jane Roe", "title": "Board member"}])
+        self.assertEqual(cleaned["source_url"], row["source_url"])
+        self.assertEqual(row["manager_address"], "954-555-0134 7700 NW 5TH COURT", "the caller's row is not changed")
+        self.assertEqual({p.severity for p in problems}, {"contact"})
+
+        cleaned, problems = self.c.clean({**self.REGISTRY, "name": "board@example.org"}, "registry", today=self.TODAY)
+        self.assertIsNone(cleaned)
+        self.assertIn(("error", "empty", "name"), [(p.severity, p.rule, p.key) for p in problems])
+        lien = {**self.LIEN, "respondents": ["ROE JANE", "954-555-0134"]}
+        self.assertEqual(self.c.clean(lien, "lien", today=self.TODAY)[0]["respondents"], ["ROE JANE"])
+
+    def test_family_is_read_from_the_file_name(self):
+        f = self.c.family_of
+        self.assertEqual(f("records/associations.jsonl"), "registry")
+        self.assertEqual(f("/data/x/records/gov_layers.jsonl"), "registry")
+        self.assertEqual(f("records/state_corps.jsonl"), "corp")
+        self.assertEqual(f("records/sc_complaints.jsonl"), "complaint")
+        self.assertEqual(f("liens/liens_cook.jsonl"), "lien")
+        self.assertEqual(f("courts/dockets.jsonl"), "docket")
+        self.assertEqual(f("courts/trial_va_gdc.jsonl"), "docket")
+        self.assertEqual(f("courts/tx_research.jsonl"), "docket")
+        self.assertEqual(f("courts/opinions.jsonl"), "opinion")
+        self.assertEqual(f("courts/bulk_dockets.jsonl"), "bulk_docket")
+        self.assertEqual(f("courts/bulk_opinions.jsonl"), "bulk_opinion")
+        self.assertEqual(f("news/articles.jsonl"), "news")
+        for other in ("courts/.trial_md_casesearch_partial.jsonl", "courts/.trial_va_gdc_rejected.jsonl",
+                      "records/llm_audit_names.jsonl", "records/member_links.jsonl", "liens/liens.csv",
+                      "courts/sources.json", "elsewhere/liens.jsonl", ".cache/ca_sos_raw.jsonl"):
+            self.assertIsNone(f(other), other)
+
+    def test_validate_file_counts_problems_and_never_echoes_a_contact(self):
+        """A file report: rows, unusable rows, rows with contact details, one
+        entry per kind of problem with the first line numbers, repeated
+        rows, the hosts the source links point at. The text and the JSON
+        name the line of a contact detail but not the detail."""
+        rows = [self.LIEN,
+                {**self.LIEN, "doc_id": "2", "respondents": ["ROE JANE", "954-555-0134"]},
+                {**self.LIEN, "doc_id": "3", "state": "ZZ"},
+                {**self.LIEN, "doc_id": "4", "association": ""},
+                self.LIEN]                                                  # a repeat of line 1
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "liens" / "liens_test.jsonl"
+            path.parent.mkdir()
+            path.write_text("\n".join(json.dumps(r) for r in rows) + "\n\n{not json\n")
+            report = self.c.validate_file(path, today=self.TODAY)
+            self.assertEqual((report.family, report.rows, report.bad_rows, report.contact_rows, report.duplicates),
+                             ("lien", 6, 2, 1, 1))
+            self.assertFalse(report.ok)
+            self.assertEqual(report.counts[("error", "state", "state")], 1)
+            self.assertEqual(report.examples[("error", "state", "state")][0][0], 3)
+            self.assertEqual(report.examples[("error", "json", "")][0][0], 7)
+            self.assertEqual(report.counts[("warning", "no-association", "association")], 1)
+            self.assertEqual(report.hosts, {"officialrecords.broward.org": 5})
+            text = "\n".join(report.lines())
+            self.assertIn("FAILED: 6 rows, 2 unusable, 1 with contact details", text)
+            self.assertIn("contact  contact `respondents`: 1 rows  e.g. line 2", text)
+            self.assertNotIn("954-555-0134", text + json.dumps(report.to_dict()))
+            with self.assertRaises(ValueError):
+                self.c.validate_file(Path(tmp) / "liens" / "notes.txt")
+
+            # the command: exit 1 on a failing file, 0 on a clean one, 2 when the family is unknown
+            def run(*argv):
+                out, err = io.StringIO(), io.StringIO()
+                with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
+                    code = self.v.main([str(a) for a in argv])
+                return code, out.getvalue(), err.getvalue()
+
+            code, out, _ = run(path)
+            self.assertEqual(code, 1)
+            self.assertIn("1 files, 6 rows: 1 failed", out)
+            good = Path(tmp) / "bundle.jsonl"
+            good.write_text(json.dumps(self.LIEN) + "\n")
+            self.assertEqual(run(good)[0], 2)
+            self.assertIn("pass --family", run(good)[2])
+            code, out, _ = run("--family", "lien", good)
+            self.assertEqual((code, "all conform" in out), (0, True))
+            warned = Path(tmp) / "warned.jsonl"
+            warned.write_text(json.dumps({**self.LIEN, "association": ""}) + "\n")
+            self.assertEqual(run("--family", "lien", warned)[0], 0)
+            self.assertEqual(run("--family", "lien", "--strict", warned)[0], 1)
+            code, out, _ = run("--family", "lien", "--json", "-", path)
+            data = json.loads(out)
+            self.assertEqual((code, data["ok"], data["files"][0]["bad_rows"]), (1, False, 2))
+            self.assertEqual(run(Path(tmp) / "missing.jsonl")[0], 2)
+
+    def test_output_files_lists_collector_output_only(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            for name in ("liens/liens.jsonl", "liens/liens.csv", "courts/trial_x.jsonl", "courts/.trial_x_partial.jsonl",
+                         "records/llm_audit_names.jsonl", "records/associations.jsonl", "site/data.jsonl"):
+                (root / name).parent.mkdir(exist_ok=True)
+                (root / name).write_text("")
+            self.assertEqual([p.relative_to(root).as_posix() for p in self.v.output_files(root)],
+                             ["records/associations.jsonl", "liens/liens.jsonl", "courts/trial_x.jsonl"])
+
+    def test_collectors_strip_contact_details_at_the_source(self):
+        """The three places a filer's phone number or e-mail address reached
+        the output: a Utah contact block with no name line, a Florida
+        managing entity's route line, and a registry's unit count kept as
+        text."""
+        from hoaspy.collect.registries import get_ut_hoa, get_states
+        self.assertEqual(get_ut_hoa._block_name("Jane Roe<br>(801) 555-0155<br>jane@example.org"), "Jane Roe")
+        self.assertEqual(get_ut_hoa._block_name("(801) 555-0155<br>jane@example.org"), "")
+        self.assertEqual(get_ut_hoa._block_name(""), "")
+        self.assertEqual([get_states._units(v) for v in ("240", "1,204", "", "n/a", " 12 ")], [240, 1204, None, None, 12])
+
+    def test_parsed_rows_conform(self):
+        """Rows the collectors shape — from the captured Utah registry page
+        and from the samples the other test classes use — pass the contract:
+        the tie between each parser and the contract. (`retrieved_at` is
+        stamped when a collector writes its file, so its absence here is
+        the one warning allowed.)"""
+        from hoaspy.collect.registries import get_ut_hoa
+        from hoaspy.collect.liens import get_ca_ucc, records_miamidade
+        from hoaspy.collect.courts import get_tx_research
+
+        client = get_ut_hoa.Client(pace=0)
+        client.call = lambda f, v: (ROOT / "tests" / "fixtures" / "ut_hoa_detail.html").read_text()   # offline
+        rows = [(get_ut_hoa.to_record(client.detail("14255465"), {}), "registry")]
+        collapsed = records_miamidade._collapse(TestMiamiDadeParsing.ROWS)
+        rows.append((records_miamidade.to_record(collapsed[999], "LIEN - LIE"), "lien"))
+        rows.append((get_tx_research.to_record(TestTxResearchParsing.HOA_HIT, "Circle C Homeowners Association"), "docket"))
+        rows.append((get_ca_ucc.to_record({
+            "ID": 739724, "RECORD_NUM": "177595183753", "TITLE": ["JANE ROE - ANAHEIM, CA"],
+            "SEC_PARTY": ["RIO VISTA WALK HOA, A CALIFORNIA NON-PROFIT MUTUAL BENEFIT CORPORATION - OCEANSIDE, CA"],
+            "FILING_DATE": "07/11/2017", "LAPSE_DATE": "07/11/2022", "RECORD_TYPE": "Judgment Lien",
+            "STATUS": "Lapsed"}), "lien"))
+        for row, family in rows:
+            found = [str(p) for p in self.c.check(row, family, today=self.TODAY)
+                     if (p.rule, p.key) != ("no-retrieved-at", "retrieved_at") and (p.rule, p.key) != ("missing", "retrieved_at")]
+            self.assertEqual(found, [], f"{family} row from {row.get('source')}")
