@@ -54,7 +54,7 @@ each able to create new entities or attach to existing ones:
 
 Every collector writes JSON Lines, and each output file belongs to one
 *family* of records. `hoaspy/lib/contract.py` says which keys a row of each
-family must carry and what each may hold. `python -m hoaspy.lib.validate`
+family must carry and what each may hold. `python -m hoaspy validate`
 checks files against it, and the site build reads every file through it, so
 a collector that starts writing something else is caught before its rows are
 used.
@@ -105,10 +105,10 @@ to a longer id (a parcel number, a case number).
 **The command.**
 
 ```bash
-./venv/bin/python -m hoaspy.lib.validate                          # every output file under records/ liens/ courts/ news/
-./venv/bin/python -m hoaspy.lib.validate liens/liens_cook.jsonl   # some files
-./venv/bin/python -m hoaspy.lib.validate --family lien bundle.jsonl   # a file whose name does not say what it is
-./venv/bin/python -m hoaspy.lib.validate --json report.json       # the same report as JSON ("-" for stdout)
+./venv/bin/python -m hoaspy validate                          # every output file under records/ liens/ courts/ news/
+./venv/bin/python -m hoaspy validate liens/liens_cook.jsonl   # some files
+./venv/bin/python -m hoaspy validate --family lien bundle.jsonl   # a file whose name does not say what it is
+./venv/bin/python -m hoaspy validate --json report.json       # the same report as JSON ("-" for stdout)
 ```
 
 It prints, per file, the row count and one line per kind of problem with the

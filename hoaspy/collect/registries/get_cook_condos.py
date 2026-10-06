@@ -1,30 +1,31 @@
-#!/usr/bin/env python
 """Cook County, IL condominium buildings from the Assessor's open data.
 
-    ./venv/bin/python -m hoaspy.collect.registries.get_cook_condos
-    ./venv/bin/python -m hoaspy.collect.registries.get_cook_condos --limit 500   # smoke test
+    python -m hoaspy cook-condos
+    python -m hoaspy cook-condos --limit 500    # smoke test
 
 Illinois has no association registry, and the Cook County recorder's index
-names an association only on the documents it is a party to (get_cook_liens
-reads those), but the Assessor classifies every residential condominium
-unit (class 299) and publishes the parcels with coordinates, plus a unit
-characteristics table and a parcel-address table. Grouping the unit PINs by
-their 10-digit building PIN gives every condo building in the county:
+names an association only on the documents it is a party to (the
+cook-liens command reads those). The Assessor, though, classifies every
+residential condominium unit (class 299) and publishes the parcels with
+coordinates, a unit-characteristics table and a parcel-address table.
+Grouping the unit PINs by their 10-digit building PIN gives every condo
+building in the county:
 
-    pabr-t5kh  Assessor - Parcel Universe (current year)    class='299' -> pin, pin10,
-               zip, lat/lon, municipality, township
-    3r7i-mrz4  Assessor - Residential Condominium Unit Characteristics -> per pin10:
-               year built, building PIN count, non-unit (parking/common) PINs, sq ft
-    3723-97qp  Assessor - Parcel Addresses -> the street address of one unit per
-               building (the unit designator is stripped)
+    pabr-t5kh  Parcel Universe (current year)        class='299' -> pin, pin10, zip,
+                                                     lat/lon, municipality, township
+    3r7i-mrz4  Residential Condominium Unit           per pin10: year built, building
+               Characteristics                        PIN count, non-unit (parking/common) PINs
+    3723-97qp  Parcel Addresses                       the street address of one unit per
+                                                     building (the unit designator is stripped)
 
-The dataset carries no association names, so each building is listed as
-"<street address> Condominium" — an inventory of where condominium
-associations exist, not who runs them. Owner and mailing names on the
-address table are never read. Output: records/cook_condos.jsonl (registry
-shape + `lat`, `lon`, `pin10`, `year_built`), folded by build_site as a
-county inventory (`local_inventory` marking); coverage.json
-collected["condo_buildings"] for IL.
+The data carries no association names, so each building is listed as
+"<street address> Condominium": an inventory of where condominium
+associations exist, not of who runs them. Owner and mailing names on the
+address table are never read.
+
+Output: records/cook_condos.jsonl in the registry shape plus `pin10`,
+`year_built`, `lat` and `lon`; coverage.json collected["condo_buildings"]
+for IL. The parcel list is cached for a week under .cache/cook_condos/.
 """
 
 from __future__ import annotations
@@ -34,73 +35,180 @@ import collections
 import json
 import logging
 import re
-import sys
 import time
-from datetime import datetime, timezone
-from pathlib import Path
+from dataclasses import dataclass, field
+from datetime import datetime
 
 import requests
 
 from hoaspy import ROOT
-from hoaspy.collect.registries.get_states import update_coverage
+from hoaspy.lib import http
+from hoaspy.lib.coverage import update_coverage
+from hoaspy.lib.jsonl import now_iso, write_rows
+from hoaspy.lib.records import Association
 
-OUT = ROOT / "records" / "cook_condos.jsonl"
-CACHE = ROOT / ".cache" / "cook_condos"
-DOMAIN = "https://datacatalog.cookcountyil.gov"
-UNIVERSE = DOMAIN + "/resource/pabr-t5kh.json"
-CHARS = DOMAIN + "/resource/3r7i-mrz4.json"
-ADDRESSES = DOMAIN + "/resource/3723-97qp.json"
-PAGE = DOMAIN + "/d/3r7i-mrz4"
-USER_AGENT = "macos:hoa-public-records:0.1 (academic research)"
+OUTPUT_PATH = ROOT / "records" / "cook_condos.jsonl"
+CACHE_DIR = ROOT / ".cache" / "cook_condos"
+PARCELS_CACHE = CACHE_DIR / "units.json"
+CACHE_DAYS = 7
+CATALOG_URL = "https://datacatalog.cookcountyil.gov"
+PARCELS_URL = CATALOG_URL + "/resource/pabr-t5kh.json"           # Assessor - Parcel Universe
+CHARACTERISTICS_URL = CATALOG_URL + "/resource/3r7i-mrz4.json"   # Assessor - Residential Condo Unit Characteristics
+ADDRESSES_URL = CATALOG_URL + "/resource/3723-97qp.json"         # Assessor - Parcel Addresses
+SOURCE_PAGE = CATALOG_URL + "/d/3r7i-mrz4"
 SOURCE = "Cook County Assessor — residential condominium buildings (class 299)"
+CONDO_CLASS = "299"
 PAGE_SIZE = 50000
+ADDRESS_BATCH = 250
 
-log = logging.getLogger("cook")
+STREET_SUFFIXES = {"ST": "St", "AVE": "Ave", "BLVD": "Blvd", "DR": "Dr", "RD": "Rd", "LN": "Ln", "CT": "Ct",
+                   "PL": "Pl", "TER": "Ter", "PKWY": "Pkwy", "HWY": "Hwy", "CIR": "Cir", "TRL": "Trl",
+                   "WAY": "Way", "SQ": "Sq", "N": "N", "S": "S", "E": "E", "W": "W", "NE": "NE", "NW": "NW",
+                   "SE": "SE", "SW": "SW"}
+HOUSE_NUMBER_RE = re.compile(r"^(\d+[A-Z]?(?:-\d+)?)\s+(.*)$")
+UNIT_KEYWORD_RE = re.compile(r"(?:UNIT|APT|APARTMENT|STE|SUITE|#|NO\.?)")
+UNIT_TOKEN_RE = re.compile(r"#?[A-Z]{1,2}|PH\w*|GAR\w*|BSMT")     # A, PH, GAR, BSMT, #B
+ORDINAL_RE = re.compile(r"\d+(?:ST|ND|RD|TH)")
+MUNICIPALITY_PREFIX_RE = re.compile(r"^(?:CITY|VILLAGE|TOWN) OF ")
 
-UNIT_RE = re.compile(r"\s+(?:UNIT|APT|APARTMENT|STE|SUITE|#|NO\.?|PH|GAR|P|G|B|BSMT)?\s*#?\s*"
-                     r"([A-Z]?\d+[A-Z]?|[A-Z]{1,2}\d*|PH\d*|\d+[A-Z]?-\d+[A-Z]?)\s*$", re.I)
-SUFFIX = {"ST": "St", "AVE": "Ave", "BLVD": "Blvd", "DR": "Dr", "RD": "Rd", "LN": "Ln", "CT": "Ct",
-          "PL": "Pl", "TER": "Ter", "PKWY": "Pkwy", "HWY": "Hwy", "CIR": "Cir", "TRL": "Trl",
-          "WAY": "Way", "SQ": "Sq", "N": "N", "S": "S", "E": "E", "W": "W", "NE": "NE", "NW": "NW",
-          "SE": "SE", "SW": "SW"}
+log = logging.getLogger(__name__)
 
 
-def street_of(addr: str) -> str:
-    """'850 N LAKE SHORE DR 412' -> '850 N Lake Shore Dr' (unit stripped)."""
-    a = " ".join((addr or "").upper().split())
-    m = re.match(r"^(\d+[A-Z]?(?:-\d+)?)\s+(.*)$", a)
-    if not m:
-        return ""
-    num, rest = m.groups()
-    # strip a trailing unit designator, but never the street's own last word
-    words = rest.split()
-    while len(words) > 1:
-        last = words[-1]
-        if last in SUFFIX:
-            break
-        # a unit designator: anything with a digit (2-E, A-10, 10AB, P2-65, 1FRON),
-        # a one/two-letter token (A, PH), or a unit keyword before it
-        if re.fullmatch(r"(?:UNIT|APT|APARTMENT|STE|SUITE|#|NO\.?)", words[-2] if len(words) > 1 else "") \
-                or re.search(r"\d", last) or re.fullmatch(r"#?[A-Z]{1,2}|PH\w*|GAR\w*|BSMT", last):
+# ---- addresses ----------------------------------------------------------------
+
+def is_unit_designator(words: list[str]) -> bool:
+    """True when the last word is a unit designator: anything with a digit
+    (2-E, A-10, 10AB, P2-65, 1FRON), a one- or two-letter token (A, PH), or
+    whatever follows a unit keyword (UNIT 5A, APT 3107)."""
+    last = words[-1]
+    after_keyword = len(words) > 1 and UNIT_KEYWORD_RE.fullmatch(words[-2]) is not None
+    return after_keyword or re.search(r"\d", last) is not None or UNIT_TOKEN_RE.fullmatch(last) is not None
+
+
+def strip_unit(words: list[str]) -> list[str]:
+    """`words` without the trailing unit designator and its keyword. The
+    street's own last word is never taken: a street suffix stops it."""
+    words = list(words)
+    while len(words) > 1 and words[-1] not in STREET_SUFFIXES and is_unit_designator(words):
+        words.pop()
+        if words and UNIT_KEYWORD_RE.fullmatch(words[-1]):
             words.pop()
-            if words and re.fullmatch(r"(?:UNIT|APT|APARTMENT|STE|SUITE|#|NO\.?)", words[-1]):
-                words.pop()
-            continue
-        break
-    pretty = [SUFFIX.get(w, w.lower() if re.fullmatch(r"\d+(?:ST|ND|RD|TH)", w) else w.title()) for w in words]
-    return f"{num} {' '.join(pretty)}".strip()
+    return words
 
+
+def pretty_word(word: str) -> str:
+    """'DR' -> 'Dr', '46TH' -> '46th', 'LAKE' -> 'Lake'."""
+    if word in STREET_SUFFIXES:
+        return STREET_SUFFIXES[word]
+    return word.lower() if ORDINAL_RE.fullmatch(word) else word.title()
+
+
+def street_of(address: str) -> str:
+    """'850 N LAKE SHORE DR 412' -> '850 N Lake Shore Dr': the house number
+    and street with the unit designator stripped; '' when the text does not
+    start with a house number."""
+    squashed = " ".join((address or "").upper().split())
+    match = HOUSE_NUMBER_RE.match(squashed)
+    if not match:
+        return ""
+    number, rest = match.groups()
+    words = strip_unit(rest.split())
+    return f"{number} {' '.join(pretty_word(word) for word in words)}".strip()
+
+
+def municipality_city(municipality: str, township: str) -> str:
+    """'VILLAGE OF BARRINGTON' -> 'Barrington'; the township when the parcel has no municipality."""
+    name = MUNICIPALITY_PREFIX_RE.sub("", (municipality or "").upper()).strip()
+    return (name or township or "").title()
+
+
+# ---- buildings ----------------------------------------------------------------
+
+@dataclass
+class Building:
+    """The class-299 unit parcels that share one 10-digit building PIN."""
+
+    pin10: str
+    pins: list[str] = field(default_factory=list)
+    latitudes: list[float] = field(default_factory=list)
+    longitudes: list[float] = field(default_factory=list)
+    zips: collections.Counter = field(default_factory=collections.Counter)
+    municipalities: collections.Counter = field(default_factory=collections.Counter)
+    township: str = ""
+
+
+def group_units(units: list[dict]) -> dict[str, Building]:
+    """{pin10: building} from the class-299 parcel rows."""
+    buildings: dict[str, Building] = {}
+    for unit in units:
+        pin10 = unit.get("pin10") or (unit.get("pin") or "")[:10]
+        if not pin10:
+            continue
+        building = buildings.setdefault(pin10, Building(pin10))
+        building.pins.append(unit.get("pin", ""))
+        try:
+            building.latitudes.append(float(unit["lat"]))
+            building.longitudes.append(float(unit["lon"]))
+        except (KeyError, TypeError, ValueError):
+            pass
+        if unit.get("zip_code"):
+            building.zips[str(unit["zip_code"])[:5]] += 1
+        if unit.get("cook_municipality_name"):
+            building.municipalities[unit["cook_municipality_name"]] += 1
+        building.township = building.township or unit.get("township_name", "")
+    return buildings
+
+
+def mean(values: list[float]) -> float | None:
+    return round(sum(values) / len(values), 6) if values else None
+
+
+def to_record(building: Building, characteristics: dict | None, address: dict | None,
+              retrieved_at: str = "") -> Association | None:
+    """The registry record for one building, or None when no street address
+    is known for it (a building with no name cannot be listed)."""
+    address = address or {}
+    characteristics = characteristics or {}
+    street = street_of(address.get("prop_address_full", ""))
+    if not street:
+        return None
+    most_common_municipality = building.municipalities.most_common(1)[0][0] if building.municipalities else ""
+    city = (address.get("prop_address_city_name") or "").title() \
+        or municipality_city(most_common_municipality, building.township)
+    zip_code = (address.get("prop_address_zipcode_1") or "")[:5] \
+        or (building.zips.most_common(1)[0][0] if building.zips else "")
+    unit_pins = len(building.pins)
+    non_unit_pins = int(float(characteristics.get("max_char_building_non_units") or 0))
+    year_built = characteristics.get("max_char_yrblt")
+    year_built = str(int(float(year_built))) if year_built else ""
+    detail = []
+    if year_built:
+        detail.append(f"built {year_built}")
+    detail.append(f"{unit_pins} unit PIN{'s' if unit_pins != 1 else ''}"
+                  + (f" ({non_unit_pins} parking/common)" if non_unit_pins else ""))
+    return Association(
+        state="IL", source=SOURCE, source_url=SOURCE_PAGE, record_id=building.pin10,
+        name=f"{street} Condominium", status="condominium building (Assessor class 299)",
+        status_detail="; ".join(detail), address=street, city=city, county="Cook", zip=zip_code,
+        units=max(unit_pins - non_unit_pins, 1) if unit_pins else None,
+        registration_type="county condo-building inventory", retrieved_at=retrieved_at,
+        extras={"pin10": building.pin10, "year_built": year_built,
+                "lat": mean(building.latitudes), "lon": mean(building.longitudes)})
+
+
+# ---- fetching -----------------------------------------------------------------
 
 def fetch_all(session: requests.Session, url: str, params: dict, pace: float) -> list[dict]:
+    """Every row of a Socrata resource, paged; a failed page is retried four times."""
     rows: list[dict] = []
     offset = 0
     while True:
-        p = {**params, "$limit": PAGE_SIZE, "$offset": offset}
+        page_params = {**params, "$limit": PAGE_SIZE, "$offset": offset}
         for attempt in range(4):
             try:
-                r = session.get(url, params=p, timeout=300)
-                r.raise_for_status()
-                page = r.json()
+                response = session.get(url, params=page_params, timeout=300)
+                response.raise_for_status()
+                page = response.json()
                 break
             except (requests.RequestException, ValueError) as exc:
                 log.warning("%s offset %d: %s (attempt %d)", url.rsplit("/", 1)[1], offset, exc, attempt + 1)
@@ -115,141 +223,83 @@ def fetch_all(session: requests.Session, url: str, params: dict, pace: float) ->
         time.sleep(pace)
 
 
-def group_units(units: list[dict]) -> dict[str, dict]:
-    """{pin10: building} from class-299 parcel rows."""
-    b: dict[str, dict] = {}
-    for u in units:
-        p10 = u.get("pin10") or (u.get("pin") or "")[:10]
-        if not p10:
-            continue
-        g = b.setdefault(p10, {"pin10": p10, "pins": [], "lat": [], "lon": [], "zip": collections.Counter(),
-                               "muni": collections.Counter(), "township": ""})
-        g["pins"].append(u.get("pin", ""))
-        try:
-            g["lat"].append(float(u["lat"]))
-            g["lon"].append(float(u["lon"]))
-        except (KeyError, TypeError, ValueError):
-            pass
-        if u.get("zip_code"):
-            g["zip"][str(u["zip_code"])[:5]] += 1
-        if u.get("cook_municipality_name"):
-            g["muni"][u["cook_municipality_name"]] += 1
-        g["township"] = g["township"] or u.get("township_name", "")
-    return b
+def fetch_units(session: requests.Session, pace: float) -> list[dict]:
+    """The class-299 parcels, from the week-old cache when there is one."""
+    if PARCELS_CACHE.exists() and time.time() - PARCELS_CACHE.stat().st_mtime < CACHE_DAYS * 86400:
+        return json.loads(PARCELS_CACHE.read_text())
+    units = fetch_all(session, PARCELS_URL, {
+        "$select": "pin,pin10,zip_code,lat,lon,cook_municipality_name,township_name",
+        "$where": f"class='{CONDO_CLASS}'", "$order": "pin"}, pace)
+    PARCELS_CACHE.write_text(json.dumps(units))
+    return units
 
 
-def muni_city(muni: str, township: str) -> str:
-    m = re.sub(r"^(?:CITY|VILLAGE|TOWN) OF ", "", (muni or "").upper()).strip()
-    return (m or township or "").title()
+def fetch_characteristics(session: requests.Session, pace: float) -> dict[str, dict]:
+    """{pin10: this year's characteristics row}."""
+    year = datetime.now().year
+    rows = fetch_all(session, CHARACTERISTICS_URL, {
+        "$select": "pin10,max(char_yrblt),max(char_building_pins),max(char_building_non_units),max(char_building_sf)",
+        "$where": f"year='{year}.0' OR year='{year}'", "$group": "pin10", "$order": "pin10"}, pace)
+    return {row["pin10"]: row for row in rows}
 
 
-def to_row(g: dict, chars: dict | None, address: dict | None) -> dict | None:
-    street = street_of((address or {}).get("prop_address_full", ""))
-    if not street:
-        return None
-    city = ((address or {}).get("prop_address_city_name") or "").title() or muni_city(
-        g["muni"].most_common(1)[0][0] if g["muni"] else "", g["township"])
-    zc = ((address or {}).get("prop_address_zipcode_1") or "")[:5] or (
-        g["zip"].most_common(1)[0][0] if g["zip"] else "")
-    n_units = len(g["pins"])
-    non_units = int(float((chars or {}).get("max_char_building_non_units") or 0))
-    yr = (chars or {}).get("max_char_yrblt")
-    yr = str(int(float(yr))) if yr else ""
-    bits = []
-    if yr:
-        bits.append(f"built {yr}")
-    bits.append(f"{n_units} unit PIN{'s' if n_units != 1 else ''}" +
-                (f" ({non_units} parking/common)" if non_units else ""))
-    return {
-        "state": "IL", "source": SOURCE, "source_url": PAGE,
-        "record_id": g["pin10"], "pin10": g["pin10"],
-        "name": f"{street} Condominium", "dba": "",
-        "status": "condominium building (Assessor class 299)",
-        "status_detail": "; ".join(bits), "recorded_date": "",
-        "address": street, "city": city, "county": "Cook", "zip": zc,
-        "units": max(n_units - non_units, 1) if n_units else None,
-        "manager_name": "", "officers": [],
-        "registration_type": "county condo-building inventory",
-        "year_built": yr,
-        "lat": round(sum(g["lat"]) / len(g["lat"]), 6) if g["lat"] else None,
-        "lon": round(sum(g["lon"]) / len(g["lon"]), 6) if g["lon"] else None,
-    }
+def fetch_addresses(session: requests.Session, pins: list[str], pace: float) -> dict[str, dict]:
+    """{pin: the newest address row} for the given unit PINs, in batches."""
+    addresses: dict[str, dict] = {}
+    pins = sorted(pins)
+    for start in range(0, len(pins), ADDRESS_BATCH):
+        batch = pins[start:start + ADDRESS_BATCH]
+        rows = fetch_all(session, ADDRESSES_URL, {
+            "$select": "pin,prop_address_full,prop_address_city_name,prop_address_zipcode_1,year",
+            "$where": "pin in (" + ",".join(f"'{pin}'" for pin in batch) + ")",
+            "$order": "year DESC"}, pace)
+        for row in rows:
+            addresses.setdefault(row["pin"], row)             # newest year first
+        if (start // ADDRESS_BATCH) % 10 == 0:
+            log.info("addresses: %d/%d buildings", min(start + ADDRESS_BATCH, len(pins)), len(pins))
+        time.sleep(pace)
+    return addresses
 
 
-def main(argv: list[str] | None = None) -> int:
-    ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0],
-                                 formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--limit", type=int, default=0, help="only this many buildings (smoke test)")
-    ap.add_argument("--pace", type=float, default=0.5)
-    ap.add_argument("-v", "--verbose", action="store_true")
-    args = ap.parse_args(argv)
-    logging.basicConfig(level=logging.DEBUG if args.verbose else logging.INFO,
-                        format="%(asctime)s %(levelname)-7s %(message)s", datefmt="%H:%M:%S")
+# ---- the command --------------------------------------------------------------
+
+def add_arguments(parser: argparse.ArgumentParser) -> None:
+    parser.add_argument("--limit", type=int, default=0, help="only this many buildings (smoke test)")
+    parser.add_argument("--pace", type=float, default=0.5)
+
+
+def run(args: argparse.Namespace) -> int:
     started = time.time()
-    CACHE.mkdir(parents=True, exist_ok=True)
-    s = requests.Session()
-    s.headers["User-Agent"] = USER_AGENT
+    CACHE_DIR.mkdir(parents=True, exist_ok=True)
+    session = http.session()
 
-    units_p = CACHE / "units.json"
-    if units_p.exists() and time.time() - units_p.stat().st_mtime < 7 * 86400:
-        units = json.loads(units_p.read_text())
-    else:
-        units = fetch_all(s, UNIVERSE, {
-            "$select": "pin,pin10,zip_code,lat,lon,cook_municipality_name,township_name",
-            "$where": "class='299'", "$order": "pin"}, args.pace)
-        units_p.write_text(json.dumps(units))
+    units = fetch_units(session, args.pace)
     buildings = group_units(units)
     log.info("%d condo unit PINs in %d buildings", len(units), len(buildings))
-
-    chars_rows = fetch_all(s, CHARS, {
-        "$select": "pin10,max(char_yrblt),max(char_building_pins),max(char_building_non_units),max(char_building_sf)",
-        "$where": f"year='{datetime.now().year}.0' OR year='{datetime.now().year}'",
-        "$group": "pin10", "$order": "pin10"}, args.pace)
-    chars = {r["pin10"]: r for r in chars_rows}
-    log.info("characteristics for %d buildings", len(chars))
+    characteristics = fetch_characteristics(session, args.pace)
+    log.info("characteristics for %d buildings", len(characteristics))
 
     keys = sorted(buildings)
     if args.limit:
         keys = keys[:args.limit]
-    first_pin = {min(buildings[k]["pins"]): k for k in keys}
-    addr: dict[str, dict] = {}
-    pins = sorted(first_pin)
-    for i in range(0, len(pins), 250):
-        chunk = pins[i:i + 250]
-        rows = fetch_all(s, ADDRESSES, {
-            "$select": "pin,prop_address_full,prop_address_city_name,prop_address_zipcode_1,year",
-            "$where": "pin in (" + ",".join(f"'{p}'" for p in chunk) + ")",
-            "$order": "year DESC"}, args.pace)
-        for r in rows:
-            addr.setdefault(r["pin"], r)             # newest year first
-        if (i // 250) % 10 == 0:
-            log.info("addresses: %d/%d buildings", min(i + 250, len(pins)), len(pins))
-        time.sleep(args.pace)
+    first_pin = {min(buildings[key].pins): key for key in keys}
+    addresses = fetch_addresses(session, list(first_pin), args.pace)
 
-    out_rows = []
-    for pin, k in first_pin.items():
-        row = to_row(buildings[k], chars.get(k), addr.get(pin))
-        if row:
-            out_rows.append(row)
-    out_rows.sort(key=lambda r: r["name"])
-    OUT.parent.mkdir(parents=True, exist_ok=True)
-    tmp = OUT.with_suffix(".tmp")
-    with tmp.open("w") as fh:
-        for r in out_rows:
-            fh.write(json.dumps(r, ensure_ascii=False) + "\n")
-    tmp.replace(OUT)
+    retrieved_at = now_iso()
+    records = []
+    for pin, key in first_pin.items():
+        record = to_record(buildings[key], characteristics.get(key), addresses.get(pin), retrieved_at)
+        if record:
+            records.append(record)
+    records.sort(key=lambda record: record.name)
+    write_rows(OUTPUT_PATH, (record.as_row() for record in records))
     update_coverage("IL", "condo_buildings", {
-        "source": SOURCE, "url": PAGE, "records": len(out_rows),
-        "unit_pins": len(units), "coverage": "partial",
+        "source": SOURCE, "url": SOURCE_PAGE, "records": len(records), "unit_pins": len(units),
+        "coverage": "partial",
         "note": ("Every Assessor class-299 condominium building in Cook County, named by street "
                  "address (the data carries no association names): where condo associations "
                  "exist, not who runs them. Unit count = unit PINs minus parking/common PINs."),
-        "retrieved_at": datetime.now(timezone.utc).isoformat(),
-        "duration_seconds": round(time.time() - started, 1),
+        "retrieved_at": retrieved_at, "duration_seconds": round(time.time() - started, 1),
     })
-    log.info("wrote %d buildings -> %s", len(out_rows), OUT.relative_to(ROOT))
+    log.info("wrote %d buildings -> %s", len(records), OUTPUT_PATH.relative_to(ROOT))
     return 0
-
-
-if __name__ == "__main__":
-    sys.exit(main())

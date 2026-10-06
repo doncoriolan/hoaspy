@@ -1,25 +1,23 @@
-"""Trial-court portal adapters for get_state_courts.py.
+"""Trial-court portal adapters, one module per portal, driven by the
+state-courts command (hoaspy/collect/courts/get_state_courts.py).
 
 Each adapter module exposes:
 
-    STATE     two-letter state the portal covers
-    KEY       slug used for the output file  courts/trial_<KEY>.jsonl
-    INFO      dict for courts/sources.json: name, url, access, coverage, caveat
-    NEEDS_COOKIE   True when a human-copied Cookie header is required
+    STATE          the two-letter state the portal covers
+    KEY            the slug of its output file, courts/trial_<KEY>.jsonl
+    INFO           what courts/sources.json records: name, url, access, coverage, caveat
+    NEEDS_COOKIE   True when a Cookie header copied from a browser is required
+    COUNTIES       (optional) the upper-cased counties a county portal covers
+    SWEEPS         (optional) statewide prefixes queried after the names
     class Client:  __init__(cookie: str | None, pace: float)
-                   search(name: str) -> list[dict]   docket records (see below)
+                   search(name: str) -> list[dict]   Case rows (hoaspy/lib/records.py)
 
-Docket record shape (identical to courts/tx_research.jsonl so build_site's
-add_courts() folds it in unchanged):
-
-    case_name, court, docket_number, date_filed (YYYY-MM-DD or ""),
-    date_terminated, nature_of_suit, cause (status), state, associations
-    (list of matched party names), url (public deep link), case_data_id,
-    source (== KEY), queries (list of names that found it), retrieved_at
-
-Adapters raise PermissionError when their cookie/session has expired (the
-run stops resumably) and RateLimited(retry_after) on a quota hit.
+`_common.record()` builds a Case from a portal's raw text; an adapter adds
+`association_role` and whatever else the portal says (county, level, a
+judgment). A Client raises PermissionError when its cookie or session has
+expired (the run stops resumably) and RateLimited(retry_after) on a quota.
 """
+
 from __future__ import annotations
 
 import importlib
@@ -35,10 +33,10 @@ class RateLimited(Exception):
 def registry() -> dict[str, object]:
     """{KEY: module} for every adapter module in this package."""
     out = {}
-    for m in pkgutil.iter_modules(__path__):
-        if m.name.startswith("_"):
+    for info in pkgutil.iter_modules(__path__):
+        if info.name.startswith("_"):
             continue
-        mod = importlib.import_module(f"{__name__}.{m.name}")
-        if hasattr(mod, "KEY") and hasattr(mod, "Client"):
-            out[mod.KEY] = mod
+        module = importlib.import_module(f"{__name__}.{info.name}")
+        if hasattr(module, "KEY") and hasattr(module, "Client"):
+            out[module.KEY] = module
     return out

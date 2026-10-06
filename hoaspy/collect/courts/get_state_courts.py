@@ -1,290 +1,232 @@
-#!/usr/bin/env python3
-"""Collect trial-court cases naming our community associations, state by
-state, from each state's own public court-records portal.
+"""Trial-court cases naming the associations we hold, state by state, from
+each state's own public court-records portal.
 
-CourtListener gives us federal dockets and state *appellate* opinions
-nationwide (get_courts.py); re:SearchTX gives Texas trial courts
-(get_tx_research.py). Every other state's trial courts live in that state's
-(or county's) portal. This driver queries each portal **by association
-name** — the names we already hold in records/ (registries, corporate
-rosters, the IRS exempt-organization roster) — through a per-portal adapter
-in hoaspy/collect/courts/court_portals/, and writes courts/trial_<KEY>.jsonl
-in the same docket shape build_site.py already folds in. An adapter may add
-`SWEEPS`, statewide prefixes queried after the names (Maryland's "council of
-unit owners"), to catch communities no roster holds.
+    python -m hoaspy state-courts --list                                   # the adapters
+    python -m hoaspy state-courts --portal ct_civil -v                     # one portal
+    python -m hoaspy state-courts --portal md_casesearch --cookie-file md_cookie.txt
+    python -m hoaspy state-courts --all                                    # every anonymous adapter
 
-    ./venv/bin/python -m hoaspy.collect.courts.get_state_courts --list                 # adapters
-    ./venv/bin/python -m hoaspy.collect.courts.get_state_courts --portal ct_civil -v    # one portal
-    ./venv/bin/python -m hoaspy.collect.courts.get_state_courts --portal md_casesearch --cookie-file md_cookie.txt
-    ./venv/bin/python -m hoaspy.collect.courts.get_state_courts --all                  # every adapter
+CourtListener gives federal dockets and state *appellate* opinions
+nationwide (the courts command); re:SearchTX gives Texas trial courts
+(tx-research). Every other state's trial courts live in that state's (or
+county's) portal. This driver queries each portal **by association name**
+— the names held in records/ (registries, corporate rosters, the IRS
+roster) — through a per-portal adapter in court_portals/, and writes
+courts/trial_<KEY>.jsonl in the shared docket shape. An adapter may add
+`SWEEPS`, statewide prefixes queried after the names (Maryland's "council
+of unit owners"), to catch communities no roster holds.
 
-Each portal run is checkpointed per name (courts/.trial_<KEY>_done.txt and
-courts/.trial_<KEY>_partial.jsonl), so it can be killed and resumed; --fresh
-starts over. Output is written on every stop so build_site can use partial
-results. Every portal is best-effort by construction — name-match recall is
-partial and unmeasured, and portals cap or page their results — so
-build_site's per-state "not checked" footers stay in force; see docs/DATA.md.
-
-Government sources only.
+Each portal run is checkpointed per name (courts/.trial_<KEY>_partial.jsonl
+and courts/.trial_<KEY>_done.txt), so it can be killed and resumed;
+`--fresh` starts over. The output is written on every stop. Every portal
+is best-effort by construction: name-match recall is partial and
+unmeasured, and portals cap or page their results.
 """
+
 from __future__ import annotations
 
 import argparse
-import json
 import logging
-import re
 import sys
 import time
-from datetime import datetime, timezone
 from pathlib import Path
 
-from hoaspy.collect.courts import court_portals
+from hoaspy import ROOT
+from hoaspy.collect.courts import COURTS_DIR, court_portals
 from hoaspy.collect.courts.court_portals import RateLimited
 from hoaspy.collect.courts.court_portals._common import ASSOCIATION_RE
+from hoaspy.lib.checkpoint import NameCheckpoint
+from hoaspy.lib.jsonl import merge_json, now_iso, read_json, read_rows, write_rows
 
-from hoaspy import ROOT
-OUT_DIR = ROOT / "courts"
-log = logging.getLogger("state_courts")
+NAME_FILES = ("associations.jsonl", "state_corps.jsonl", "state_registries.jsonl", "irs_exempt_orgs.jsonl")
+EXIT_COOKIE_NEEDED, EXIT_NO_NAMES, EXIT_EXPIRED, EXIT_RATE_LIMITED, EXIT_INTERRUPTED = 2, 1, 3, 4, 130
+
+log = logging.getLogger(__name__)
 
 
-# -- association names per state ---------------------------------------------
-def association_names(state: str, limit: int | None = None,
-                      counties: set[str] | None = None) -> list[str]:
-    """Distinct association-shaped names we hold for `state`, from every
-    records file (registries, corporate rosters, the IRS exempt-organization
-    roster), longest first (a fuller name is a tighter query).
-    `counties` (upper-case) limits county-scoped portals to the associations
-    that sit in that county; rows without a county are then skipped."""
+# -- the names to query -------------------------------------------------------------
+
+def association_names(state: str, limit: int | None = None, counties: set[str] | None = None) -> list[str]:
+    """The distinct association-shaped names held for `state`, from every
+    records file, longest first (a fuller name is a tighter query).
+    `counties` (upper-cased) limits county-scoped portals to the
+    associations that sit in those counties; rows without a county are
+    then skipped."""
     seen: set[str] = set()
     names: list[str] = []
-    for fn in ("associations.jsonl", "state_corps.jsonl", "state_registries.jsonl",
-               "irs_exempt_orgs.jsonl"):
-        p = ROOT / "records" / fn
-        if not p.exists():
-            continue
-        with p.open() as fh:
-            for line in fh:
-                try:
-                    d = json.loads(line)
-                except json.JSONDecodeError:
-                    continue
-                if d.get("state") != state:
-                    continue
-                if counties and (d.get("county") or "").upper() not in counties:
-                    continue
-                nm = " ".join((d.get("name") or "").split())
-                if nm and nm.upper() not in seen and ASSOCIATION_RE.search(nm):
-                    seen.add(nm.upper())
-                    names.append(nm)
+    for filename in NAME_FILES:
+        for row in read_rows(ROOT / "records" / filename, skip_bad=True):
+            if row.get("state") != state:
+                continue
+            if counties and (row.get("county") or "").upper() not in counties:
+                continue
+            name = " ".join((row.get("name") or "").split())
+            if name and name.upper() not in seen and ASSOCIATION_RE.search(name):
+                seen.add(name.upper())
+                names.append(name)
     names.sort(key=len, reverse=True)
     return names[:limit] if limit else names
 
 
-def portal_names(mod, args) -> list[str]:
-    """What one portal run queries: `--names FILE` verbatim, else the
-    association names we hold for the portal's state followed by the
-    adapter's `SWEEPS` — statewide prefixes such as Maryland's "council of
-    unit owners" that catch communities no roster holds (`--no-sweeps`
-    leaves them out)."""
+def portal_names(module, args: argparse.Namespace) -> list[str]:
+    """What one portal run queries: `--names FILE` verbatim, else the names
+    held for the portal's state followed by the adapter's SWEEPS
+    (`--no-sweeps` leaves them out)."""
     if args.names:
-        return [l.strip() for l in args.names.read_text().splitlines() if l.strip()]
-    names = association_names(mod.STATE, args.limit, getattr(mod, "COUNTIES", None))
+        return [line.strip() for line in args.names.read_text().splitlines() if line.strip()]
+    names = association_names(module.STATE, args.limit, getattr(module, "COUNTIES", None))
     if not getattr(args, "no_sweeps", False):
-        names += [s for s in getattr(mod, "SWEEPS", ()) if s not in names]
+        names += [sweep for sweep in getattr(module, "SWEEPS", ()) if sweep not in names]
     return names
 
 
-# -- checkpointing ---------------------------------------------------------------
-def ckpt_paths(key: str, out_dir: Path) -> tuple[Path, Path]:
-    return out_dir / f".trial_{key}_partial.jsonl", out_dir / f".trial_{key}_done.txt"
+# -- the output ---------------------------------------------------------------------
 
-
-def load_ckpt(key: str, out_dir: Path) -> tuple[list[dict], set[str]]:
-    part, done = ckpt_paths(key, out_dir)
-    records: list[dict] = []
-    if part.exists():
-        for line in part.open():
-            line = line.strip()
-            if line:
-                try:
-                    records.append(json.loads(line))
-                except json.JSONDecodeError:
-                    continue            # torn final line from a hard kill
-    names = {l.strip() for l in done.open() if l.strip()} if done.exists() else set()
-    return records, names
-
-
-def clear_ckpt(key: str, out_dir: Path) -> None:
-    for p in ckpt_paths(key, out_dir):
-        p.unlink(missing_ok=True)
-
-
-def dedupe(records: list[dict]) -> list[dict]:
-    """Merge records for the same case (by case_data_id) collected under
-    several queried names: union the associations and queries."""
+def dedupe(rows: list[dict]) -> list[dict]:
+    """Merge the records of one case (by case_data_id) found under several
+    queried names: the associations and queries are unioned."""
     by_id: dict[str, dict] = {}
-    for r in records:
-        k = f'{r.get("source")}:{r.get("case_data_id") or r.get("docket_number")}'
-        cur = by_id.get(k)
-        if cur is None:
-            by_id[k] = dict(r, associations=list(r["associations"]),
-                            queries=list(r.get("queries", [])))
+    for row in rows:
+        key = f'{row.get("source")}:{row.get("case_data_id") or row.get("docket_number")}'
+        current = by_id.get(key)
+        if current is None:
+            by_id[key] = dict(row, associations=list(row["associations"]), queries=list(row.get("queries", [])))
             continue
-        for a in r["associations"]:
-            if a not in cur["associations"]:
-                cur["associations"].append(a)
-        for q in r.get("queries", []):
-            if q not in cur["queries"]:
-                cur["queries"].append(q)
+        for association in row["associations"]:
+            if association not in current["associations"]:
+                current["associations"].append(association)
+        for query in row.get("queries", []):
+            if query not in current["queries"]:
+                current["queries"].append(query)
     return list(by_id.values())
 
 
-def write_outputs(key: str, mod, records: list[dict], out_dir: Path) -> Path:
-    out_dir.mkdir(parents=True, exist_ok=True)
+def write_outputs(key: str, module, rows: list[dict], out_dir: Path) -> Path:
+    """courts/trial_<KEY>.jsonl and the portal's entry in courts/sources.json.
+    An empty result never clobbers an existing file."""
     out = out_dir / f"trial_{key}.jsonl"
-    records = dedupe(records)
-    if not records:
+    rows = dedupe(rows)
+    if not rows:
         if out.exists() and out.stat().st_size > 0:
             log.warning("no records this run — keeping existing %s untouched", out.name)
         return out
-    with out.open("w") as fh:
-        for r in records:
-            fh.write(json.dumps(r, ensure_ascii=False) + "\n")
-    src = out_dir / "sources.json"
-    catalog = {}
-    if src.exists():
-        try:
-            catalog = json.loads(src.read_text())
-        except json.JSONDecodeError:
-            catalog = {}
-    entry = dict(mod.INFO)
-    entry.update({"state": mod.STATE, "records": len(records),
-                  "associations": len({a for r in records for a in r["associations"]}),
-                  "courts": len({r["court"] for r in records}),
-                  "retrieved_at": datetime.now(timezone.utc).isoformat()})
+    write_rows(out, rows)
+    entry = dict(module.INFO)
+    entry.update({"state": module.STATE, "records": len(rows),
+                  "associations": len({name for row in rows for name in row["associations"]}),
+                  "courts": len({row["court"] for row in rows}), "retrieved_at": now_iso()})
+    catalog = read_json(out_dir / "sources.json", {})
     catalog.setdefault("trial_courts", {})[key] = entry
-    src.write_text(json.dumps(catalog, indent=2, ensure_ascii=False) + "\n")
+    merge_json(out_dir / "sources.json", "trial_courts", catalog["trial_courts"])
     return out
 
 
 # -- one portal run -----------------------------------------------------------------
-def run_portal(key: str, mod, args) -> int:
+
+def search_with_retries(client, name: str, key: str, wait_on_quota: bool) -> tuple[list[dict] | None, int]:
+    """One portal search: (its rows, or None when the name was skipped; an
+    exit code when the run must stop). A quota hit is slept off when asked,
+    an expired session stops the run resumably, any other error skips the name."""
+    while True:
+        try:
+            return client.search(name), 0
+        except PermissionError as exc:
+            print(f"\n{key}: {exc}\nProgress is checkpointed — rerun to resume "
+                  "(with a fresh cookie if the portal needs one).", file=sys.stderr)
+            return None, EXIT_EXPIRED
+        except Exception as exc:
+            # Adapters raise RateLimited; a bare HTTP 429 from requests counts too,
+            # so a quota never burns names.
+            if isinstance(exc, RateLimited) or " 429 " in f" {exc} ":
+                retry_after = getattr(exc, "retry_after", 0) or 600
+                if not wait_on_quota:
+                    print(f"\n{key}: rate limited ({exc}). Progress is checkpointed — rerun to resume, "
+                          "or add --wait-on-quota.", file=sys.stderr)
+                    return None, EXIT_RATE_LIMITED
+                nap = max(retry_after, 60) + 5
+                log.warning("%s: rate limited — sleeping %ds then retrying", key, nap)
+                time.sleep(nap)
+                continue
+            log.warning("  %s -> skipped (%s: %s)", name, type(exc).__name__, str(exc)[:120])
+            return None, 0
+
+
+def run_portal(key: str, module, args: argparse.Namespace) -> int:
     cookie = None
-    if getattr(mod, "NEEDS_COOKIE", False):
+    if getattr(module, "NEEDS_COOKIE", False):
         if args.cookie_file and args.cookie_file.exists():
             cookie = args.cookie_file.read_text().strip()
         if not cookie:
-            print(f"{key}: needs a Cookie header — pass --cookie-file (see "
-                  f"hoaspy/collect/courts/court_portals/{mod.__name__.split('.')[-1]}.py docstring).", file=sys.stderr)
-            return 2
-    names = portal_names(mod, args)
+            print(f"{key}: needs a Cookie header — pass --cookie-file (see the adapter's docstring, "
+                  f"hoaspy/collect/courts/court_portals/{module.__name__.split('.')[-1]}.py).", file=sys.stderr)
+            return EXIT_COOKIE_NEEDED
+    names = portal_names(module, args)
     if not names:
-        print(f"{key}: no {mod.STATE} association names in records/", file=sys.stderr)
-        return 1
-    if args.fresh:
-        clear_ckpt(key, args.out)
-    records, done = load_ckpt(key, args.out)
-    part_path, done_path = ckpt_paths(key, args.out)
+        print(f"{key}: no {module.STATE} association names in records/", file=sys.stderr)
+        return EXIT_NO_NAMES
     args.out.mkdir(parents=True, exist_ok=True)
-    todo = [n for n in names if n not in done]
-    log.info("%s: %d %s names (%d done, %d to query)", key, len(names), mod.STATE,
-             len(names) - len(todo), len(todo))
-    client = mod.Client(cookie=cookie, pace=args.pace)
+    checkpoint = NameCheckpoint(args.out, f"trial_{key}")
+    if args.fresh:
+        checkpoint.clear()
+    rows, done = checkpoint.load()
+    todo = [name for name in names if name not in done]
+    log.info("%s: %d %s names (%d done, %d to query)", key, len(names), module.STATE, len(names) - len(todo), len(todo))
+    client = module.Client(cookie=cookie, pace=args.pace)
     code = 0
     try:
-        with part_path.open("a") as part_fh, done_path.open("a") as done_fh:
+        with checkpoint:
             for i, name in enumerate(todo, 1):
-                found = None
-                while True:                       # retry loop for quota hits
-                    try:
-                        found = client.search(name)
-                        break
-                    except PermissionError as exc:
-                        print(f"\n{key}: {exc}\nProgress is checkpointed — rerun to "
-                              "resume (with a fresh cookie if the portal needs one).",
-                              file=sys.stderr)
-                        code = 3
-                        break
-                    except Exception as exc:
-                        # Adapters raise RateLimited; a bare HTTP 429 from
-                        # requests counts too so a quota never burns names.
-                        if isinstance(exc, RateLimited) or " 429 " in f" {exc} ":
-                            ra = getattr(exc, "retry_after", 0) or 600
-                            if not args.wait_on_quota:
-                                print(f"\n{key}: rate limited ({exc}). Progress is "
-                                      "checkpointed — rerun to resume, or add "
-                                      "--wait-on-quota.", file=sys.stderr)
-                                code = 4
-                                break
-                            nap = max(ra, 60) + 5
-                            log.warning("%s: rate limited — sleeping %ds then retrying", key, nap)
-                            time.sleep(nap)
-                            continue
-                        log.warning("  [%d/%d] %s -> skipped (%s: %s)", i, len(todo),
-                                    name, type(exc).__name__, str(exc)[:120])
-                        break
+                found, code = search_with_retries(client, name, key, args.wait_on_quota)
                 if code:
                     break
                 if found is None:
                     continue
-                for rec in found:
-                    rec.setdefault("source", key)
-                    rec.setdefault("state", mod.STATE)
-                    part_fh.write(json.dumps(rec, ensure_ascii=False) + "\n")
-                    records.append(rec)
-                part_fh.flush()
-                done_fh.write(name + "\n")
-                done_fh.flush()
+                for row in found:
+                    row.setdefault("source", key)
+                    row.setdefault("state", module.STATE)
+                rows.extend(found)
+                checkpoint.add(name, found)
                 if found or i % 25 == 0:
                     log.info("  [%d/%d] %s -> %d case(s)", i, len(todo), name, len(found))
                 time.sleep(args.pace)
     except KeyboardInterrupt:
         print("\nInterrupted — progress checkpointed; rerun to resume.", file=sys.stderr)
-        code = 130
-    out = write_outputs(key, mod, records, args.out)
-    log.info("%s: wrote %s — %d cases, %d associations, %d courts", key, out.name,
-             len(records), len({a for r in records for a in r["associations"]}),
-             len({r["court"] for r in records}))
-    if code == 0 and not todo[len(todo):]:
-        pass
+        code = EXIT_INTERRUPTED
+    out = write_outputs(key, module, rows, args.out)
+    log.info("%s: wrote %s — %d cases, %d associations, %d courts", key, out.name, len(rows),
+             len({name for row in rows for name in row["associations"]}), len({row["court"] for row in rows}))
     if code == 0:
-        clear_ckpt(key, args.out)
+        checkpoint.clear()
     return code
 
 
-def main() -> int:
-    ap = argparse.ArgumentParser(description=__doc__,
-                                 formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--list", action="store_true", help="list adapters and exit")
-    ap.add_argument("--portal", action="append", help="adapter KEY to run (repeatable)")
-    ap.add_argument("--all", action="store_true", help="run every adapter that needs no cookie")
-    ap.add_argument("--cookie-file", type=Path, help="Cookie header file for portals that need one")
-    ap.add_argument("--names", type=Path, help="override: file of names, one per line")
-    ap.add_argument("--limit", type=int, help="cap the number of names per portal")
-    ap.add_argument("--no-sweeps", action="store_true",
-                    help="skip the adapter's statewide SWEEPS prefixes, query held names only")
-    ap.add_argument("--pace", type=float, default=1.0, help="seconds between requests")
-    ap.add_argument("--out", type=Path, default=OUT_DIR)
-    ap.add_argument("--fresh", action="store_true", help="ignore checkpoints")
-    ap.add_argument("--wait-on-quota", action="store_true")
-    ap.add_argument("-v", "--verbose", action="store_true")
-    args = ap.parse_args()
-    logging.basicConfig(level=logging.DEBUG if args.verbose else logging.INFO,
-                        format="%(asctime)s %(levelname)-7s %(message)s", datefmt="%H:%M:%S")
-    reg = court_portals.registry()
+def add_arguments(parser: argparse.ArgumentParser) -> None:
+    parser.add_argument("--list", action="store_true", help="list the adapters and exit")
+    parser.add_argument("--portal", action="append", help="adapter KEY to run (repeatable)")
+    parser.add_argument("--all", action="store_true", help="run every adapter that needs no cookie")
+    parser.add_argument("--cookie-file", type=Path, help="Cookie header file for portals that need one")
+    parser.add_argument("--names", type=Path, help="override: a file of names, one per line")
+    parser.add_argument("--limit", type=int, help="cap the number of names per portal")
+    parser.add_argument("--no-sweeps", action="store_true",
+                        help="skip the adapter's statewide SWEEPS prefixes, query held names only")
+    parser.add_argument("--pace", type=float, default=1.0, help="seconds between requests")
+    parser.add_argument("--out", type=Path, default=COURTS_DIR)
+    parser.add_argument("--fresh", action="store_true", help="ignore checkpoints")
+    parser.add_argument("--wait-on-quota", action="store_true")
+
+
+def run(args: argparse.Namespace) -> int:
+    adapters = court_portals.registry()
     if args.list or not (args.portal or args.all):
-        for k, m in sorted(reg.items()):
-            print(f"{k:22s} {m.STATE}  {'cookie' if getattr(m, 'NEEDS_COOKIE', False) else 'anon  '}  {m.INFO.get('name', '')}")
+        for key, module in sorted(adapters.items()):
+            access = "cookie" if getattr(module, "NEEDS_COOKIE", False) else "anon  "
+            print(f"{key:22s} {module.STATE}  {access}  {module.INFO.get('name', '')}")
         return 0
-    keys = args.portal or [k for k, m in reg.items() if not getattr(m, "NEEDS_COOKIE", False)]
+    keys = args.portal or [key for key, module in adapters.items() if not getattr(module, "NEEDS_COOKIE", False)]
     worst = 0
-    for k in keys:
-        if k not in reg:
-            print(f"unknown portal {k!r}; --list shows adapters", file=sys.stderr)
+    for key in keys:
+        if key not in adapters:
+            print(f"unknown portal {key!r}; --list shows the adapters", file=sys.stderr)
             return 2
-        worst = max(worst, run_portal(k, reg[k], args))
+        worst = max(worst, run_portal(key, adapters[key], args))
     return worst
-
-
-if __name__ == "__main__":
-    sys.exit(main())

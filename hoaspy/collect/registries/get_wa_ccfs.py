@@ -1,82 +1,80 @@
 """Washington Secretary of State — Corporations & Charities Filing System
-(CCFS) advanced search, association-named entities.
+(CCFS) advanced search: the association-named entities.
 
-    ./venv/bin/python -m hoaspy.collect.registries.get_wa_ccfs                # full sweep (resumable)
-    ./venv/bin/python -m hoaspy.collect.registries.get_wa_ccfs --limit 3      # smoke test: 3 list pages
-    ./venv/bin/python -m hoaspy.collect.registries.get_wa_ccfs --fresh        # ignore the checkpoint
+    python -m hoaspy wa-ccfs                 # full sweep (resumable)
+    python -m hoaspy wa-ccfs --limit 3       # smoke test: 3 list pages
+    python -m hoaspy wa-ccfs --fresh         # ignore the checkpoint
 
-Source: https://ccfs.sos.wa.gov (AngularJS SPA over ccfs-api.prod.sos.wa.gov).
-Every /api/BusinessSearch/* call needs a Cloudflare Turnstile token that the
-SPA's own <cf-turnstile> widget mints non-interactively (managed mode, ~4 s,
-no click) and stores in $rootScope.reCaptcha. Tokens outside a browser would
-be captcha circumvention, so — like hoaspy/collect/courts/court_portals/fl_broward.py — this
-collector drives the real local BrowserOS Chromium over raw CDP
-(127.0.0.1:9100) in a throw-away browser context: it types the search term
-into the SPA's advanced-search form, clicks its Search button, and pages the
-results by calling the results controller's own `search(page)` scope method.
-Nothing is minted, replayed, clicked-through or solved from Python.
-Recon: scratchpad wa_ccfs/WA_CCFS.md (2026-09-02).
+Source: https://ccfs.sos.wa.gov, an AngularJS app over ccfs-api.prod.sos.wa.gov.
+Every /api/BusinessSearch/* call needs a Cloudflare Turnstile token that
+the app's own <cf-turnstile> widget mints without a click. A token made
+outside a browser would be captcha circumvention, so this collector drives
+a local Chromium over its DevTools port (hoaspy/lib/browser.py) in a
+throw-away browser context: it types each search term into the app's
+advanced-search form, clicks Search, and pages the results by calling the
+results controller's own `search(page)`. Nothing is minted, replayed or
+solved from Python.
 
-Only the LIST rows are used (25 per page, ~23 KB each on the wire but only
-a dozen keys are read off the Angular scope). Per-entity detail calls
-(governors, mailing addresses) are a follow-up: ~15k more Turnstile-gated
-requests. List rows carry name, UBI, business type, status, formation date,
-registered-agent name and the principal-office street address, which is
-everything the get_states.py csv_corp row shape needs. Phone numbers, e-mail
-addresses and EINs present in the API payload are never read.
+Only the list rows are read (25 per page): name, UBI, business type,
+status, formation date, registered-agent name and the principal-office
+street address — the corporate-roster columns. Per-entity detail calls
+(governors, mailing addresses) are not made. Phone numbers, e-mail
+addresses and EINs in the API payload are never read off the page.
 
-Output: WA rows in records/state_corps.jsonl (replacing earlier WA rows),
-coverage.json["states"]["WA"]["collected"]["corporate"], and
-records/corp_coverage.json["WA"] = "all" (rows carry a status column, so the
-site may flag dissolved/inactive corporations). get_states.py is NOT
-involved: WA has no state_sources.yml entry, and get_states.py rewrites
-corp_coverage.json from that file, so rerun this script after a full
-get_states.py run to restore the WA key.
+Output: Washington's rows in records/state_corps.jsonl (replaced on each
+complete run) plus `business_id`; coverage.json collected["corporate"] for
+WA; records/corp_coverage.json["WA"] = "all" (rows carry a status, so a
+dissolved or inactive corporation can be flagged). The `states` command
+rewrites corp_coverage.json from state_sources.yml, where WA has no entry:
+run this again after a full `states` run to restore the WA key.
 
-Checkpoint: .cache/wa/ccfs_rows.jsonl (raw slim rows) + ccfs_progress.json
-(pages done per term); a rerun resumes at the next page.
+Checkpoint: .cache/wa/ccfs_rows.jsonl (the raw list rows) and
+ccfs_progress.json (pages done per term); a rerun resumes at the next page.
 """
+
 from __future__ import annotations
 
 import argparse
 import json
 import logging
 import re
-import sys
 import time
-import urllib.request
-from datetime import datetime, timezone
-from pathlib import Path
-
-import websocket
-
-from hoaspy.collect.registries.get_states import ASSOC_RE, CORPS, OUT_DIR, update_coverage, write_merged
 
 from hoaspy import ROOT
-CACHE = ROOT / ".cache" / "wa"
-ROWS = CACHE / "ccfs_rows.jsonl"
-PROGRESS = CACHE / "ccfs_progress.json"
-CORP_COVERAGE = OUT_DIR / "corp_coverage.json"
+from hoaspy.collect.registries import CORPORATIONS_PATH
+from hoaspy.collect.registries.get_states import CORP_COVERAGE_PATH
+from hoaspy.lib.browser import DevTools, Tab
+from hoaspy.lib.coverage import update_coverage
+from hoaspy.lib.jsonl import append_row, now_iso, read_json, read_rows, replace_rows, write_json
+from hoaspy.lib.names import REGISTRY_NAME_RE
+from hoaspy.lib.records import Association
+
+CACHE_DIR = ROOT / ".cache" / "wa"
+ROWS_PATH = CACHE_DIR / "ccfs_rows.jsonl"
+PROGRESS_PATH = CACHE_DIR / "ccfs_progress.json"
 
 STATE = "WA"
 SOURCE = "Washington Secretary of State — Corporations & Charities Filing System (CCFS)"
-SOURCE_URL = "https://ccfs.sos.wa.gov/"
+SOURCE_PAGE = "https://ccfs.sos.wa.gov/"
 SEARCH_URL = "https://ccfs.sos.wa.gov/#/AdvancedSearch"
-CDP_HTTP = "http://127.0.0.1:9100"
 PAGE_SIZE = 25
+MIN_PACE = 0.6
+TOKEN_REFRESH_SECONDS = 240     # Turnstile tokens die server-side at 300 s
+VERIFY_MESSAGE = "System verification in progress"
+BACKOFFS = (60, 120, 300, 600, 900, 1200, 1800)   # after a verification refusal
 
-# Name-contains terms; the server search is LIKE %term%, so "CONDO" also
-# hits CONDOR/CONDON and "HOA" hits SHOAL — ASSOC_RE (word-bounded) gates
-# every row locally, and BusinessID dedupes across overlapping terms.
+# Name-contains terms. The server search is LIKE %term%, so "CONDO" also
+# hits CONDOR/CONDON and "HOA" hits SHOAL: REGISTRY_NAME_RE (word-bounded)
+# gates every row locally, and BusinessID de-duplicates across terms.
 TERMS = ["HOMEOWNERS", "HOME OWNERS", "CONDOMINIUM", "CONDO", "PROPERTY OWNERS",
          "OWNERS ASSOCIATION", "COMMUNITY ASSOCIATION", "MASTER ASSOCIATION",
          "TOWNHOME", "TOWNHOUSE", "HOA"]
 
-log = logging.getLogger("wa_ccfs")
+log = logging.getLogger(__name__)
 
-# ---- page-context JavaScript (runs inside the SPA; awaited via CDP) --------
-# Only these keys leave the page: no PhoneNumber/EmailAddress/FEINNo.
-_JS_PROJECT = r'''
+# ---- page-context JavaScript (runs inside the app; awaited over DevTools) ----
+# Only these keys leave the page: no PhoneNumber, EmailAddress or FEINNo.
+PROJECT_JS = r'''
 function __waProject(list){
   const addr=a=>a?{StreetAddress1:a.StreetAddress1,StreetAddress2:a.StreetAddress2,City:a.City,
                    State:a.State,Zip5:a.Zip5,County:a.County||a.CountyName||null}:null;
@@ -88,15 +86,17 @@ function __waProject(list){
     PrincipalMailingAddress:addr((b.PrincipalOffice||{}).PrincipalMailingAddress)}));
 }'''
 
-_JS_READY = r'''!!(window.angular && document.getElementById('btnSearch') && document.getElementById('txtOrgname'))'''
+READY_JS = r'''!!(window.angular && document.getElementById('btnSearch')
+     && document.getElementById('txtOrgname'))'''
 
-# Fill the term and press the SPA's Search button; the results view's own
+# Fill the term and press the app's Search button; the results view's own
 # Turnstile widget mints a token, its controller then posts page 1 itself.
-_JS_SEARCH = _JS_PROJECT + r'''
+SEARCH_JS = PROJECT_JS + r'''
 (async()=>{
   const sleep=ms=>new Promise(r=>setTimeout(r,ms));
   const el=document.getElementById('txtOrgname'); if(!el) return JSON.stringify({ok:false,err:'no form'});
-  el.value=TERM; el.dispatchEvent(new Event('input',{bubbles:true})); el.dispatchEvent(new Event('change',{bubbles:true}));
+  el.value=TERM; el.dispatchEvent(new Event('input',{bubbles:true}));
+  el.dispatchEvent(new Event('change',{bubbles:true}));
   await sleep(300);
   // The advanced-search view has no widget of its own: Search routes to the
   // results view, whose <cf-turnstile> mints the token that triggers page 1.
@@ -105,8 +105,10 @@ _JS_SEARCH = _JS_PROJECT + r'''
     await sleep(500);
     const back=document.getElementById('btnReturnToSearch');
     if(back){ const sc=angular.element(back).scope();
-      if(sc && sc.businessList && typeof sc.search==='function' && sc.businesssearchType=='AdvancedSearch' && !sc.BusinessListProgressBar)
-        return JSON.stringify({ok:true,page:sc.page,total:sc.totalCount,pages:sc.pagesCount,rows:__waProject(sc.businessList)});
+      if(sc && sc.businessList && typeof sc.search==='function' && sc.businesssearchType=='AdvancedSearch'
+         && !sc.BusinessListProgressBar)
+        return JSON.stringify({ok:true,page:sc.page,total:sc.totalCount,pages:sc.pagesCount,
+                               rows:__waProject(sc.businessList)});
     }
     const dlg=document.querySelector('.ngdialog-content');
     if(dlg) return JSON.stringify({ok:false,err:'dialog: '+dlg.innerText.slice(0,200)});
@@ -115,10 +117,11 @@ _JS_SEARCH = _JS_PROJECT + r'''
 })()'''
 
 # Page N (0-based) through the results controller's own search(page).
-_JS_PAGE = _JS_PROJECT + r'''
+PAGE_JS = PROJECT_JS + r'''
 (async()=>{
   const sleep=ms=>new Promise(r=>setTimeout(r,ms));
-  const back=document.getElementById('btnReturnToSearch'); if(!back) return JSON.stringify({ok:false,err:'not on results view'});
+  const back=document.getElementById('btnReturnToSearch');
+  if(!back) return JSON.stringify({ok:false,err:'not on results view'});
   const sc=angular.element(back).scope(); const root=sc.$root;
   let tok=null;
   for(let i=0;i<120;i++){ tok=root.reCaptcha; if(tok) break; await sleep(500); }
@@ -128,338 +131,258 @@ _JS_PAGE = _JS_PROJECT + r'''
   for(let i=0;i<240;i++){
     await sleep(500);
     if(sc.businessList!==prev && sc.page===PAGE && !sc.BusinessListProgressBar)
-      return JSON.stringify({ok:true,page:sc.page,total:sc.totalCount,pages:sc.pagesCount,rows:__waProject(sc.businessList)});
+      return JSON.stringify({ok:true,page:sc.page,total:sc.totalCount,pages:sc.pagesCount,
+                             rows:__waProject(sc.businessList)});
     const dlg=document.querySelector('.ngdialog-content');
     if(dlg) return JSON.stringify({ok:false,err:'dialog: '+dlg.innerText.slice(0,200)});
   }
   return JSON.stringify({ok:false,err:'timeout waiting for page '+PAGE});
 })()'''
 
-
-# ---- CDP plumbing (same shape as hoaspy/collect/courts/court_portals/fl_broward.py) --------------
-class CDP:
-    def __init__(self):
-        try:
-            ver = json.load(urllib.request.urlopen(CDP_HTTP + "/json/version", timeout=5))
-        except Exception as exc:
-            raise PermissionError(f"BrowserOS CDP not reachable at {CDP_HTTP} ({exc}); "
-                                  "start the browser with its DevTools port there (README: Browser-driven collectors) and rerun") from exc
-        self.ws = websocket.create_connection(ver["webSocketDebuggerUrl"], suppress_origin=True)
-        self.n = 0
-
-    def send(self, method, params=None, sid=None, timeout=10):
-        self.n += 1
-        msg = {"id": self.n, "method": method, "params": params or {}}
-        if sid:
-            msg["sessionId"] = sid
-        self.ws.send(json.dumps(msg))
-        return self.wait(self.n, timeout)
-
-    def wait(self, id_, timeout):
-        self.ws.settimeout(timeout)
-        end = time.time() + timeout
-        while time.time() < end:
-            try:
-                m = json.loads(self.ws.recv())
-            except Exception:
-                break
-            if m.get("id") == id_:
-                return m
-        return None
-
-    def eval(self, sid, js, timeout=30, await_promise=False):
-        r = self.send("Runtime.evaluate", {"expression": js, "returnByValue": True,
-                                           "awaitPromise": await_promise}, sid=sid, timeout=timeout)
-        res = (r or {}).get("result", {})
-        if "exceptionDetails" in res:
-            raise RuntimeError("page JS threw: " + json.dumps(res["exceptionDetails"])[:300])
-        return res.get("result", {}).get("value")
-
-    def close(self):
-        try:
-            self.ws.close()
-        except Exception:
-            pass
+NO_ANSWER = '{"ok":false,"err":"no eval result"}'
 
 
-class Browser:
-    """One throw-away browser context; a fresh tab per search term."""
+class Portal:
+    """The app in one throw-away browser context, a fresh tab per search term."""
 
     def __init__(self):
-        self.cdp = CDP()
-        self.ctx = self.cdp.send("Target.createBrowserContext")["result"]["browserContextId"]
-        self.tid = None
-        self.sid = None
+        self.devtools = DevTools()
+        self.context = self.devtools.context()
+        self.tab: Tab | None = None
 
-    def open_tab(self):
+    def open_tab(self) -> None:
         self.close_tab()
-        self.tid = self.cdp.send("Target.createTarget", {"url": "about:blank", "browserContextId": self.ctx,
-                                                          "background": True})["result"]["targetId"]
-        self.sid = self.cdp.send("Target.attachToTarget", {"targetId": self.tid, "flatten": True})["result"]["sessionId"]
-        self.cdp.send("Page.enable", sid=self.sid)
-        self.cdp.send("Page.navigate", {"url": SEARCH_URL}, sid=self.sid)
+        self.tab = self.context.open_tab(SEARCH_URL)
         for _ in range(60):
             time.sleep(0.5)
-            if self.cdp.eval(self.sid, _JS_READY, timeout=5):
+            if self.tab.evaluate(READY_JS, timeout=5):
                 return
         raise RuntimeError("advanced-search form never appeared")
 
-    def close_tab(self):
-        if self.tid:
-            self.cdp.send("Target.closeTarget", {"targetId": self.tid})
-            self.tid = self.sid = None
+    def close_tab(self) -> None:
+        if self.tab is not None:
+            self.tab.close()
+            self.tab = None
 
     def search(self, term: str) -> dict:
+        """Open a fresh tab, search `term`; the first page's answer."""
         self.open_tab()
-        js = _JS_SEARCH.replace("TERM", json.dumps(term))
-        out = self.cdp.eval(self.sid, js, timeout=200, await_promise=True)
-        return json.loads(out or '{"ok":false,"err":"no eval result"}')
+        answer = self.tab.evaluate(SEARCH_JS.replace("TERM", json.dumps(term)), timeout=200, await_promise=True)
+        return json.loads(answer or NO_ANSWER)
 
-    def page(self, n: int) -> dict:
-        js = _JS_PAGE.replace("PAGE", str(n))
-        out = self.cdp.eval(self.sid, js, timeout=200, await_promise=True)
-        return json.loads(out or '{"ok":false,"err":"no eval result"}')
+    def page(self, number: int) -> dict:
+        """Page `number` (0-based) of the open results view."""
+        answer = self.tab.evaluate(PAGE_JS.replace("PAGE", str(number)), timeout=200, await_promise=True)
+        return json.loads(answer or NO_ANSWER)
 
-    def close(self):
+    def close(self) -> None:
         try:
-            self.close_tab()
-            self.cdp.send("Target.disposeBrowserContext", {"browserContextId": self.ctx})
+            self.context.dispose()
         finally:
-            self.cdp.close()
+            self.devtools.close()
 
 
-# ---- row shaping ----------------------------------------------------------
-def _iso(v) -> str:
-    v = (v or "")[:10]
-    return "" if not v or v.startswith("0001-") else v
+# ---- row shaping ---------------------------------------------------------------
+
+def iso_date(value) -> str:
+    day = (value or "")[:10]
+    return "" if not day or day.startswith("0001-") else day
 
 
-def to_row(raw: dict) -> dict | None:
-    """Slim list row (see _JS_PROJECT) -> get_states.py csv_corp row, or None
-    when the name is not association-like."""
+def to_record(raw: dict, retrieved_at: str = "") -> Association | None:
+    """A slim list row (see PROJECT_JS) as a corporate-roster record, or
+    None when the name does not read as an association."""
     name = " ".join((raw.get("BusinessName") or "").split())
-    if not name or not ASSOC_RE.search(name):
+    if not name or not REGISTRY_NAME_RE.search(name):
         return None
-    addr = raw.get("PrincipalStreetAddress") or raw.get("PrincipalMailingAddress") or {}
+    address = raw.get("PrincipalStreetAddress") or raw.get("PrincipalMailingAddress") or {}
     status = raw.get("BusinessStatus") or ""
-    street = " ".join(x for x in ((addr.get("StreetAddress1") or "").strip(),
-                                  (addr.get("StreetAddress2") or "").strip()) if x)
-    return {
-        "state": STATE,
-        "source": SOURCE,
-        "source_url": SOURCE_URL,
-        "record_id": re.sub(r"\D", "", raw.get("UBINumber") or ""),
-        "business_id": str(raw.get("BusinessID") or ""),
-        "name": name,
-        "corp_status": status,
-        "status": status,
-        "address": street,
-        "city": (addr.get("City") or "").strip().title(),
-        "county": "",
-        "zip": (addr.get("Zip5") or "")[:5],
-        "incorporated": _iso(raw.get("DateOfIncorporation")),
-        "registered_agent": " ".join((raw.get("AgentName") or "").split()),
-        "entity_type": raw.get("BusinessType") or "",
-        "units": None,
-        "manager_name": "",
-        "officers": [],
-    }
+    street = " ".join(part for part in ((address.get("StreetAddress1") or "").strip(),
+                                        (address.get("StreetAddress2") or "").strip()) if part)
+    return Association(
+        state=STATE, source=SOURCE, source_url=SOURCE_PAGE, record_id=re.sub(r"\D", "", raw.get("UBINumber") or ""),
+        name=name, corp_status=status, status=status, address=street,
+        city=(address.get("City") or "").strip().title(), zip=(address.get("Zip5") or "")[:5],
+        incorporated=iso_date(raw.get("DateOfIncorporation")),
+        registered_agent=" ".join((raw.get("AgentName") or "").split()), entity_type=raw.get("BusinessType") or "",
+        retrieved_at=retrieved_at, extras={"business_id": str(raw.get("BusinessID") or "")})
 
 
-# ---- checkpoint -----------------------------------------------------------
+# ---- checkpoint ----------------------------------------------------------------
+
 def load_progress() -> dict:
-    return json.loads(PROGRESS.read_text()) if PROGRESS.exists() else {}
+    return read_json(PROGRESS_PATH, {})
 
 
-def save_progress(p: dict) -> None:
-    tmp = PROGRESS.with_suffix(".tmp")
-    tmp.write_text(json.dumps(p, indent=1))
-    tmp.replace(PROGRESS)
-
-
-def load_rows() -> list[dict]:
-    if not ROWS.exists():
-        return []
-    with ROWS.open() as fh:
-        return [json.loads(line) for line in fh if line.strip()]
+def save_progress(progress: dict) -> None:
+    write_json(PROGRESS_PATH, progress)
 
 
 def append_rows(term: str, page: int, rows: list[dict]) -> None:
-    with ROWS.open("a") as fh:
-        for r in rows:
-            r = dict(r, _term=term, _page=page)
-            fh.write(json.dumps(r, ensure_ascii=False) + "\n")
+    with ROWS_PATH.open("a", encoding="utf-8") as fh:
+        for row in rows:
+            append_row(fh, dict(row, _term=term, _page=page))
 
 
-# ---- sweep ----------------------------------------------------------------
-TOKEN_REFRESH_S = 240          # Turnstile tokens die server-side at 300 s
-VERIFY_MSG = "System verification in progress"
-BACKOFFS = (60, 120, 300, 600, 900, 1200, 1800)   # after a verification refusal
-
+# ---- sweep ---------------------------------------------------------------------
 
 def sweep(terms: list[str], pace: float, limit: int | None) -> int:
-    """Walk every term's list pages; returns pages fetched this run."""
+    """Walk every term's list pages; returns the pages fetched this run."""
     progress = load_progress()
     fetched = 0
-    browser = Browser()
+    portal = Portal()
 
     def open_results(term: str) -> dict:
-        res = browser.search(term)
-        if not res.get("ok"):
-            raise RuntimeError(f"{term}: search failed: {res.get('err')}")
-        return res
+        answer = portal.search(term)
+        if not answer.get("ok"):
+            raise RuntimeError(f"{term}: search failed: {answer.get('err')}")
+        return answer
 
     try:
         for term in terms:
-            st = progress.setdefault(term, {"pages_done": 0, "total": None, "done": False})
-            if st["done"]:
-                log.info("%-22s done (%s rows)", term, st["total"])
+            state = progress.setdefault(term, {"pages_done": 0, "total": None, "done": False})
+            if state["done"]:
+                log.info("%-22s done (%s rows)", term, state["total"])
                 continue
             if limit is not None and fetched >= limit:
                 break
             refusals = 0
-            res = None
-            while res is None:
+            answer = None
+            while answer is None:
                 try:
-                    res = open_results(term)
+                    answer = open_results(term)
                 except RuntimeError as exc:
-                    if VERIFY_MSG not in str(exc) or refusals >= len(BACKOFFS):
+                    if VERIFY_MESSAGE not in str(exc) or refusals >= len(BACKOFFS):
                         raise
                     wait = BACKOFFS[refusals]
                     refusals += 1
                     log.warning("%s: verification refused on search; backing off %ds (%d/%d)",
                                 term, wait, refusals, len(BACKOFFS))
-                    browser.close_tab()
+                    portal.close_tab()
                     time.sleep(wait)
             opened = time.time()
-            total = int(res.get("total") or 0)
+            total = int(answer.get("total") or 0)
             pages = (total + PAGE_SIZE - 1) // PAGE_SIZE
-            st["total"] = total
-            log.info("%-22s %d rows / %d pages (resume at page %d)", term, total, pages, st["pages_done"] + 1)
-            if st["pages_done"] == 0 and res["rows"]:
-                append_rows(term, 1, res["rows"])
-                st["pages_done"] = 1
+            state["total"] = total
+            log.info("%-22s %d rows / %d pages (resume at page %d)", term, total, pages, state["pages_done"] + 1)
+            if state["pages_done"] == 0 and answer["rows"]:
+                append_rows(term, 1, answer["rows"])
+                state["pages_done"] = 1
                 fetched += 1
                 save_progress(progress)
-            while st["pages_done"] < pages:
+            while state["pages_done"] < pages:
                 if limit is not None and fetched >= limit:
                     break
-                n = st["pages_done"]            # 0-based index of the next page
-                if time.time() - opened > TOKEN_REFRESH_S:
-                    # fresh tab -> the SPA's widget mints a fresh token before
-                    # the old one dies server-side (the SPA reuses one token
-                    # across pages and only drops it after 5 min)
+                number = state["pages_done"]            # 0-based index of the next page
+                if time.time() - opened > TOKEN_REFRESH_SECONDS:
+                    # A fresh tab: the app's widget mints a new token before the
+                    # old one dies server-side (the app reuses one token across
+                    # pages and only drops it after 5 minutes).
                     open_results(term)
                     opened = time.time()
                     time.sleep(pace)
                 time.sleep(pace)
-                res = browser.page(n)
-                if not res.get("ok") or res.get("page") != n:
-                    err = str(res.get("err"))
-                    if VERIFY_MSG in err and refusals < len(BACKOFFS):
+                answer = portal.page(number)
+                if not answer.get("ok") or answer.get("page") != number:
+                    error = str(answer.get("err"))
+                    if VERIFY_MESSAGE in error and refusals < len(BACKOFFS):
                         wait = BACKOFFS[refusals]
                         refusals += 1
                         log.warning("%s page %d: verification refused; backing off %ds (%d/%d)",
-                                    term, n + 1, wait, refusals, len(BACKOFFS))
-                        browser.close_tab()
+                                    term, number + 1, wait, refusals, len(BACKOFFS))
+                        portal.close_tab()
                         time.sleep(wait)
                     elif refusals >= len(BACKOFFS):
-                        raise RuntimeError(f"{term}: page {n + 1} failed repeatedly ({err})")
+                        raise RuntimeError(f"{term}: page {number + 1} failed repeatedly ({error})")
                     else:
                         refusals += 1
-                        log.warning("%s page %d failed (%s); retry %d", term, n + 1, err[:120], refusals)
-                        browser.close_tab()
+                        log.warning("%s page %d failed (%s); retry %d", term, number + 1, error[:120], refusals)
+                        portal.close_tab()
                         time.sleep(5 * refusals)
                     open_results(term)
                     opened = time.time()
                     continue
-                rows = res["rows"]
-                append_rows(term, n + 1, rows)
-                st["pages_done"] = n + 1
+                rows = answer["rows"]
+                append_rows(term, number + 1, rows)
+                state["pages_done"] = number + 1
                 fetched += 1
                 save_progress(progress)
-                if refusals and (n + 1) % 5 == 0:
+                if refusals and (number + 1) % 5 == 0:
                     refusals = max(0, refusals - 1)     # earn back headroom while it works
-                if (n + 1) % 20 == 0 or not rows:
-                    log.info("%-22s page %d/%d (%d rows)", term, n + 1, pages, len(rows))
+                if (number + 1) % 20 == 0 or not rows:
+                    log.info("%-22s page %d/%d (%d rows)", term, number + 1, pages, len(rows))
                 if not rows:
                     break
-            if st["pages_done"] >= pages:
-                st["done"] = True
+            if state["pages_done"] >= pages:
+                state["done"] = True
                 save_progress(progress)
                 log.info("%-22s complete", term)
     finally:
-        browser.close()
+        portal.close()
     return fetched
 
 
 def finalize() -> int:
+    """Shape the checkpointed rows into the corporate roster and record the coverage."""
+    retrieved_at = now_iso()
     seen: set[str] = set()
-    rows: list[dict] = []
-    kept = dropped = 0
-    for raw in load_rows():
+    records: list[Association] = []
+    dropped = 0
+    for raw in read_rows(ROWS_PATH, skip_bad=True):
         key = str(raw.get("BusinessID") or raw.get("UBINumber") or "")
         if not key or key in seen:
             continue
         seen.add(key)
-        row = to_row(raw)
-        if row is None:
+        record = to_record(raw, retrieved_at)
+        if record is None:
             dropped += 1
             continue
-        kept += 1
-        rows.append(row)
-    total = write_merged(CORPS, rows, {STATE})
-    log.info("state_corps.jsonl: %d WA rows (%d unique entities, %d non-association names dropped); %d rows total",
-             len(rows), kept + dropped, dropped, total)
-    statuses = {}
-    for r in rows:
-        statuses[r["status"]] = statuses.get(r["status"], 0) + 1
+        records.append(record)
+    total = replace_rows(CORPORATIONS_PATH, (record.as_row() for record in records), {STATE})
+    log.info("%s: %d WA rows (%d unique entities, %d non-association names dropped); %d rows total",
+             CORPORATIONS_PATH.name, len(records), len(records) + dropped, dropped, total)
+    statuses: dict[str, int] = {}
+    for record in records:
+        statuses[record.status] = statuses.get(record.status, 0) + 1
     update_coverage(STATE, "corporate", {
-        "source": SOURCE,
-        "records": len(rows),
-        "url": SOURCE_URL,
-        "coverage": "all",
+        "source": SOURCE, "records": len(records), "url": SOURCE_PAGE, "coverage": "all",
         "note": "advanced-search list rows (name contains HOMEOWNERS/CONDO/…); every status incl. "
                 "Administratively Dissolved/Inactive; principal-office address + registered-agent name; "
                 "governors need per-entity detail calls (not collected). Turnstile-gated: swept through "
-                "BrowserOS (get_wa_ccfs.py), not get_states.py",
-        "statuses": dict(sorted(statuses.items(), key=lambda kv: -kv[1])),
-        "collected_at": datetime.now(timezone.utc).date().isoformat(),
+                "a local browser (wa-ccfs), not the states command",
+        "statuses": dict(sorted(statuses.items(), key=lambda item: -item[1])),
+        "collected_at": retrieved_at[:10],
     })
-    cov = json.loads(CORP_COVERAGE.read_text()) if CORP_COVERAGE.exists() else {}
-    cov[STATE] = "all"
-    CORP_COVERAGE.write_text(json.dumps(cov, indent=2))
-    return len(rows)
+    coverage = read_json(CORP_COVERAGE_PATH, {})
+    coverage[STATE] = "all"
+    write_json(CORP_COVERAGE_PATH, coverage)
+    return len(records)
 
 
-def main() -> int:
-    ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
-    ap.add_argument("--limit", type=int, help="stop after N list pages (smoke test)")
-    ap.add_argument("--pace", type=float, default=1.5, help="seconds between list pages (default 1.5)")
-    ap.add_argument("--terms", nargs="+", help="search terms (default: the association vocabulary)")
-    ap.add_argument("--fresh", action="store_true", help="discard the checkpoint and start over")
-    ap.add_argument("--finalize-only", action="store_true", help="skip the sweep; rebuild outputs from the checkpoint")
-    args = ap.parse_args()
-    logging.basicConfig(level=logging.INFO, stream=sys.stderr,
-                        format="%(asctime)s %(levelname)s %(message)s", datefmt="%H:%M:%S")
-    CACHE.mkdir(parents=True, exist_ok=True)
+def add_arguments(parser: argparse.ArgumentParser) -> None:
+    parser.add_argument("--limit", type=int, help="stop after N list pages (smoke test)")
+    parser.add_argument("--pace", type=float, default=1.5, help="seconds between list pages (default 1.5)")
+    parser.add_argument("--terms", nargs="+", help="search terms (default: the association vocabulary)")
+    parser.add_argument("--fresh", action="store_true", help="discard the checkpoint and start over")
+    parser.add_argument("--finalize-only", action="store_true",
+                        help="skip the sweep; rebuild the output from the checkpoint")
+
+
+def run(args: argparse.Namespace) -> int:
+    CACHE_DIR.mkdir(parents=True, exist_ok=True)
     if args.fresh:
-        for p in (ROWS, PROGRESS):
-            if p.exists():
-                p.unlink()
+        for path in (ROWS_PATH, PROGRESS_PATH):
+            path.unlink(missing_ok=True)
+    terms = args.terms or TERMS
     if not args.finalize_only:
         started = time.time()
-        n = sweep(args.terms or TERMS, max(args.pace, 0.6), args.limit)
-        log.info("fetched %d list pages in %.0fs", n, time.time() - started)
+        pages = sweep(terms, max(args.pace, MIN_PACE), args.limit)
+        log.info("fetched %d list pages in %.0fs", pages, time.time() - started)
     progress = load_progress()
-    if args.limit is not None or any(not progress.get(t, {}).get("done") for t in (args.terms or TERMS)):
+    if args.limit is not None or any(not progress.get(term, {}).get("done") for term in terms):
         log.info("sweep incomplete — outputs not written (rerun without --limit to resume; "
                  "--finalize-only writes what the checkpoint holds)")
         if not args.finalize_only:
             return 0
     finalize()
     return 0
-
-
-if __name__ == "__main__":
-    sys.exit(main())

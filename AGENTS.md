@@ -3,7 +3,8 @@
 This repository holds the collectors behind [HOA Spy](https://hoaspy.com):
 the code that fetches community-association records from government
 registries, county recorders and court portals. `README.md` is the tour;
-`docs/` has a page per collector family and a page per state.
+`docs/` has a page per collector family and a page per state;
+`CONTRIBUTING.md` has the code conventions, which apply to every change.
 
 ## The one rule that matters most
 
@@ -18,12 +19,13 @@ For each source that means:
 1. **The collector** under `hoaspy/collect/` (`registries/`, `liens/`,
    `courts/`; a trial-court portal is one adapter file in
    `hoaspy/collect/courts/court_portals/`). Copy the nearest existing one:
-   paced requests, a checkpoint so a long run resumes, an atomic write of
-   the output, and a module
-   docstring that states the source, the access path, the output file and
-   the caveats. Its rows must conform to the record contract
-   (`hoaspy/lib/contract.py`): run `python -m hoaspy.lib.validate <file>`
-   on the output and leave no error and no contact detail.
+   `add_arguments(parser)` and `run(args)` registered in `hoaspy/lib/cli.py`,
+   rows built as the record types of `hoaspy/lib/records.py`, paced
+   requests, a checkpoint so a long run resumes, an atomic write of the
+   output, and a module docstring that states the source, the access path,
+   the output file and the caveats. Its rows must conform to the record
+   contract (`hoaspy/lib/contract.py`): run `python -m hoaspy validate
+   <file>` on the output and leave no error and no contact detail.
 2. **A fixture and a parsing test**: a captured sample under
    `tests/fixtures/` and a class in `tests/test_collectors.py`. No network in
    tests. This repository is public, so replace individuals' names and
@@ -59,14 +61,16 @@ the attempt.
 
 ```bash
 ./venv/bin/python -m unittest discover -s tests -t . -v     # the whole suite, no network; CI runs the same on every pull request
-./venv/bin/python -m hoaspy.lib.validate                    # collector output against the record contract
-./venv/bin/python -m hoaspy.collect.courts.get_state_courts --list
-./venv/bin/python -m hoaspy.collect.<family>.<module> --help
+./venv/bin/ruff check .                                     # the linter; CI runs it too (pip install -r requirements-dev.txt)
+./venv/bin/python -m hoaspy                                 # every collector command, one line each
+./venv/bin/python -m hoaspy validate                        # collector output against the record contract
+./venv/bin/python -m hoaspy state-courts --list
+./venv/bin/python -m hoaspy <command> --help
 ```
 
-Run modules from the repository root with `python -m`; every module finds
-the root through `hoaspy.ROOT`. Outputs (`records/`, `liens/`, `courts/`,
-`news/`, `.cache/`) are git-ignored: never commit them or a cookie file.
+Run everything from the repository root; a module finds the root through
+`hoaspy.ROOT`. Outputs (`records/`, `liens/`, `courts/`, `news/`, `.cache/`)
+are git-ignored: never commit them or a cookie file.
 
 ## Working alongside other agents
 

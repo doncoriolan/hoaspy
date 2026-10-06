@@ -1,205 +1,150 @@
-#!/usr/bin/env python
-"""Collect HOA lien-family records from Miami-Dade County Official Records.
+"""Miami-Dade County, FL association liens, one association name at a time.
 
-Miami-Dade does not sell a bulk index the way Broward's SFTP does, so this
-queries the Clerk's public search API one association at a time — the mode that
-stays under the API's 500-row result cap (see records_miamidade for the why).
+Miami-Dade sells no bulk index the way Broward's SFTP hands one out, so
+this queries the Clerk's public search API by party name — the mode that
+stays under the API's 500-row cap (records_miamidade.py says why).
 
-    ./venv/bin/python -m hoaspy.collect.liens.get_miamidade_liens --cookie '<.PremierIDDade value>'
-    ./venv/bin/python -m hoaspy.collect.liens.get_miamidade_liens --cookie ... --limit 200
-    ./venv/bin/python -m hoaspy.collect.liens.get_miamidade_liens --cookie ... --names names.txt
+    python -m hoaspy miamidade-liens --cookie '<.PremierIDDade value>'
+    python -m hoaspy miamidade-liens --cookie ... --limit 200
+    python -m hoaspy miamidade-liens --cookie ... --names names.txt
 
-The `.PremierIDDade` cookie is an anonymous session cookie (no login); copy its
-value from a browser at onlineservices.miamidadeclerk.gov (DevTools → Application
-→ Cookies). It is never committed.
+The `.PremierIDDade` cookie is an anonymous session cookie (no login); copy
+its value from a browser at onlineservices.miamidadeclerk.gov (DevTools ->
+Application -> Cookies). It is never committed.
 
-Coverage is BEST-EFFORT, not complete, and the sources.json says so:
-  * an association is found only when our name matches the Clerk's spelling
-    (their "AMARETTO HOMEOWNERS ASSN INC" vs our "AMARETTO CONDO" misses);
-  * a name broad enough to hit the 500-row cap is flagged, not silently cut.
-For a complete historical index, buy the $110/mo Official Records FTP folder.
-This collector is for targeted, per-association coverage.
+Coverage is best-effort, not complete, and sources.json says so: an
+association is found only when the queried name matches the Clerk's
+spelling ("AMARETTO HOMEOWNERS ASSN INC" versus "AMARETTO CONDO" misses),
+and a name broad enough to hit the cap is flagged, not silently cut. The
+run is checkpointed per name and resumes where it stopped.
 
-Output (default ./liens/):
+Output (default liens/):
     liens_miamidade.jsonl   one record per lien-family document
-    liens_miamidade.csv     flattened
-    sources.json            provenance + coverage caveats (written per-region)
+    liens_miamidade.csv     the same rows, the CSV_COLUMNS only
+    sources.json            provenance and the coverage caveat (per region)
 """
 
 from __future__ import annotations
 
 import argparse
 import csv
-import json
 import logging
 import re
 import sys
 import time
 from collections import Counter
-from datetime import date, datetime, timezone
 from pathlib import Path
 
-from hoaspy.collect.liens import records_miamidade as md
 from hoaspy import ROOT
-DEFAULT_OUT = ROOT / "liens"
+from hoaspy.collect.liens import LIENS_DIR, records_miamidade
+from hoaspy.lib.checkpoint import NameCheckpoint
+from hoaspy.lib.jsonl import now_iso, read_json, read_rows, write_json, write_rows
 
-log = logging.getLogger("liens.miamidade")
-
-FIELDS = [
+DEFAULT_NAMES_PATH = ROOT / "records" / "associations.jsonl"
+CHECKPOINT_PREFIX = "miamidade"
+MIAMI_DADE_COUNTIES = ("miami-dade", "miami dade", "dade")
+MIN_QUERY_LENGTH = 4
+CSV_COLUMNS = [
     "doc_id", "cfn", "year", "recorded_date", "doc_type", "doc_type_label",
     "state", "county", "association", "query_name", "respondent", "amount",
     "case_number", "parcel_id", "book_page", "address", "legal_description",
     "n_parties",
 ]
+COMPASS_WORDS = (("WEST", "W"), ("EAST", "E"), ("NORTH", "N"), ("SOUTH", "S"))
+
+log = logging.getLogger(__name__)
 
 
 def query_name(name: str) -> str:
-    """Turn one of our association names into a party-name query the Clerk's
-    index is likely to match: strip punctuation and filing noise, abbreviate the
-    compass words the county abbreviates, and keep the distinctive head so the
-    query neither misses nor broadens into a 500-row cap."""
-    n = name.upper()
-    n = re.sub(r"[,\.'\"]", " ", n)
-    n = re.sub(r"\bCONDOMINIUM\b", "CONDO", n)
-    n = re.sub(r"\bWEST\b", "W", n)
-    n = re.sub(r"\bEAST\b", "E", n)
-    n = re.sub(r"\bNORTH\b", "N", n)
-    n = re.sub(r"\bSOUTH\b", "S", n)
-    # trailing filing noise that the lien index usually omits
-    n = re.sub(r"\b(A|AN|THE)\b", " ", n)
-    n = re.sub(r"\s+", " ", n).strip()
-    return n
+    """An association name as a party-name query the Clerk's index is
+    likely to match: punctuation and filing noise stripped, the compass
+    words abbreviated as the county abbreviates them, the distinctive head
+    kept so the query neither misses nor broadens into the cap."""
+    query = re.sub(r"[,\.'\"]", " ", name.upper())
+    query = re.sub(r"\bCONDOMINIUM\b", "CONDO", query)
+    for word, short in COMPASS_WORDS:
+        query = re.sub(rf"\b{word}\b", short, query)
+    query = re.sub(r"\b(A|AN|THE)\b", " ", query)          # filing noise the lien index usually omits
+    return re.sub(r"\s+", " ", query).strip()
 
 
-def load_names(args) -> list[str]:
-    if args.names:
-        raw = [l.strip() for l in Path(args.names).read_text().splitlines() if l.strip()]
-    else:
-        raw = _miamidade_association_names(args.assoc_file, args.all_florida)
-    seen, out = set(), []
-    for n in raw:
-        q = query_name(n)
-        if len(q) < 4 or q in seen:
-            continue
-        seen.add(q)
-        out.append(q)
-    if args.limit:
-        out = out[: args.limit]
-    return out
-
-
-def _miamidade_association_names(path: Path, all_florida: bool) -> list[str]:
+def miami_dade_names(path: Path, all_florida: bool) -> list[str]:
+    """The association names of the Florida registry rows in Miami-Dade County (or all of Florida)."""
     names = []
-    with path.open() as fh:
-        for line in fh:
-            d = json.loads(line)
-            if d.get("state") != "FL":
-                continue
-            county = (d.get("county") or "").strip().lower()
-            if all_florida or county in ("miami-dade", "miami dade", "dade"):
-                if d.get("name"):
-                    names.append(d["name"])
+    for row in read_rows(path):
+        if row.get("state") != "FL" or not row.get("name"):
+            continue
+        county = (row.get("county") or "").strip().lower()
+        if all_florida or county in MIAMI_DADE_COUNTIES:
+            names.append(row["name"])
     return names
 
 
-def checkpoint_paths(out_dir: Path) -> tuple[Path, Path]:
-    """(records-so-far, names-done). A full county run is thousands of requests
-    over hours, so every name's results are appended as they arrive and the
-    run resumes from where it stopped."""
-    return out_dir / ".miamidade_partial.jsonl", out_dir / ".miamidade_done.txt"
+def load_names(args: argparse.Namespace) -> list[str]:
+    """The distinct queries to run, from --names or the registry rows."""
+    if args.names:
+        raw = [line.strip() for line in Path(args.names).read_text().splitlines() if line.strip()]
+    else:
+        raw = miami_dade_names(args.assoc_file, args.all_florida)
+    seen, out = set(), []
+    for name in raw:
+        query = query_name(name)
+        if len(query) < MIN_QUERY_LENGTH or query in seen:
+            continue
+        seen.add(query)
+        out.append(query)
+    return out[:args.limit] if args.limit else out
 
 
-def load_checkpoint(out_dir: Path) -> tuple[list[dict], set[str]]:
-    part, done = checkpoint_paths(out_dir)
-    records: list[dict] = []
-    if part.exists():
-        for line in part.open():
-            line = line.strip()
-            if not line:
-                continue
-            try:
-                records.append(json.loads(line))
-            except json.JSONDecodeError:
-                continue  # a torn final line from a hard kill
-    names = set()
-    if done.exists():
-        names = {l.strip() for l in done.open() if l.strip()}
-    return records, names
-
-
-def clear_checkpoint(out_dir: Path) -> None:
-    for p in checkpoint_paths(out_dir):
-        p.unlink(missing_ok=True)
-
-
-def write_outputs(records: list[dict], sources: dict, out_dir: Path) -> None:
+def write_outputs(rows: list[dict], sources: dict, out_dir: Path) -> None:
     out_dir.mkdir(parents=True, exist_ok=True)
-    with (out_dir / "liens_miamidade.jsonl").open("w") as fh:
-        for r in records:
-            fh.write(json.dumps(r, ensure_ascii=False) + "\n")
+    write_rows(out_dir / "liens_miamidade.jsonl", rows)
     with (out_dir / "liens_miamidade.csv").open("w", newline="") as fh:
-        w = csv.DictWriter(fh, fieldnames=FIELDS, extrasaction="ignore")
-        w.writeheader()
-        for r in records:
-            w.writerow({**r, "respondent": "; ".join(r.get("respondents") or [])[:200]})
-    # sources.json is per-region: merge, don't clobber Broward's entry.
-    spath = out_dir / "sources.json"
-    existing = {}
-    if spath.exists():
-        try:
-            existing = json.loads(spath.read_text())
-        except json.JSONDecodeError:
-            existing = {}
-        if existing and "miami_dade" not in existing and "source" in existing:
-            existing = {"broward": existing}  # migrate the old single-region file
+        writer = csv.DictWriter(fh, fieldnames=CSV_COLUMNS, extrasaction="ignore")
+        writer.writeheader()
+        for row in rows:
+            writer.writerow({**row, "respondent": "; ".join(row.get("respondents") or [])[:200]})
+    # sources.json is per region: merge, never clobber Broward's entry.
+    path = out_dir / "sources.json"
+    existing = read_json(path, {})
+    if existing and "miami_dade" not in existing and "source" in existing:
+        existing = {"broward": existing}        # migrate the old single-region file
     existing["miami_dade"] = sources
-    spath.write_text(json.dumps(existing, indent=2))
+    write_json(path, existing)
 
 
-def print_summary(records: list[dict], truncated: list[str]) -> None:
-    if not records:
+def print_summary(rows: list[dict]) -> None:
+    if not rows:
         print("\nNo lien-family records matched any queried name.")
         return
-    by_type = Counter(r["doc_type_label"] for r in records)
-    filers = Counter(r["association"] or r["query_name"] for r in records
-                     if r["doc_type"] in ("LIE",))
-    with_parcel = sum(1 for r in records if r.get("parcel_id"))
-    print(f"\n{len(records):,} lien-family documents")
-    print(f"  {with_parcel:,} carry a folio/parcel id ({with_parcel/len(records)*100:.0f}%)")
+    by_type = Counter(row["doc_type_label"] for row in rows)
+    filers = Counter(row["association"] or row["query_name"] for row in rows if row["doc_type"] == "LIE")
+    with_parcel = sum(1 for row in rows if row.get("parcel_id"))
+    print(f"\n{len(rows):,} lien-family documents")
+    print(f"  {with_parcel:,} carry a folio/parcel id ({with_parcel / len(rows) * 100:.0f}%)")
     print("\nBy document type")
-    for k, v in by_type.most_common():
-        print(f"  {k:<28} {v:>6,}")
+    for label, count in by_type.most_common():
+        print(f"  {label:<28} {count:>6,}")
     print("\nMost active lien filers")
-    for name, n in filers.most_common(12):
-        print(f"  {n:>4}  {name[:64]}")
-    if truncated:
-        print(f"\n⚠ {len(truncated)} query(ies) hit the 500-row cap and are "
-              f"incomplete — first few: {', '.join(truncated[:3])}")
+    for name, count in filers.most_common(12):
+        print(f"  {count:>4}  {name[:64]}")
 
 
-def main() -> int:
-    ap = argparse.ArgumentParser(
-        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--cookie", required=True,
-                    help="the .PremierIDDade cookie value (with or without name=)")
-    ap.add_argument("--names", type=Path, help="file of association names, one per line")
-    ap.add_argument("--assoc-file", type=Path, default=ROOT / "records" / "associations.jsonl",
-                    help="source of association names when --names is not given")
-    ap.add_argument("--all-florida", action="store_true",
-                    help="query every FL association, not just Miami-Dade county")
-    ap.add_argument("--types", nargs="+", help="override Miami-Dade document types")
-    ap.add_argument("--limit", type=int, help="cap the number of names queried")
-    ap.add_argument("--pace", type=float, default=0.4, help="seconds between requests")
-    ap.add_argument("--out", type=Path, default=DEFAULT_OUT)
-    ap.add_argument("--fresh", action="store_true",
-                    help="ignore any checkpoint and start the run over")
-    ap.add_argument("-v", "--verbose", action="store_true")
-    args = ap.parse_args()
+def add_arguments(parser: argparse.ArgumentParser) -> None:
+    parser.add_argument("--cookie", required=True, help="the .PremierIDDade cookie value (with or without name=)")
+    parser.add_argument("--names", type=Path, help="file of association names, one per line")
+    parser.add_argument("--assoc-file", type=Path, default=DEFAULT_NAMES_PATH,
+                        help="source of association names when --names is not given")
+    parser.add_argument("--all-florida", action="store_true",
+                        help="query every FL association, not just Miami-Dade County")
+    parser.add_argument("--types", nargs="+", help="override the Miami-Dade document types")
+    parser.add_argument("--limit", type=int, help="cap the number of names queried")
+    parser.add_argument("--pace", type=float, default=0.4, help="seconds between requests")
+    parser.add_argument("--out", type=Path, default=LIENS_DIR)
+    parser.add_argument("--fresh", action="store_true", help="ignore any checkpoint and start the run over")
 
-    logging.basicConfig(
-        level=logging.DEBUG if args.verbose else logging.INFO,
-        format="%(asctime)s %(levelname)-7s %(message)s", datefmt="%H:%M:%S")
 
+def run(args: argparse.Namespace) -> int:
     try:
         names = load_names(args)
     except FileNotFoundError as exc:
@@ -208,95 +153,62 @@ def main() -> int:
     if not names:
         print("\nNo association names to query.\n", file=sys.stderr)
         return 1
-
-    started = time.time()
-    truncated: list[str] = []
-
     try:
-        s = md.session(args.cookie)
-    except md.MiamiDadeError as exc:
+        session = records_miamidade.open_session(args.cookie)
+    except records_miamidade.MiamiDadeError as exc:
         print(f"\n{exc}\n", file=sys.stderr)
         return 1
 
+    started = time.time()
     args.out.mkdir(parents=True, exist_ok=True)
+    checkpoint = NameCheckpoint(args.out, CHECKPOINT_PREFIX)
     if args.fresh:
-        clear_checkpoint(args.out)
-    prior, done_names = load_checkpoint(args.out)
+        checkpoint.clear()
+    prior, done = checkpoint.load()
     if prior:
-        log.info("resuming: %d records from %d names already collected",
-                 len(prior), len(done_names))
-    log.info("querying %d Miami-Dade association names (%d to go)",
-             len(names), len([n for n in names if n not in done_names]))
+        log.info("resuming: %d records from %d names already collected", len(prior), len(done))
+    log.info("querying %d Miami-Dade association names (%d to go)", len(names),
+             len([name for name in names if name not in done]))
 
-    part_path, done_path = checkpoint_paths(args.out)
-    part_fh = part_path.open("a")
-    done_fh = done_path.open("a")
-
-    def on_name_done(name, fresh):
-        for r in fresh:
-            part_fh.write(json.dumps(r, ensure_ascii=False) + "\n")
-        done_fh.write(name + "\n")
-        part_fh.flush()
-        done_fh.flush()
-
-    def progress(i, total, name, found):
+    def progress(i: int, total: int, name: str, found: int) -> None:
         if args.verbose or i % 50 == 0 or i == total:
             log.info("  %d/%d names, %d new records (…%s)", i, total, found, name[:30])
 
+    retrieved_at = now_iso()
     try:
-        new = md.fetch_for_names(s, names, doctypes=args.types, pace=args.pace,
-                                 progress=progress, skip=done_names,
-                                 seen_ids={r["doc_id"] for r in prior},
-                                 on_name_done=on_name_done)
-    except md.MiamiDadeError as exc:
-        part_fh.close(); done_fh.close()
-        print(f"\nMiami-Dade collection failed: {exc}", file=sys.stderr)
-        print(f"Progress is checkpointed — rerun the same command to resume.\n",
+        with checkpoint:
+            fresh = records_miamidade.fetch_for_names(
+                session, names, doctypes=args.types, pace=args.pace, progress=progress, skip=done,
+                seen_ids={row["doc_id"] for row in prior}, on_name_done=checkpoint.add, retrieved_at=retrieved_at)
+    except records_miamidade.MiamiDadeError as exc:
+        print(f"\nMiami-Dade collection failed: {exc}\nProgress is checkpointed — rerun the same command to resume.\n",
               file=sys.stderr)
         return 1
     except KeyboardInterrupt:
-        part_fh.close(); done_fh.close()
-        print("\nInterrupted — progress checkpointed; rerun to resume.\n",
-              file=sys.stderr)
+        print("\nInterrupted — progress checkpointed; rerun to resume.\n", file=sys.stderr)
         return 130
-    finally:
-        if not part_fh.closed:
-            part_fh.close()
-        if not done_fh.closed:
-            done_fh.close()
 
-    records = prior + new
-
-    now = datetime.now(timezone.utc).isoformat()
-    for r in records:
-        r["retrieved_at"] = now
-
+    rows = [dict(row, retrieved_at=row.get("retrieved_at") or retrieved_at) for row in prior + fresh]
     sources = {
-        "retrieved_at": now,
+        "retrieved_at": retrieved_at,
         "source": "Miami-Dade Clerk of the Court & Comptroller — Official Records search API",
         "access": "public search API (anonymous .PremierIDDade cookie); no login, no bulk feed",
-        "page": md.SEARCH_PAGE,
+        "page": records_miamidade.SEARCH_PAGE,
         "method": "per-association party-name query",
-        "document_types": args.types or md.DEFAULT_TYPES,
+        "document_types": args.types or records_miamidade.DEFAULT_TYPES,
         "names_queried": len(names),
-        "records": len(records),
+        "records": len(rows),
         "duration_seconds": round(time.time() - started, 1),
         "coverage": "best-effort, NOT complete",
-        "caveat": (
-            "Per-association name queries against the public search API. Coverage "
-            "is bounded by (a) name-spelling agreement between our association "
-            "list and the Clerk's party index, and (b) a 500-row result cap that "
-            "truncates over-broad names and busy days. This is targeted coverage, "
-            "not a full county index; the paid Official Records FTP folder is the "
-            "complete source."),
+        "caveat": ("Per-association name queries against the public search API. Coverage "
+                   "is bounded by (a) name-spelling agreement between the association "
+                   "list and the Clerk's party index, and (b) a 500-row result cap that "
+                   "truncates over-broad names and busy days. This is targeted coverage, "
+                   "not a full county index; the paid Official Records FTP folder is the "
+                   "complete source."),
     }
-
-    write_outputs(records, sources, args.out)
-    clear_checkpoint(args.out)
-    print_summary(records, truncated)
-    print(f"\nWrote {len(records):,} records to {args.out}/liens_miamidade.jsonl")
+    write_outputs(rows, sources, args.out)
+    checkpoint.clear()
+    print_summary(rows)
+    print(f"\nWrote {len(rows):,} records to {args.out}/liens_miamidade.jsonl")
     return 0
-
-
-if __name__ == "__main__":
-    sys.exit(main())

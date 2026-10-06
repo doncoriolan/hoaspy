@@ -1,13 +1,13 @@
 """Florida condominium associations from the DBPR public-records extracts.
 
-The Division of Florida Condominiums, Timeshares and Mobile Homes publishes its
-registry as five regional CSVs. Each row is one condominium project: name, full
-street address, county, unit count, registration status, and the managing
-entity. `Secondary Status` is the interesting field — it carries values like
-"Delinquent", which is a compliance flag attached to a named community.
+The Division of Florida Condominiums, Timeshares and Mobile Homes publishes
+its registry as five regional CSVs. Each row is one condominium project:
+name, street address, county, unit count, registration status and the
+managing entity. "Secondary Status" carries values like "Delinquent" — a
+compliance flag attached to a named community.
 
-Scope caveat: these are *condominium* projects. Florida HOAs proper are only
-lightly registered with DBPR, so this covers condo/co-op associations well and
+These are *condominium* projects: Florida HOAs proper are only lightly
+registered with DBPR, so condo and co-op associations are covered well and
 non-condo HOAs barely at all.
 
 Source: https://www2.myfloridalicense.com/condos-timeshares-mobile-homes/public-records/
@@ -23,12 +23,13 @@ import re
 import requests
 
 from hoaspy.lib.contract import strip_contacts
+from hoaspy.lib.records import Association
 
-log = logging.getLogger("records.fl")
+log = logging.getLogger(__name__)
 
-BASE = "https://www2.myfloridalicense.com/sto/file_download/extracts/"
-SOURCE_PAGE = ("https://www2.myfloridalicense.com/condos-timeshares-mobile-homes/"
-               "public-records/")
+EXTRACTS_URL = "https://www2.myfloridalicense.com/sto/file_download/extracts/"
+SOURCE_PAGE = "https://www2.myfloridalicense.com/condos-timeshares-mobile-homes/public-records/"
+SOURCE = "dbpr-condo-extract"
 
 # The registry is split by region; together they are the whole state.
 EXTRACTS = {
@@ -41,77 +42,64 @@ EXTRACTS = {
 
 # "1071 HIGHWAY A1A SOUTH, ST. AUGUSTINE, FL 32084" -> street / city / state / zip
 ADDRESS_RE = re.compile(
-    r"^(?P<street>.*),\s*(?P<city>[^,]+),\s*(?P<state>[A-Z]{2})\s+(?P<zip>\d{5}(?:-\d{4})?)\s*$"
-)
+    r"^(?P<street>.*),\s*(?P<city>[^,]+),\s*(?P<state>[A-Z]{2})\s+(?P<zip>\d{5}(?:-\d{4})?)\s*$")
 
 
 def parse_address(raw: str) -> dict:
-    """Split the combined address field. Returns empty parts when it doesn't
-    match rather than guessing — the raw string is always kept."""
-    m = ADDRESS_RE.match((raw or "").strip())
-    if not m:
+    """{address, city, zip} from the combined address column. When it does
+    not match, the raw text stays the address and the rest is empty rather
+    than guessed."""
+    match = ADDRESS_RE.match((raw or "").strip())
+    if not match:
         return {"address": raw or "", "city": "", "zip": ""}
-    return {
-        "address": m.group("street").strip(),
-        "city": m.group("city").strip().title(),
-        "zip": m.group("zip"),
-    }
+    return {"address": match.group("street").strip(), "city": match.group("city").strip().title(),
+            "zip": match.group("zip")}
 
 
-def _int(value: str) -> int | None:
+def whole_number(value) -> int | None:
     try:
         return int(str(value).strip())
     except (TypeError, ValueError):
         return None
 
 
-def fetch(session: requests.Session, timeout: float = 120.0) -> list[dict]:
-    """Download every regional extract and normalise it."""
-    out: list[dict] = []
+def to_record(row: dict, region: str, url: str, retrieved_at: str = "") -> Association:
+    """One extract row as a registry record."""
 
+    def text(column: str) -> str:
+        return (row.get(column) or "").strip()
+
+    return Association(
+        state="FL", source=SOURCE, source_url=url, record_id=text("Project Number"),
+        name=text("Condo Name"), county=text("County"),
+        **parse_address(row.get("Street City State Zip", "")),
+        units=whole_number(row.get("Units")), recorded_date=text("Recorded Date"),
+        status=text("Primary Status"), status_detail=text("Secondary Status"),
+        manager_name=text("Managing Entity Name"), retrieved_at=retrieved_at,
+        extras={
+            "type": "condo", "source_region": region, "file_number": text("File Number"),
+            "address_raw": text("Street City State Zip"), "manager_id": text("Managing Entity Number"),
+            # Some managing entities type their phone number into the route line.
+            "manager_address": strip_contacts(" ".join(
+                part for part in (text("Managing Entity Route"), text("Managing Entity Street")) if part)),
+            "manager_city": text("Managing Entity City"), "manager_state": text("Managing Entity State"),
+            "manager_zip": text("Managing Entity Zip"),
+        })
+
+
+def fetch(session: requests.Session, timeout: float = 120.0, retrieved_at: str = "") -> list[Association]:
+    """Every project of every regional extract, shaped. A region that cannot
+    be fetched is logged and left out."""
+    out: list[Association] = []
     for filename, region in EXTRACTS.items():
-        url = BASE + filename
+        url = EXTRACTS_URL + filename
         try:
-            resp = session.get(url, timeout=timeout)
-            resp.raise_for_status()
+            response = session.get(url, timeout=timeout)
+            response.raise_for_status()
         except requests.RequestException as exc:
             log.warning("could not fetch %s (%s): %s", filename, region, exc)
             continue
-
-        # These files are Latin-1 in practice, not UTF-8.
-        text = resp.content.decode("latin-1")
-        rows = list(csv.DictReader(io.StringIO(text)))
+        rows = list(csv.DictReader(io.StringIO(response.content.decode("latin-1"))))   # Latin-1 in practice
         log.info("%s (%s): %d projects", filename, region, len(rows))
-
-        for row in rows:
-            parts = parse_address(row.get("Street City State Zip", ""))
-            out.append({
-                "state": "FL",
-                "source": "dbpr-condo-extract",
-                "source_region": region,
-                "source_url": url,
-                "record_id": (row.get("Project Number") or "").strip(),
-                "file_number": (row.get("File Number") or "").strip(),
-                "name": (row.get("Condo Name") or "").strip(),
-                "type": "condo",
-                "county": (row.get("County") or "").strip(),
-                **parts,
-                "address_raw": (row.get("Street City State Zip") or "").strip(),
-                "units": _int(row.get("Units")),
-                "recorded_date": (row.get("Recorded Date") or "").strip(),
-                "status": (row.get("Primary Status") or "").strip(),
-                "status_detail": (row.get("Secondary Status") or "").strip(),
-                "manager_id": (row.get("Managing Entity Number") or "").strip(),
-                "manager_name": (row.get("Managing Entity Name") or "").strip(),
-                # Some managing entities type their phone number into the route line.
-                "manager_address": strip_contacts(" ".join(
-                    p for p in ((row.get("Managing Entity Route") or "").strip(),
-                                (row.get("Managing Entity Street") or "").strip()) if p
-                )),
-                "manager_city": (row.get("Managing Entity City") or "").strip(),
-                "manager_state": (row.get("Managing Entity State") or "").strip(),
-                "manager_zip": (row.get("Managing Entity Zip") or "").strip(),
-                "document_url": "",
-            })
-
+        out += [to_record(row, region, url, retrieved_at) for row in rows]
     return out

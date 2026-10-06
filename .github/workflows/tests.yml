@@ -1,7 +1,7 @@
 name: tests
 
-# Runs the whole suite (no network, captured fixtures only) on every pull
-# request and on main.
+# Runs the whole suite (no network, captured fixtures only) and the linter
+# on every pull request and on main.
 #
 # The trigger is `pull_request`, never `pull_request_target`: a pull request
 # from a fork then runs with a read-only token and no secrets, so the code it
@@ -39,3 +39,18 @@ jobs:
         run: pip install -r requirements.txt
       - name: Tests
         run: python -m unittest discover -s tests -t . -v
+
+  lint:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+      - name: Install
+        run: pip install -r requirements-dev.txt
+      - name: Lint
+        run: ruff check .

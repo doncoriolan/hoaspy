@@ -269,26 +269,26 @@ both from a GET of the search page; no login and no captcha.
 
 ```bash
 # Broward: a decade of yearly exports
-./venv/bin/python -m hoaspy.collect.liens.get_liens --years 2015-2025
-./venv/bin/python -m hoaspy.collect.liens.get_liens --years 2025 --all-parties --types LIE LP -v
+./venv/bin/python -m hoaspy liens --years 2015-2025
+./venv/bin/python -m hoaspy liens --years 2025 --all-parties --types LIE LP -v
 
 # Miami-Dade: per-association queries with the anonymous browser cookie (resumable)
-./venv/bin/python -m hoaspy.collect.liens.get_miamidade_liens --cookie '<.PremierIDDade value>'
-./venv/bin/python -m hoaspy.collect.liens.get_miamidade_liens --cookie ... --limit 200 --pace 0.4
-./venv/bin/python -m hoaspy.collect.liens.get_miamidade_liens --cookie ... --names names.txt --fresh
+./venv/bin/python -m hoaspy miamidade-liens --cookie '<.PremierIDDade value>'
+./venv/bin/python -m hoaspy miamidade-liens --cookie ... --limit 200 --pace 0.4
+./venv/bin/python -m hoaspy miamidade-liens --cookie ... --names names.txt --fresh
 
 # NYC ACRIS: no options
-./venv/bin/python -m hoaspy.collect.liens.get_nyc_liens
+./venv/bin/python -m hoaspy nyc-liens
 
 # Cook County IL: sweep every term, fetch the detail pages that are needed (resumable)
-./venv/bin/python -m hoaspy.collect.liens.get_cook_liens
-./venv/bin/python -m hoaspy.collect.liens.get_cook_liens --details all                    # + addresses and co-parties; hours
-./venv/bin/python -m hoaspy.collect.liens.get_cook_liens --no-sweep --details none        # re-shape from the cache, no network
-./venv/bin/python -m hoaspy.collect.liens.get_cook_liens --terms "UNIT OWNERS" --limit-windows 1 -v
+./venv/bin/python -m hoaspy cook-liens
+./venv/bin/python -m hoaspy cook-liens --details all                    # + addresses and co-parties; hours
+./venv/bin/python -m hoaspy cook-liens --no-sweep --details none        # re-shape from the cache, no network
+./venv/bin/python -m hoaspy cook-liens --terms "UNIT OWNERS" --limit-windows 1 -v
 
 # California judgment liens (cookie + token files from the CA SoS sweep)
-./venv/bin/python -m hoaspy.collect.liens.get_ca_ucc --probe
-./venv/bin/python -m hoaspy.collect.liens.get_ca_ucc
+./venv/bin/python -m hoaspy ca-ucc --probe
+./venv/bin/python -m hoaspy ca-ucc
 
 # then rebuild the site and the map
 ./venv/bin/python -m hoaspy.build.build_site && ./venv/bin/python -m hoaspy.build.build_map
@@ -384,8 +384,8 @@ colour ramp uses the recent-5y count (MAP.md).
 ## Tests
 
 From TEST.md: `TestMiamiDadeParsing` (dates, CFN collapse, record
-shaping, cookie check, resume skipping), `TestMiamiDadeCheckpoint` (torn-line
-recovery, clear on success), `TestCaUccParsing` (party splitting, the HOA
+shaping, cookie check, resume skipping), `TestNameCheckpoint` (the shared
+name-by-name resume state: torn-line recovery, clear on success), `TestCaUccParsing` (party splitting, the HOA
 name gate, creditor/debtor roles, offset paging vs bisection),
 `TestCookLiensParsing` (results and detail pages, parties kept apart, the
 bank guard, the document-type map and drops, the walk back through the row

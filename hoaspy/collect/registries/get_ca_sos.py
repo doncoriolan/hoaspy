@@ -1,16 +1,18 @@
-#!/usr/bin/env python3
-"""Aggregate California HOAs from the CA Secretary of State bizfile search.
+"""California HOAs from the Secretary of State's bizfile business search.
+
+    python -m hoaspy ca-sos                        # the whole sweep (resumable)
+    python -m hoaspy ca-sos --phase expand         # only mine collected names for new words
+    python -m hoaspy ca-sos --ingest saved_*.jsonl # no network: shape rows saved from a browser
 
 California has no statewide HOA registry, but every common-interest
-development (CID) is on file with the Secretary of State — as a
-"Nonprofit Corporation - CA - Mutual Benefit - Common Interest Development
+development (CID) is on file with the Secretary of State: as a "Nonprofit
+Corporation - CA - Mutual Benefit - Common Interest Development
 Corporation" (FILING_TYPE_ID 69), an "Unincorporated Common Interest
-Development" (62, the SI-CID statements TIC/condo boards file), or the rare
-"Public Benefit - CID Corporation" (72). Anything filed under one of those
-three types *is* an HOA by definition, whatever its name. HOA-shaped names
-also turn up under plain Mutual/Public Benefit nonprofits, LLCs and stock
-corporations; those are kept only when the name passes the association gate
-build_site applies everywhere.
+Development" (62, the SI-CID statements TIC and condo boards file), or the
+rare "Public Benefit - CID Corporation" (72). Anything filed under one of
+those three types *is* an HOA by definition, whatever its name. HOA-shaped
+names also turn up under plain nonprofits, LLCs and stock corporations;
+those are kept only when the name passes the association gate.
 
     POST https://bizfileonline.sos.ca.gov/api/Records/businesssearch
     body {"SEARCH_VALUE": <term>, "SEARCH_TYPE_ID": "1",
@@ -19,44 +21,45 @@ build_site applies everywhere.
     -> {"rows": {<id>: {TITLE:["Name (FilingNo)"], ENTITY_TYPE, STATUS,
                         STANDING, FILING_DATE, AGENT, ...}}}
 
-What the live API does (probed 2026-09-01):
+What the API does:
 
-* **500-row cap, no paging.** Beaten by bisecting the FILING_DATE window:
-  a capped (term, type, window) is split at its midpoint until every leaf
-  window is under the cap. A capped single-day window is logged and kept.
-* **Search is word-based with limited prefix expansion.** "hoa" also hits
+* **A 500-row cap and no paging.** Beaten by bisecting the FILING_DATE
+  window: a capped (term, type, window) is split at its midpoint until
+  every leaf window is under the cap. A capped single-day window is
+  logged and kept.
+* **Word search with limited prefix expansion.** "hoa" also hits
   HOANG/HOARDING, but wildcards and short tokens are truncated by the
-  engine ("b*" returns 18 CID corps, "the"/"inc"/"of" almost nothing), and
-  an empty or "*" term returns nothing — so enumeration has to go through
-  real words. Phase 1 sweeps the three CID types with a broad word list,
-  phase 2 sweeps every entity type with the HOA keywords, and phase 3
-  mines the names collected so far for the most frequent words not yet
-  searched and sweeps those too, logging the yield of each so the tail can
-  be judged.
+  engine and an empty term returns nothing, so enumeration has to go
+  through real words. Phase 1 sweeps the three CID types with a broad
+  word list, phase 2 sweeps every entity type with the HOA keywords, and
+  phase 3 mines the names collected so far for the most frequent words
+  not yet searched and sweeps those, logging the yield of each.
 * **Auth.** Requests need the browser's Imperva cookies *and* the Okta
-  bearer token the site attaches (`authorization` header; 403 without it).
-  The token lives one hour. On 401/403 the run pauses and polls
+  bearer token the site attaches (`authorization` header; 403 without
+  it). The token lives one hour. On 401/403 the run pauses and polls
   `ca_cookie.txt` / `ca_token.txt` for a refresh (copy both from a
-  businesssearch request in DevTools → Network → Request Headers), then
+  businesssearch request in DevTools -> Network -> Request Headers), then
   resumes from its checkpoint. Cookies are IP/TLS-bound: run this on the
   machine whose browser produced them.
 
-Output rows match records/state_corps.jsonl; CA rows are replaced wholesale
-on a completed run. CID-typed rows carry `is_association: true` so
-build_site.add_corps keeps them even when the name lacks an HOA keyword.
-Raw API rows are also kept in records/ca_sos_raw.jsonl for re-shaping.
-
-Government source; public registry names, referenced not re-hosted.
+Output: California's rows in records/state_corps.jsonl (replaced wholesale
+on a completed run) in the corporate-roster shape plus `bizfile_id`,
+`standing` and `is_association` (true for CID-typed rows, so a consumer
+keeps them even when the name lacks an HOA keyword). Raw API rows are
+kept in records/ca_sos_raw.jsonl for re-shaping. Checkpoint:
+records/.ca_sos_done.txt (finished and split windows),
+records/.ca_sos_partial.jsonl (rows so far) and records/.ca_sos_words.json
+(which words were swept against which type — kept after a completed run,
+so a later expansion tries only new pairs).
 """
+
 from __future__ import annotations
 
 import argparse
 import datetime as dt
-import json
 import logging
 import random
 import re
-import sys
 import time
 from collections import Counter, defaultdict
 from pathlib import Path
@@ -64,22 +67,25 @@ from pathlib import Path
 import requests
 
 from hoaspy import ROOT
-OUT_DEFAULT = ROOT / "records" / "state_corps.jsonl"
-RAW_DEFAULT = ROOT / "records" / "ca_sos_raw.jsonl"
-CKPT_DONE = ROOT / "records" / ".ca_sos_done.txt"
-CKPT_PARTIAL = ROOT / "records" / ".ca_sos_partial.jsonl"
-# Which words have been swept against which type. Survives a completed run
-# (unlike the window checkpoint) so a later --phase expand only tries new
-# (word, type) pairs.
-WORDS_FILE = ROOT / "records" / ".ca_sos_words.json"
-COOKIE_FILE = ROOT / "ca_cookie.txt"
-TOKEN_FILE = ROOT / "ca_token.txt"
+from hoaspy.collect.registries import CORPORATIONS_PATH
+from hoaspy.lib.http import BROWSER_USER_AGENT
+from hoaspy.lib.jsonl import append_row, now_iso, read_json, read_rows, replace_rows, write_json
+from hoaspy.lib.names import CORPORATION_NAME_RE
+from hoaspy.lib.records import Association
+
+DEFAULT_OUTPUT_PATH = CORPORATIONS_PATH
+DEFAULT_RAW_PATH = ROOT / "records" / "ca_sos_raw.jsonl"
+DONE_PATH = ROOT / "records" / ".ca_sos_done.txt"
+PARTIAL_PATH = ROOT / "records" / ".ca_sos_partial.jsonl"
+WORDS_PATH = ROOT / "records" / ".ca_sos_words.json"
+COOKIE_PATH = ROOT / "ca_cookie.txt"
+TOKEN_PATH = ROOT / "ca_token.txt"
 
 SEARCH_URL = "https://bizfileonline.sos.ca.gov/api/Records/businesssearch"
 SOURCE = "California Secretary of State — bizfile Business Search"
-SOURCE_URL = "https://bizfileonline.sos.ca.gov/search/business"
-UA = ("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 "
-      "(KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36")
+SOURCE_PAGE = "https://bizfileonline.sos.ca.gov/search/business"
+SITE_URL = "https://bizfileonline.sos.ca.gov"
+CHROME_VERSION = re.search(r"Chrome/(\d+)", BROWSER_USER_AGENT).group(1)
 
 # FILING_TYPE_ID -> entity type, confirmed by sweeping ids 1-120 against
 # the live API (only ids that returned rows for "hoa" are listed).
@@ -106,7 +112,7 @@ FILING_TYPES = {
 CID_TYPES = ("62", "69", "72")
 CID_LABEL = "Common Interest Development"
 
-# Phase 1 — words that appear in CID names, broad on purpose: the goal is to
+# Phase 1: words that appear in CID names, broad on purpose — the goal is to
 # touch every CID row at least once, and the date bisection handles the
 # volume. Digits work too (the engine prefix-matches numeric tokens), which
 # catches the address-named SF/LA condo boards ("1004 W. BALBOA HOA").
@@ -130,9 +136,9 @@ CID_KEYWORDS = [
     "0", "1", "2", "3", "4", "5", "6", "7", "8", "9",
 ]
 
-# Phase 2 — HOA-shaped words searched across every entity type. Kept in
-# lockstep with records_sunbiz.ASSOCIATION_NAME_RE so each hit also passes
-# the name gate (the engine prefix-matches, so CONDO also finds CONDOMINIUM).
+# Phase 2: HOA-shaped words searched across every entity type, in step with
+# CORPORATION_NAME_RE so each hit also passes the name gate (the engine
+# prefix-matches, so CONDO also finds CONDOMINIUM).
 NAMED_KEYWORDS = [
     "HOA", "HOMEOWNERS", "HOMEOWNER", "HOME OWNERS", "CONDOMINIUM", "CONDO",
     "PROPERTY OWNERS", "COMMUNITY ASSOCIATION", "MASTER ASSOCIATION",
@@ -148,92 +154,81 @@ STOPWORDS = {
 
 CAP = 500           # a search returning this many rows is truncated
 DATE_MIN = "1850-01-01"
+EXHAUSTED_AFTER = 20            # expansion words in a row that found nothing
 
-_TITLE_RE = re.compile(r"^(?P<name>.*?)\s*\((?P<num>[^()]+)\)\s*$")
+TITLE_RE = re.compile(r"^(?P<name>.*?)\s*\((?P<num>[^()]+)\)\s*$")
 # Letters only: the engine folds "OWNERS'" into OWNERS, so possessives would
 # just re-run a word already swept.
-_WORD_RE = re.compile(r"[A-Z]{3,}")
+WORD_RE = re.compile(r"[A-Z]{3,}")
 
-log = logging.getLogger("ca_sos")
+log = logging.getLogger(__name__)
 
 
-# ----------------------------------------------------------------- shaping
+# ---- shaping -------------------------------------------------------------------
 
 def clean_title(title: str) -> tuple[str, str]:
-    """Split "1 Buena Vista HOA (B20250040101)" -> (name, filing_number)."""
+    """'1 Buena Vista HOA (B20250040101)' -> (name, filing number)."""
     title = " ".join(title.split())
-    m = _TITLE_RE.match(title)
-    if m:
-        return m.group("name").strip(), m.group("num").strip()
+    match = TITLE_RE.match(title)
+    if match:
+        return match.group("name").strip(), match.group("num").strip()
     return title, ""
 
 
 def iso_date(mdy: str) -> str:
-    """"03/21/2025" -> "2025-03-21"; junk -> ""."""
-    m = re.match(r"\s*(\d{1,2})/(\d{1,2})/(\d{4})\s*$", mdy or "")
-    if not m:
+    """'03/21/2025' -> '2025-03-21'; '' when the text is not a date."""
+    match = re.match(r"\s*(\d{1,2})/(\d{1,2})/(\d{4})\s*$", mdy or "")
+    if not match:
         return ""
-    mo, da, yr = m.groups()
-    return f"{yr}-{int(mo):02d}-{int(da):02d}"
+    month, day, year = match.groups()
+    return f"{year}-{int(month):02d}-{int(day):02d}"
 
 
 def mdy_date(iso: str) -> str:
-    """"2025-03-21" -> "03/21/2025" (what the API's FILING_DATE filter takes)."""
-    y, m, d = iso.split("-")
-    return f"{m}/{d}/{y}"
+    """'2025-03-21' -> '03/21/2025' (what the API's FILING_DATE filter takes)."""
+    year, month, day = iso.split("-")
+    return f"{month}/{day}/{year}"
 
 
 def is_cid(row: dict) -> bool:
     return CID_LABEL in (row.get("ENTITY_TYPE") or "")
 
 
-def to_record(row: dict) -> dict | None:
-    """Shape one bizfile row into a records/state_corps.jsonl row.
-
-    CID-typed rows are HOAs by definition and are always kept; every other
-    entity type must pass the association name gate build_site applies
-    (so "1058 HOAGIE LLC" is dropped and "1014-1016 Diamond St HOA LLC" kept).
-    Name reservations are not entities and are dropped outright."""
-    title = (row.get("TITLE") or [""])[0]
-    name, filing_number = clean_title(title)
+def to_record(row: dict, retrieved_at: str = "") -> Association | None:
+    """One bizfile row as a corporate-roster record, or None when it is not
+    an HOA: a CID-typed row is one by definition and is always kept; every
+    other entity type must pass the association name gate (so "1058 HOAGIE
+    LLC" is dropped and "1014-1016 Diamond St HOA LLC" kept); a name
+    reservation is not an entity."""
+    name, filing_number = clean_title((row.get("TITLE") or [""])[0])
     if not name or (row.get("ENTITY_TYPE") or "") == "Name Reservation":
         return None
     cid = is_cid(row)
-    if not cid:
-        from hoaspy.collect.registries import records_sunbiz
-        if not records_sunbiz.ASSOCIATION_NAME_RE.search(name):
-            return None
-    return {
-        "state": "CA",
-        "source": SOURCE,
-        "source_url": SOURCE_URL,
-        "record_id": filing_number or str(row.get("ID", "")),
-        "bizfile_id": str(row.get("ID", "")),
-        "name": name,
-        "corp_status": row.get("STATUS", "") or "",
-        "standing": row.get("STANDING", "") or "",
-        "address": "", "city": "", "county": "", "zip": "",
-        "incorporated": iso_date(row.get("FILING_DATE", "")),
-        "registered_agent": (row.get("AGENT") or "").strip(),
-        "entity_type": row.get("ENTITY_TYPE", "") or "",
-        "is_association": cid,
-    }
+    if not cid and not CORPORATION_NAME_RE.search(name):
+        return None
+    return Association(
+        state="CA", source=SOURCE, source_url=SOURCE_PAGE, record_id=filing_number or str(row.get("ID", "")),
+        name=name, corp_status=row.get("STATUS", "") or "", incorporated=iso_date(row.get("FILING_DATE", "")),
+        registered_agent=(row.get("AGENT") or "").strip(), entity_type=row.get("ENTITY_TYPE", "") or "",
+        retrieved_at=retrieved_at,
+        extras={"bizfile_id": str(row.get("ID", "")), "standing": row.get("STANDING", "") or "",
+                "is_association": cid})
 
 
 def parse_response(payload: dict) -> tuple[list[dict], int]:
-    """Return (records, raw_row_count). raw_row_count feeds cap detection;
-    records are the kept subset shaped for state_corps.jsonl."""
+    """(the kept rows, shaped; the raw row count, which feeds cap detection)."""
     rows = payload.get("rows") or {}
-    out = []
+    kept = []
     for row in rows.values():
-        rec = to_record(row)
-        if rec:
-            out.append(rec)
-    return out, len(rows)
+        record = to_record(row)
+        if record:
+            kept.append(record.as_row())
+    return kept, len(rows)
 
 
-def make_body(term: str, filing_type: str = "", start: str | None = None,
-              end: str | None = None, status: str = "") -> dict:
+def search_body(term: str, filing_type: str = "", start: str | None = None,
+                end: str | None = None, status: str = "") -> dict:
+    """The businesssearch request body for one query."""
     return {
         "SEARCH_VALUE": term, "SEARCH_FILTER_TYPE_ID": "0",
         "SEARCH_TYPE_ID": "1", "FILING_TYPE_ID": filing_type,
@@ -251,86 +246,84 @@ def make_body(term: str, filing_type: str = "", start: str | None = None,
     }
 
 
-# ------------------------------------------------------------ date windows
+# ---- date windows -------------------------------------------------------------
 
 def split_window(start: str, end: str) -> tuple[tuple[str, str], tuple[str, str]]:
-    """Bisect an inclusive ISO date window into two adjacent halves."""
-    a = dt.date.fromisoformat(start)
-    b = dt.date.fromisoformat(end)
-    if a >= b:
+    """An inclusive ISO date window as two adjacent halves."""
+    first = dt.date.fromisoformat(start)
+    last = dt.date.fromisoformat(end)
+    if first >= last:
         raise ValueError(f"cannot split single-day window {start}")
-    mid = a + (b - a) // 2
-    return (start, mid.isoformat()), ((mid + dt.timedelta(days=1)).isoformat(), end)
+    middle = first + (last - first) // 2
+    return (start, middle.isoformat()), ((middle + dt.timedelta(days=1)).isoformat(), end)
 
 
 def today_iso() -> str:
     return dt.date.today().isoformat()
 
 
-# ------------------------------------------------------------------ client
+# ---- the client ---------------------------------------------------------------
 
 class BlockedError(Exception):
-    """401/403 or Imperva challenge — cookie/token need refreshing."""
+    """401/403 or an Imperva challenge: the cookie and token need refreshing."""
 
 
-def session(cookie: str, token: str = "") -> requests.Session:
+def open_session(cookie: str, token: str = "") -> requests.Session:
+    """A session carrying the browser's cookie and bearer token, with the
+    header set the site's own frontend sends and nothing more."""
     cookie = (cookie or "").strip()
     if not cookie:
         raise ValueError("empty CA SoS cookie — paste the bizfile Cookie header")
-    s = requests.Session()
-    # The exact header set the site's own frontend sends (captured from a
-    # browser businesssearch request) — nothing beyond what Chrome sends.
-    s.headers.update({
-        "User-Agent": UA, "Accept": "*/*", "Content-Type": "application/json",
+    session = requests.Session()
+    session.headers.update({
+        "User-Agent": BROWSER_USER_AGENT, "Accept": "*/*", "Content-Type": "application/json",
         "Accept-Language": "en-US,en;q=0.9",
-        "Origin": "https://bizfileonline.sos.ca.gov",
-        "Referer": SOURCE_URL, "Cookie": cookie,
+        "Origin": SITE_URL, "Referer": SOURCE_PAGE, "Cookie": cookie,
         "Cache-Control": "no-cache", "Pragma": "no-cache", "Priority": "u=1, i",
-        "Sec-Fetch-Dest": "empty", "Sec-Fetch-Mode": "cors",
-        "Sec-Fetch-Site": "same-origin",
-        "sec-ch-ua": '"Not=A?Brand";v="99", "Google Chrome";v="151", "Chromium";v="151"',
+        "Sec-Fetch-Dest": "empty", "Sec-Fetch-Mode": "cors", "Sec-Fetch-Site": "same-origin",
+        "sec-ch-ua": f'"Not=A?Brand";v="99", "Google Chrome";v="{CHROME_VERSION}", "Chromium";v="{CHROME_VERSION}"',
         "sec-ch-ua-mobile": "?0", "sec-ch-ua-platform": '"macOS"',
     })
     if token.strip():
-        s.headers["authorization"] = token.strip()
-    return s
+        session.headers["authorization"] = token.strip()
+    return session
 
 
-def search(s: requests.Session, term: str, filing_type: str = "",
-           start: str | None = None, end: str | None = None,
-           timeout: int = 60, url: str = SEARCH_URL, body_fn=make_body,
-           parse_fn=None, **extra) -> tuple[list[dict], int, dict]:
-    """One API call -> (records, raw_row_count, raw_rows). `url`/`body_fn`/
-    `parse_fn` let the same session, auth and retry logic drive bizfile's
-    other search endpoints (get_ca_ucc.py uses the UCC/judgment-lien one)."""
-    r = s.post(url, json=body_fn(term, filing_type, start, end, **extra),
-               timeout=timeout)
-    if r.status_code in (401, 403) or "Request unsuccessful" in r.text[:400] \
-            or "_Incapsula_" in r.text[:2000]:
-        raise BlockedError(f"HTTP {r.status_code} on {term!r}/{filing_type}")
-    r.raise_for_status()
+def search_once(session: requests.Session, term: str, filing_type: str = "",
+                start: str | None = None, end: str | None = None,
+                timeout: int = 60, url: str = SEARCH_URL, body_fn=search_body,
+                parse_fn=None, **extra) -> tuple[list[dict], int, dict]:
+    """One API call -> (kept rows, raw row count, raw rows). `url`,
+    `body_fn` and `parse_fn` let the same session, auth and retry logic
+    drive bizfile's other search endpoints (the ca-ucc command uses the
+    UCC / judgment-lien one)."""
+    response = session.post(url, json=body_fn(term, filing_type, start, end, **extra), timeout=timeout)
+    if response.status_code in (401, 403) or "Request unsuccessful" in response.text[:400] \
+            or "_Incapsula_" in response.text[:2000]:
+        raise BlockedError(f"HTTP {response.status_code} on {term!r}/{filing_type}")
+    response.raise_for_status()
     try:
-        payload = r.json()
-    except ValueError:
-        raise BlockedError(f"non-JSON on {term!r}/{filing_type} (login/challenge)")
-    recs, raw = (parse_fn or parse_response)(payload)
+        payload = response.json()
+    except ValueError as exc:
+        raise BlockedError(f"non-JSON on {term!r}/{filing_type} (login/challenge)") from exc
+    kept, raw_count = (parse_fn or parse_response)(payload)
     rows = payload.get("rows") or {}
     if isinstance(payload.get("edge"), dict):
         # Paged endpoints (uccsearch) report offset/limit/total; pass it on.
         rows = dict(rows)
         rows["__edge__"] = payload["edge"]
-    return recs, raw, rows
+    return kept, raw_count, rows
 
 
 class Client:
-    """Paced, retrying search client that pauses for a credential refresh
-    on 401/403 instead of dying: it polls the cookie/token files for a
+    """A paced, retrying search client that pauses for a credential refresh
+    on 401/403 instead of dying: it polls the cookie and token files for a
     newer mtime for up to `wait_minutes`, then resumes."""
 
-    def __init__(self, cookie_file: Path, token_file: Path, pace: float = 1.0,
+    def __init__(self, cookie_path: Path, token_path: Path, pace: float = 1.0,
                  wait_minutes: float = 90, max_requests: int = 0,
-                 url: str = SEARCH_URL, body_fn=make_body, parse_fn=None):
-        self.cookie_file, self.token_file = cookie_file, token_file
+                 url: str = SEARCH_URL, body_fn=search_body, parse_fn=None):
+        self.cookie_path, self.token_path = cookie_path, token_path
         self.pace, self.wait_minutes = pace, wait_minutes
         self.max_requests = max_requests
         self.url, self.body_fn, self.parse_fn = url, body_fn, parse_fn
@@ -340,22 +333,22 @@ class Client:
         self.reload()
 
     def _mtimes(self) -> tuple[float, float]:
-        return (self.cookie_file.stat().st_mtime if self.cookie_file.exists() else 0.0,
-                self.token_file.stat().st_mtime if self.token_file.exists() else 0.0)
+        return (self.cookie_path.stat().st_mtime if self.cookie_path.exists() else 0.0,
+                self.token_path.stat().st_mtime if self.token_path.exists() else 0.0)
 
     def reload(self) -> None:
-        cookie = self.cookie_file.read_text() if self.cookie_file.exists() else ""
-        token = self.token_file.read_text() if self.token_file.exists() else ""
-        self.session = session(cookie, token)
+        cookie = self.cookie_path.read_text() if self.cookie_path.exists() else ""
+        token = self.token_path.read_text() if self.token_path.exists() else ""
+        self.session = open_session(cookie, token)
         self._stamp = self._mtimes()
 
     def wait_for_refresh(self) -> bool:
-        """Block until ca_cookie.txt or ca_token.txt changes. False on timeout."""
-        log.error("bizfile rejected the credentials (token expires hourly).")
-        log.error("Refresh: DevTools → Network → 'businesssearch' → Request Headers; "
+        """Block until the cookie or token file changes; False on timeout."""
+        log.error("bizfile rejected the credentials (the token expires hourly).")
+        log.error("Refresh: DevTools -> Network -> 'businesssearch' -> Request Headers; "
                   "paste 'authorization' into %s and 'cookie' into %s. "
-                  "Waiting up to %.0f min; checkpoint is safe.",
-                  self.token_file.name, self.cookie_file.name, self.wait_minutes)
+                  "Waiting up to %.0f min; the checkpoint is safe.",
+                  self.token_path.name, self.cookie_path.name, self.wait_minutes)
         deadline = time.time() + self.wait_minutes * 60
         while time.time() < deadline:
             time.sleep(15)
@@ -378,36 +371,33 @@ class Client:
         while True:
             self.requests += 1
             try:
-                out = search(self.session, term, filing_type, start, end,
-                             url=self.url, body_fn=self.body_fn,
-                             parse_fn=self.parse_fn, **extra)
+                found = search_once(self.session, term, filing_type, start, end,
+                                    url=self.url, body_fn=self.body_fn, parse_fn=self.parse_fn, **extra)
                 time.sleep(self.pace * random.uniform(0.7, 1.4))
-                return out
-            except BlockedError as e:
+                return found
+            except BlockedError as exc:
                 blocked += 1
-                log.warning("%s", e)
+                log.warning("%s", exc)
                 if blocked == 1:
                     time.sleep(5)  # a single transient 403 happens; retry once
                     continue
                 if not self.wait_for_refresh():
                     raise
                 blocked = 0
-            except (requests.HTTPError, requests.ConnectionError,
-                    requests.Timeout) as e:
-                log.warning("transient error %s — backing off %.0fs", e, backoff)
+            except (requests.HTTPError, requests.ConnectionError, requests.Timeout) as exc:
+                log.warning("transient error %s — backing off %.0fs", exc, backoff)
                 time.sleep(backoff)
                 backoff = min(backoff * 2, 300)
 
 
-# -------------------------------------------------------------- checkpoint
+# ---- the checkpoint -----------------------------------------------------------
 
 class Checkpoint:
-    """Append-only log of finished ("DONE key") and bisected ("SPLIT key")
+    """An append-only log of finished ("DONE key") and bisected ("SPLIT key")
     windows plus the shaped rows collected so far. path=None keeps it in
     memory (tests)."""
 
-    def __init__(self, done_path: Path | None, partial_path: Path | None,
-                 raw_path: Path | None = None):
+    def __init__(self, done_path: Path | None, partial_path: Path | None, raw_path: Path | None = None):
         self.done_path, self.partial_path, self.raw_path = done_path, partial_path, raw_path
         self.done: set[str] = set()
         self.split: set[str] = set()
@@ -417,31 +407,31 @@ class Checkpoint:
 
     def load(self) -> None:
         if self.done_path and self.done_path.exists():
-            for ln in self.done_path.read_text().splitlines():
-                tag, _, key = ln.partition(" ")
+            for line in self.done_path.read_text().splitlines():
+                tag, _, key = line.partition(" ")
                 if tag == "DONE":
                     self.done.add(key)
                 elif tag == "SPLIT":
                     self.split.add(key)
-        if self.partial_path and self.partial_path.exists():
-            for ln in self.partial_path.read_text().splitlines():
-                try:
-                    rec = json.loads(ln)
-                except json.JSONDecodeError:
-                    continue  # torn final line from a hard kill
-                self.by_id[rec["bizfile_id"]] = rec
-        if self.raw_path and self.raw_path.exists():
-            for ln in self.raw_path.read_text().splitlines():
-                try:
-                    self.raw_ids.add(str(json.loads(ln).get("ID", "")))
-                except (json.JSONDecodeError, AttributeError):
-                    continue
+        if self.partial_path:
+            for row in read_rows(self.partial_path, skip_bad=True):
+                self.by_id[row["bizfile_id"]] = row
+        if self.raw_path:
+            for row in read_rows(self.raw_path, skip_bad=True):
+                if isinstance(row, dict):
+                    self.raw_ids.add(str(row.get("ID", "")))
 
     def _append(self, path: Path | None, line: str) -> None:
         if path:
             path.parent.mkdir(parents=True, exist_ok=True)
-            with path.open("a") as fh:
+            with path.open("a", encoding="utf-8") as fh:
                 fh.write(line + "\n")
+
+    def _append_row(self, path: Path | None, row: dict) -> None:
+        if path:
+            path.parent.mkdir(parents=True, exist_ok=True)
+            with path.open("a", encoding="utf-8") as fh:
+                append_row(fh, row)
 
     def mark_done(self, key: str) -> None:
         self.done.add(key)
@@ -451,50 +441,50 @@ class Checkpoint:
         self.split.add(key)
         self._append(self.done_path, "SPLIT " + key)
 
-    def add(self, records: list[dict], raw_rows: dict) -> int:
+    def add(self, rows: list[dict], raw_rows: dict) -> int:
+        """Record the shaped rows and the raw rows of one answer; returns how many rows were new."""
         new = 0
-        for rec in records:
-            if rec["bizfile_id"] in self.by_id:
+        for row in rows:
+            if row["bizfile_id"] in self.by_id:
                 continue
-            self.by_id[rec["bizfile_id"]] = rec
-            self._append(self.partial_path, json.dumps(rec, ensure_ascii=False))
+            self.by_id[row["bizfile_id"]] = row
+            self._append_row(self.partial_path, row)
             new += 1
-        for rid, row in raw_rows.items():
-            rid = str(rid)
-            if rid in self.raw_ids:
+        for row_id, row in raw_rows.items():
+            row_id = str(row_id)
+            if row_id in self.raw_ids:
                 continue
-            self.raw_ids.add(rid)
-            self._append(self.raw_path, json.dumps(row, ensure_ascii=False))
+            self.raw_ids.add(row_id)
+            self._append_row(self.raw_path, row)
         return new
 
-    def seed(self, records: list[dict]) -> int:
+    def seed(self, rows: list[dict]) -> int:
         """Load previously written rows into memory (not re-appended to the
         partial log) so an expansion-only run can mine their names."""
-        n = 0
-        for rec in records:
-            bid = rec.get("bizfile_id")
-            if bid and bid not in self.by_id:
-                self.by_id[bid] = rec
-                n += 1
-        return n
+        count = 0
+        for row in rows:
+            bizfile_id = row.get("bizfile_id")
+            if bizfile_id and bizfile_id not in self.by_id:
+                self.by_id[bizfile_id] = row
+                count += 1
+        return count
 
     def clear(self) -> None:
-        for p in (self.done_path, self.partial_path):
-            if p:
-                p.unlink(missing_ok=True)
+        for path in (self.done_path, self.partial_path):
+            if path:
+                path.unlink(missing_ok=True)
 
 
-# ------------------------------------------------------------------- sweep
+# ---- the sweep ----------------------------------------------------------------
 
 class Sweeper:
     """Runs (term, type) searches over a date window, bisecting the window
     wherever the 500-row cap is hit. `search_fn(term, type, start, end)`
-    returns (records, raw_count, raw_rows) — the Client, or a fake in tests."""
+    returns (rows, raw_count, raw_rows): the Client, or a fake in tests."""
 
-    def __init__(self, search_fn, ckpt: Checkpoint, date_min: str = DATE_MIN,
-                 date_max: str | None = None, words_path: Path | None = None,
-                 cap: int = CAP):
-        self.search_fn, self.ckpt = search_fn, ckpt
+    def __init__(self, search_fn, checkpoint: Checkpoint, date_min: str = DATE_MIN,
+                 date_max: str | None = None, words_path: Path | None = None, cap: int = CAP):
+        self.search_fn, self.checkpoint = search_fn, checkpoint
         self.cap = cap
         self.date_min = date_min
         self.date_max = date_max or today_iso()
@@ -506,300 +496,240 @@ class Sweeper:
         self.words_used: dict[str, set[str]] = defaultdict(set)
         self.words_path = words_path
         if words_path and words_path.exists():
-            try:
-                for t, ws in json.loads(words_path.read_text()).items():
-                    self.words_used[t] = set(ws)
-            except (json.JSONDecodeError, AttributeError):
-                pass
+            used = read_json(words_path, {})
+            if isinstance(used, dict):
+                for filing_type, words in used.items():
+                    self.words_used[filing_type] = set(words)
 
     @staticmethod
-    def key(term: str, ftype: str, start: str, end: str) -> str:
-        return f"{term}|{ftype}|{start}|{end}"
+    def key(term: str, filing_type: str, start: str, end: str) -> str:
+        return f"{term}|{filing_type}|{start}|{end}"
 
     def save_words(self) -> None:
         if self.words_path:
-            self.words_path.parent.mkdir(parents=True, exist_ok=True)
-            self.words_path.write_text(json.dumps(
-                {t: sorted(ws) for t, ws in self.words_used.items()}, indent=0))
+            write_json(self.words_path, {filing_type: sorted(words) for filing_type, words in self.words_used.items()})
 
-    def run_term(self, term: str, ftype: str) -> int:
-        """Sweep one (term, type) over the whole date range; return new rows."""
-        before = len(self.ckpt.by_id)
-        self._window(term, ftype, self.date_min, self.date_max)
-        new = len(self.ckpt.by_id) - before
-        self.term_yield[f"{term}|{ftype}"] += new
-        self.words_used[ftype].add(term.upper())
+    def run_term(self, term: str, filing_type: str) -> int:
+        """Sweep one (term, type) over the whole date range; returns the new rows."""
+        before = len(self.checkpoint.by_id)
+        self._window(term, filing_type, self.date_min, self.date_max)
+        new = len(self.checkpoint.by_id) - before
+        self.term_yield[f"{term}|{filing_type}"] += new
+        self.words_used[filing_type].add(term.upper())
         self.save_words()
         return new
 
-    def _window(self, term: str, ftype: str, start: str, end: str) -> None:
-        key = self.key(term, ftype, start, end)
-        if key in self.ckpt.done:
+    def _window(self, term: str, filing_type: str, start: str, end: str) -> None:
+        key = self.key(term, filing_type, start, end)
+        if key in self.checkpoint.done:
             return
-        if key not in self.ckpt.split:
-            recs, raw, raw_rows = self.search_fn(term, ftype, start, end)
+        if key not in self.checkpoint.split:
+            rows, raw_count, raw_rows = self.search_fn(term, filing_type, start, end)
             self.queries += 1
-            raw_rows = {k: v for k, v in raw_rows.items() if k != "__edge__"}
-            new = self.ckpt.add(recs, raw_rows)
-            capped = raw >= self.cap
+            raw_rows = {row_id: row for row_id, row in raw_rows.items() if row_id != "__edge__"}
+            new = self.checkpoint.add(rows, raw_rows)
+            capped = raw_count >= self.cap
             log.info("%-22s type=%-2s %s..%s -> %3d rows, %3d kept, %3d new%s",
-                     term[:22], ftype or "*", start, end, raw, len(recs), new,
-                     "  CAPPED→split" if capped and start != end else
-                     ("  CAPPED-day" if capped else ""))
+                     term[:22], filing_type or "*", start, end, raw_count, len(rows), new,
+                     "  CAPPED->split" if capped and start != end else ("  CAPPED-day" if capped else ""))
             if not capped or start == end:
                 if capped:
                     self.capped_days.append(key)
-                self.ckpt.mark_done(key)
+                self.checkpoint.mark_done(key)
                 return
-            self.ckpt.mark_split(key)
+            self.checkpoint.mark_split(key)
         left, right = split_window(start, end)
-        self._window(term, ftype, *left)
-        self._window(term, ftype, *right)
-        self.ckpt.mark_done(key)
+        self._window(term, filing_type, *left)
+        self._window(term, filing_type, *right)
+        self.checkpoint.mark_done(key)
 
 
 def mine_words(names: list[str], used: set[str], limit: int) -> list[str]:
-    """Most frequent name words (>=3 letters) not yet searched, by document
-    frequency, minus engine stopwords. Feeds the expansion phase."""
-    df: Counter = Counter()
-    for n in names:
-        df.update(set(_WORD_RE.findall(n.upper())))
+    """The most frequent name words (3+ letters) not yet searched, by
+    document frequency, minus the engine's stopwords. Feeds the expansion phase."""
+    frequency: Counter = Counter()
+    for name in names:
+        frequency.update(set(WORD_RE.findall(name.upper())))
     out = []
     # Ties break alphabetically so the plan (and its checkpoint) is stable.
-    for w, _ in sorted(df.items(), key=lambda kv: (-kv[1], kv[0])):
-        if w in used or w in STOPWORDS:
+    for word, _ in sorted(frequency.items(), key=lambda item: (-item[1], item[0])):
+        if word in used or word in STOPWORDS:
             continue
-        out.append(w)
+        out.append(word)
         if len(out) >= limit:
             break
     return out
 
 
 def load_dropped(paths: list[Path]) -> dict[str, dict]:
-    """Raw API rows from files saved by ca_sos_browser.js (one row per line)
-    or a whole captured response ({"rows": {...}}), keyed by bizfile ID."""
+    """Raw API rows from files saved out of a browser (one row per line) or
+    a whole captured response ({"rows": {...}}), keyed by bizfile ID."""
     rows: dict[str, dict] = {}
-    for p in paths:
-        text = p.read_text().strip()
+    for path in paths:
+        text = path.read_text().strip()
         if not text:
             continue
         if text.startswith("{") and '"rows"' in text[:200]:
-            try:
-                payload = json.loads(text)
-                for rid, row in (payload.get("rows") or {}).items():
-                    rows[str(rid)] = row
+            payload = read_json(path, None)
+            if isinstance(payload, dict):
+                for row_id, row in (payload.get("rows") or {}).items():
+                    rows[str(row_id)] = row
                 continue
-            except json.JSONDecodeError:
-                pass  # fall through: maybe JSONL whose first row mentions rows
-        for ln in text.splitlines():
-            ln = ln.strip()
-            if not ln:
-                continue
-            try:
-                row = json.loads(ln)
-            except json.JSONDecodeError:
-                continue
+        for row in read_rows(path, skip_bad=True):
             if isinstance(row, dict) and row.get("ID") is not None:
                 rows[str(row["ID"])] = row
     return rows
 
 
-# ------------------------------------------------------------------ output
+# ---- output -------------------------------------------------------------------
 
-def write_merged(records: list[dict], out: Path) -> int:
-    """Replace CA rows in state_corps.jsonl with `records`, keep other states.
-    Empty-guard: never clobber existing data with nothing."""
-    if not records:
+def write_merged(rows: list[dict], out: Path) -> int:
+    """Replace the CA rows of state_corps.jsonl with `rows`, keeping the
+    other states; an empty result never clobbers existing data."""
+    if not rows:
         if out.exists() and out.stat().st_size > 0:
             log.warning("no CA records collected — keeping existing %s untouched", out)
             return 0
-    existing = []
-    if out.exists():
-        for ln in out.read_text().splitlines():
-            ln = ln.strip()
-            if not ln:
-                continue
-            try:
-                r = json.loads(ln)
-            except json.JSONDecodeError:
-                continue
-            if r.get("state") != "CA":
-                existing.append(r)
-    merged = existing + records
-    out.parent.mkdir(parents=True, exist_ok=True)
-    tmp = out.with_suffix(".tmp")
-    with tmp.open("w") as fh:
-        for r in merged:
-            fh.write(json.dumps(r, ensure_ascii=False) + "\n")
-    tmp.replace(out)
-    return len(records)
+    replace_rows(out, rows, {"CA"})
+    return len(rows)
 
 
-def summarize(ckpt: Checkpoint) -> str:
-    by_type = Counter(r["entity_type"] for r in ckpt.by_id.values())
-    lines = [f"{n:6d}  {t}" for t, n in by_type.most_common()]
-    return f"{len(ckpt.by_id)} CA rows kept:\n" + "\n".join(lines)
+def ca_rows(path: Path) -> list[dict]:
+    return [row for row in read_rows(path, skip_bad=True) if row.get("state") == "CA"]
 
 
-# -------------------------------------------------------------------- main
+def summarize(checkpoint: Checkpoint) -> str:
+    by_type = Counter(row["entity_type"] for row in checkpoint.by_id.values())
+    lines = [f"{count:6d}  {entity_type}" for entity_type, count in by_type.most_common()]
+    return f"{len(checkpoint.by_id)} CA rows kept:\n" + "\n".join(lines)
 
-def main(argv=None) -> int:
-    ap = argparse.ArgumentParser(description=__doc__,
-                                 formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--cookie-file", type=Path, default=COOKIE_FILE,
-                    help="file holding the bizfile Cookie header (default ca_cookie.txt)")
-    ap.add_argument("--token-file", type=Path, default=TOKEN_FILE,
-                    help="file holding the Okta bearer token (default ca_token.txt)")
-    ap.add_argument("--phase", choices=["cid", "named", "expand", "all"], default="all",
-                    help="cid: CID types x broad words; named: all types x HOA "
-                         "keywords; expand: mine collected names for new words")
-    ap.add_argument("--keywords", help="comma-separated override of the word list")
-    ap.add_argument("--filing-types", help="comma-separated override of FILING_TYPE_IDs "
-                                           "('' = all types)")
-    ap.add_argument("--expand", type=int, default=150,
-                    help="how many mined words to sweep per CID type (default 150)")
-    ap.add_argument("--pace", type=float, default=1.0,
-                    help="base seconds between requests (jittered; default 1.0)")
-    ap.add_argument("--wait-minutes", type=float, default=90,
-                    help="how long to wait for a credential refresh on 401/403")
-    ap.add_argument("--max-requests", type=int, default=0,
-                    help="stop cleanly after this many API calls (0 = no limit)")
-    ap.add_argument("--date-min", default=DATE_MIN)
-    ap.add_argument("--out", type=Path, default=OUT_DEFAULT)
-    ap.add_argument("--raw", type=Path, default=RAW_DEFAULT)
-    ap.add_argument("--ingest", nargs="+", type=Path, metavar="FILE",
-                    help="no network: shape rows saved by ca_sos_browser.js "
-                         "(JSONL) or captured responses and write the output")
-    ap.add_argument("--fresh", action="store_true",
-                    help="ignore checkpoint and re-query everything")
-    ap.add_argument("-v", "--verbose", action="store_true")
-    args = ap.parse_args(argv)
 
-    logging.basicConfig(
-        level=logging.DEBUG if args.verbose else logging.INFO,
-        format="%(asctime)s %(levelname)s\t%(message)s", datefmt="%H:%M:%S")
+# ---- the command --------------------------------------------------------------
 
+def add_arguments(parser: argparse.ArgumentParser) -> None:
+    parser.add_argument("--cookie-file", type=Path, default=COOKIE_PATH,
+                        help="file holding the bizfile Cookie header (default ca_cookie.txt)")
+    parser.add_argument("--token-file", type=Path, default=TOKEN_PATH,
+                        help="file holding the Okta bearer token (default ca_token.txt)")
+    parser.add_argument("--phase", choices=["cid", "named", "expand", "all"], default="all",
+                        help="cid: CID types x broad words; named: all types x HOA keywords; "
+                             "expand: mine collected names for new words")
+    parser.add_argument("--keywords", help="comma-separated override of the word list")
+    parser.add_argument("--filing-types", help="comma-separated override of FILING_TYPE_IDs ('' = all types)")
+    parser.add_argument("--expand", type=int, default=150,
+                        help="how many mined words to sweep per CID type (default 150)")
+    parser.add_argument("--pace", type=float, default=1.0,
+                        help="base seconds between requests (jittered; default 1.0)")
+    parser.add_argument("--wait-minutes", type=float, default=90,
+                        help="how long to wait for a credential refresh on 401/403")
+    parser.add_argument("--max-requests", type=int, default=0,
+                        help="stop cleanly after this many API calls (0 = no limit)")
+    parser.add_argument("--date-min", default=DATE_MIN)
+    parser.add_argument("--out", type=Path, default=DEFAULT_OUTPUT_PATH)
+    parser.add_argument("--raw", type=Path, default=DEFAULT_RAW_PATH)
+    parser.add_argument("--ingest", nargs="+", type=Path, metavar="FILE",
+                        help="no network: shape rows saved out of a browser (JSONL) or captured responses "
+                             "and write the output")
+    parser.add_argument("--fresh", action="store_true", help="ignore the checkpoint and re-query everything")
+
+
+def ingest(args: argparse.Namespace) -> int:
+    """Shape saved raw rows and merge them with whatever a run already holds."""
+    raw = load_dropped(args.ingest)
+    checkpoint = Checkpoint(None, None, args.raw)   # the raw file de-duplicates by ID
+    rows, _ = parse_response({"rows": raw})
+    checkpoint.add(rows, raw)
+    for key, row in Checkpoint(DONE_PATH, PARTIAL_PATH).by_id.items():
+        checkpoint.by_id.setdefault(key, row)
+    for row in ca_rows(args.out):
+        if row.get("bizfile_id"):
+            checkpoint.by_id.setdefault(row["bizfile_id"], row)
+    count = write_merged(list(checkpoint.by_id.values()), args.out)
+    log.info("ingested %d raw rows from %d file(s) -> %d CA rows in %s",
+             len(raw), len(args.ingest), count, args.out.name)
+    log.info("%s", summarize(checkpoint))
+    return 0
+
+
+def expand(sweeper: Sweeper, checkpoint: Checkpoint, client: Client, filing_types, keywords, limit: int) -> None:
+    """Phase 3: for each CID type, sweep the most frequent not-yet-searched
+    words of the names collected so far, until twenty in a row find nothing."""
+    for filing_type in filing_types:
+        names = [row["name"] for row in checkpoint.by_id.values() if row.get("is_association")]
+        used = {word.upper() for word in CID_KEYWORDS} | sweeper.words_used[filing_type]
+        words = keywords or mine_words(names, used, limit)
+        log.info("expansion for type %s: %d mined words: %s ...", filing_type, len(words), ", ".join(words[:15]))
+        tail: list[int] = []
+        for i, word in enumerate(words, 1):
+            new = sweeper.run_term(word, filing_type)
+            tail.append(new)
+            log.info("== [expand %s %d/%d] %r: +%d new (total %d, %d requests)",
+                     filing_type, i, len(words), word, new, len(checkpoint.by_id), client.requests)
+            if len(tail) >= EXHAUSTED_AFTER and sum(tail[-EXHAUSTED_AFTER:]) == 0:
+                log.info("expansion for type %s exhausted (%d words, 0 new)", filing_type, EXHAUSTED_AFTER)
+                break
+
+
+def run(args: argparse.Namespace) -> int:
     if args.ingest:
-        raw = load_dropped(args.ingest)
-        ckpt = Checkpoint(None, None, args.raw)   # raw file dedupes by ID
-        recs, _ = parse_response({"rows": raw})
-        ckpt.add(recs, raw)
-        # Merge with whatever an API run already checkpointed or wrote.
-        prior = Checkpoint(CKPT_DONE, CKPT_PARTIAL).by_id
-        for k, v in prior.items():
-            ckpt.by_id.setdefault(k, v)
-        if args.out.exists():
-            for ln in args.out.read_text().splitlines():
-                try:
-                    r = json.loads(ln)
-                except json.JSONDecodeError:
-                    continue
-                if r.get("state") == "CA" and r.get("bizfile_id"):
-                    ckpt.by_id.setdefault(r["bizfile_id"], r)
-        n = write_merged(list(ckpt.by_id.values()), args.out)
-        log.info("ingested %d raw rows from %d file(s) -> %d CA rows in %s",
-                 len(raw), len(args.ingest), n, args.out.name)
-        log.info("%s", summarize(ckpt))
-        return 0
-
+        return ingest(args)
     try:
         client = Client(args.cookie_file, args.token_file, pace=args.pace,
-                        wait_minutes=args.wait_minutes,
-                        max_requests=args.max_requests)
-    except ValueError as e:
-        log.error("%s", e)
+                        wait_minutes=args.wait_minutes, max_requests=args.max_requests)
+    except ValueError as exc:
+        log.error("%s", exc)
         return 2
 
     if args.fresh:
-        Checkpoint(CKPT_DONE, CKPT_PARTIAL).clear()
-        WORDS_FILE.unlink(missing_ok=True)
-    ckpt = Checkpoint(CKPT_DONE, CKPT_PARTIAL, args.raw)
-    sweeper = Sweeper(client.search, ckpt, date_min=args.date_min,
-                      words_path=WORDS_FILE)
-    if not ckpt.by_id and args.out.exists():
+        Checkpoint(DONE_PATH, PARTIAL_PATH).clear()
+        WORDS_PATH.unlink(missing_ok=True)
+    checkpoint = Checkpoint(DONE_PATH, PARTIAL_PATH, args.raw)
+    sweeper = Sweeper(client.search, checkpoint, date_min=args.date_min, words_path=WORDS_PATH)
+    if not checkpoint.by_id and args.out.exists():
         # A completed run cleared its checkpoint; start from what it wrote so
         # an expansion-only pass has names to mine and nothing is lost.
-        prior = []
-        for ln in args.out.read_text().splitlines():
-            try:
-                r = json.loads(ln)
-            except json.JSONDecodeError:
-                continue
-            if r.get("state") == "CA":
-                prior.append(r)
-        log.info("seeded %d CA rows from %s", ckpt.seed(prior), args.out.name)
+        log.info("seeded %d CA rows from %s", checkpoint.seed(ca_rows(args.out)), args.out.name)
     log.info("checkpoint: %d windows done, %d rows so far, %d words swept",
-             len(ckpt.done), len(ckpt.by_id),
-             sum(len(w) for w in sweeper.words_used.values()))
+             len(checkpoint.done), len(checkpoint.by_id), sum(len(words) for words in sweeper.words_used.values()))
 
-    # Build the plan: list of (phase, term, type).
+    types_override = ([t.strip() for t in args.filing_types.split(",")] if args.filing_types is not None else None)
+    keywords = ([k.strip() for k in args.keywords.split(",") if k.strip()] if args.keywords else None)
     plan: list[tuple[str, str, str]] = []
-    types_override = ([t.strip() for t in args.filing_types.split(",")]
-                      if args.filing_types is not None else None)
-    kw_override = ([k.strip() for k in args.keywords.split(",") if k.strip()]
-                   if args.keywords else None)
     if args.phase in ("cid", "all"):
-        for t in (types_override or CID_TYPES):
-            for w in (kw_override or CID_KEYWORDS):
-                plan.append(("cid", w, t))
+        plan += [("cid", word, filing_type) for filing_type in (types_override or CID_TYPES)
+                 for word in (keywords or CID_KEYWORDS)]
     if args.phase in ("named", "all"):
-        for t in (types_override or [""]):
-            for w in (kw_override or NAMED_KEYWORDS):
-                plan.append(("named", w, t))
-    log.info("plan: %d (term,type) sweeps%s", len(plan),
-             " + expansion" if args.phase in ("expand", "all") else "")
+        plan += [("named", word, filing_type) for filing_type in (types_override or [""])
+                 for word in (keywords or NAMED_KEYWORDS)]
+    log.info("plan: %d (term,type) sweeps%s", len(plan), " + expansion" if args.phase in ("expand", "all") else "")
 
     completed = True
     try:
-        for i, (phase, term, ftype) in enumerate(plan, 1):
-            new = sweeper.run_term(term, ftype)
+        for i, (phase, term, filing_type) in enumerate(plan, 1):
+            new = sweeper.run_term(term, filing_type)
             log.info("== [%s %d/%d] %r type=%s: +%d new (total %d, %d requests)",
-                     phase, i, len(plan), term, ftype or "*", new,
-                     len(ckpt.by_id), client.requests)
-
+                     phase, i, len(plan), term, filing_type or "*", new, len(checkpoint.by_id), client.requests)
         if args.phase in ("expand", "all"):
-            for t in (types_override or CID_TYPES):
-                names = [r["name"] for r in ckpt.by_id.values()
-                         if r.get("is_association")]
-                used = {w.upper() for w in CID_KEYWORDS} | sweeper.words_used[t]
-                words = kw_override or mine_words(names, used, args.expand)
-                log.info("expansion for type %s: %d mined words: %s ...",
-                         t, len(words), ", ".join(words[:15]))
-                tail: list[int] = []
-                for j, w in enumerate(words, 1):
-                    new = sweeper.run_term(w, t)
-                    tail.append(new)
-                    log.info("== [expand %s %d/%d] %r: +%d new (total %d, %d requests)",
-                             t, j, len(words), w, new, len(ckpt.by_id), client.requests)
-                    if len(tail) >= 20 and sum(tail[-20:]) == 0:
-                        log.info("expansion for type %s exhausted (20 words, 0 new)", t)
-                        break
+            expand(sweeper, checkpoint, client, types_override or CID_TYPES, keywords, args.expand)
     except KeyboardInterrupt:
         log.warning("interrupted — checkpoint kept; rerun to resume")
         completed = False
-    except (BlockedError, RuntimeError) as e:
-        log.error("stopped: %s — checkpoint kept; rerun to resume", e)
+    except (BlockedError, RuntimeError) as exc:
+        log.error("stopped: %s — checkpoint kept; rerun to resume", exc)
         completed = False
 
-    records = list(ckpt.by_id.values())
-    n = write_merged(records, args.out)
-    try:
-        rel = args.out.relative_to(ROOT)
-    except ValueError:
-        rel = args.out
-    log.info("wrote %s — %d CA rows (%d API calls this run)", rel, n, client.requests)
-    log.info("%s", summarize(ckpt))
+    retrieved_at = now_iso()
+    rows = [dict(row, retrieved_at=row.get("retrieved_at") or retrieved_at) for row in checkpoint.by_id.values()]
+    count = write_merged(rows, args.out)
+    shown = args.out.relative_to(ROOT) if args.out.is_relative_to(ROOT) else args.out
+    log.info("wrote %s — %d CA rows (%d API calls this run)", shown, count, client.requests)
+    log.info("%s", summarize(checkpoint))
     if sweeper.capped_days:
         log.warning("%d single-day window(s) still capped (undercount): %s",
                     len(sweeper.capped_days), "; ".join(sweeper.capped_days[:10]))
     if completed:
-        ckpt.clear()
-        log.info("sweep complete — checkpoint cleared (raw rows kept in %s)",
-                 args.raw.name)
+        checkpoint.clear()
+        log.info("sweep complete — checkpoint cleared (raw rows kept in %s)", args.raw.name)
     else:
         log.info("run paused before finishing — checkpoint kept; rerun to resume")
     return 0 if completed else 3
-
-
-if __name__ == "__main__":
-    sys.exit(main())

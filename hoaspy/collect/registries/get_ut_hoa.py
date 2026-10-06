@@ -1,263 +1,248 @@
-#!/usr/bin/env python
-"""Utah HOA Registry (Utah Dept of Commerce) — every registered association.
+"""Utah HOA Registry (Department of Commerce): every registered association.
 
-    ./venv/bin/python -m hoaspy.collect.registries.get_ut_hoa            # full sweep (resumable)
-    ./venv/bin/python -m hoaspy.collect.registries.get_ut_hoa --fresh    # ignore the checkpoint
-    ./venv/bin/python -m hoaspy.collect.registries.get_ut_hoa --limit 50 # smoke test
+    python -m hoaspy ut-hoa               # full sweep (resumable)
+    python -m hoaspy ut-hoa --fresh       # ignore the checkpoint
+    python -m hoaspy ut-hoa --limit 50    # smoke test
 
-Registration is mandatory (Utah Code 57-8a-105 / 57-8-13.1). The public UI at
-https://services.commerce.utah.gov/hoa/ is a name search backed by one
-endpoint, `assets/js/hoa-ajax.php`:
+Registration is mandatory (Utah Code 57-8a-105 / 57-8-13.1). The public
+search at https://services.commerce.utah.gov/hoa/ is backed by one
+endpoint, assets/js/hoa-ajax.php:
 
-    f=s&v=<text>   name search -> HTML table, one <tr data-pid> per HOA
-    f=d&v=<pid>    detail card -> registration #, type, status, expiry,
+    f=s&v=<text>   name search -> an HTML table, one <tr data-pid> per HOA
+    f=d&v=<pid>    detail card -> registration number, type, status, expiry,
                    location, contact address, president, community manager,
                    payoff contact, board members
 
-`v` is a SQL LIKE pattern, so `%` lists the whole registry (about 4,100 rows)
-in one response; each detail is then fetched once. Names and roles are kept;
-the phone numbers and e-mail addresses on the detail cards are NOT stored.
+`v` is a SQL LIKE pattern, so `%` lists the whole registry (about 4,100
+rows) in one response; each detail card is then fetched once, by a few
+parallel sessions. Names and roles are kept; the phone numbers and e-mail
+addresses on the cards are not.
 
-Output: records/state_registries.jsonl (UT rows replaced) in the registry
-shape build_site.py folds in, plus coverage.json collected["hoa_registry"].
-Checkpoint: .cache/ut/hoa_details.jsonl (one detail per line, appended).
+Output: Utah's rows in records/state_registries.jsonl (replaced on each
+run) and coverage.json collected["hoa_registry"]. Checkpoint:
+.cache/ut/hoa_details.jsonl, one detail card per line, appended.
 """
 
 from __future__ import annotations
 
 import argparse
 import html
-import json
 import logging
 import re
-import sys
 import threading
 import time
 from concurrent.futures import ThreadPoolExecutor
-from pathlib import Path
 
 import requests
 
-from hoaspy.collect.registries.get_states import REGS, update_coverage, write_merged
-
 from hoaspy import ROOT
+from hoaspy.collect.registries import REGISTRIES_PATH
+from hoaspy.lib import http
 from hoaspy.lib.contract import strip_contacts
-CACHE = ROOT / ".cache" / "ut"
-CKPT = CACHE / "hoa_details.jsonl"
-BASE = "https://services.commerce.utah.gov/hoa/"
-ENDPOINT = BASE + "assets/js/hoa-ajax.php"
-USER_AGENT = "macos:hoa-public-records:0.1 (academic research)"
+from hoaspy.lib.coverage import update_coverage
+from hoaspy.lib.jsonl import append_row, now_iso, read_rows, replace_rows
+from hoaspy.lib.records import Association, Officer
+
+CACHE_DIR = ROOT / ".cache" / "ut"
+CHECKPOINT_PATH = CACHE_DIR / "hoa_details.jsonl"
+REGISTRY_URL = "https://services.commerce.utah.gov/hoa/"
+ENDPOINT_URL = REGISTRY_URL + "assets/js/hoa-ajax.php"
 SOURCE = "Utah Department of Commerce — HOA Registry"
-TEST_RECORDS = {"13855665"}          # the state's own "DTS Smoke Test" row
+TEST_RECORDS = {"13855665"}             # the state's own "DTS Smoke Test" row
 
-log = logging.getLogger("ut")
-
-ROW_RE = re.compile(
+LISTING_ROW_RE = re.compile(
     r'<tr data-pid="(\d+)" class="link-view">'
     r'<td class="text-left">(.*?)</td><td class="text-left">(.*?)</td>', re.S)
+CARD_FIELDS = (("registration_no", r"Registration #: ([^<]*)"),
+               ("registration_type", r"Registration Type: ([^<]*)"),
+               ("status", r"Status: <span[^>]*>([^<]*)"),
+               ("expires", r"Expires: ([^<]*)"))
+
+log = logging.getLogger(__name__)
 
 
-def clean(s: str) -> str:
-    return re.sub(r"\s+", " ", html.unescape(re.sub(r"<[^>]+>", " ", s or ""))).strip()
+def html_text(fragment: str) -> str:
+    """The text of an HTML fragment, tags gone, whitespace squashed."""
+    return re.sub(r"\s+", " ", html.unescape(re.sub(r"<[^>]+>", " ", fragment or ""))).strip()
+
+
+def iso_date(text: str) -> str:
+    """'3/21/2025' -> '2025-03-21'; '' when the text is not a date."""
+    match = re.match(r"(\d{1,2})/(\d{1,2})/(\d{4})", text or "")
+    return f"{match.group(3)}-{int(match.group(1)):02d}-{int(match.group(2)):02d}" if match else ""
+
+
+def contact_name(block: str) -> str:
+    """The name on a contact block: its first line. The phone, e-mail and
+    address lines that follow are dropped; a block that starts with the
+    phone number (no name line) gives ''."""
+    lines = [html_text(part) for part in re.split(r"<br\s*/?>", block)]
+    lines = [line for line in lines if line]
+    return strip_contacts(lines[0]) if lines else ""
 
 
 class Client:
+    """One paced session against the registry's endpoint."""
+
     def __init__(self, pace: float):
-        self.s = requests.Session()
-        self.s.headers.update({"User-Agent": USER_AGENT, "Referer": BASE,
-                               "X-Requested-With": "XMLHttpRequest"})
+        self.session = http.session(headers={"Referer": REGISTRY_URL, "X-Requested-With": "XMLHttpRequest"})
         self.pace = pace
         self._last = 0.0
 
-    def call(self, f: str, v: str) -> str:
+    def call(self, function: str, value: str) -> str:
+        """One endpoint call (`f`, `v`), retried on a network error."""
         wait = self._last + self.pace - time.monotonic()
         if wait > 0:
             time.sleep(wait)
         for attempt in range(4):
             try:
-                r = self.s.post(ENDPOINT, data={"f": f, "v": v}, timeout=90)
+                response = self.session.post(ENDPOINT_URL, data={"f": function, "v": value}, timeout=90)
                 self._last = time.monotonic()
-                r.raise_for_status()
-                return r.text
+                response.raise_for_status()
+                return response.text
             except requests.RequestException as exc:
-                log.warning("%s %s: %s (attempt %d)", f, v, exc, attempt + 1)
+                log.warning("%s %s: %s (attempt %d)", function, value, exc, attempt + 1)
                 time.sleep(5 * (attempt + 1))
-        raise RuntimeError(f"gave up on {f}={v}")
+        raise RuntimeError(f"gave up on {function}={value}")
 
-    def list_all(self) -> list[dict]:
+    def listing(self) -> list[dict]:
+        """Every association the registry lists: {pid, name, dba, city, county}."""
         body = self.call("s", "%")
         rows = []
-        for pid, namecell, loc in ROW_RE.findall(body):
-            name, dba = namecell, ""
-            if "DBA:" in namecell:
-                name, dba = namecell.split("DBA:", 1)
-            city, _, county = clean(loc).rpartition(", ")
-            rows.append({"pid": pid, "name": clean(name), "dba": clean(dba),
+        for pid, name_cell, location in LISTING_ROW_RE.findall(body):
+            name, dba = name_cell, ""
+            if "DBA:" in name_cell:
+                name, dba = name_cell.split("DBA:", 1)
+            city, _, county = html_text(location).rpartition(", ")
+            rows.append({"pid": pid, "name": html_text(name), "dba": html_text(dba),
                          "city": city, "county": county.replace(" County", "")})
         return rows
 
     def detail(self, pid: str) -> dict | None:
+        """One detail card as a dict, or None when the registry has none for the pid."""
         body = self.call("d", pid)
         if "No Result Returned" in body:
             return None
-        d: dict = {"pid": pid}
-        m = re.search(r'<h1 class="mb-0">(.*?)</h1>', body, re.S)
-        d["name"] = clean(m.group(1)) if m else ""
-        m = re.search(r"<b>DBA:</b>(.*?)</h3>", body, re.S)
-        d["dba"] = clean(m.group(1)) if m else ""
-        for key, pat in (("registration_no", r"Registration #: ([^<]*)"),
-                         ("registration_type", r"Registration Type: ([^<]*)"),
-                         ("status", r"Status: <span[^>]*>([^<]*)"),
-                         ("expires", r"Expires: ([^<]*)")):
-            m = re.search(pat, body)
-            d[key] = clean(m.group(1)) if m else ""
-        m = re.search(r"Location:</h5><p[^>]*>(.*?)</p>", body, re.S)
-        loc = clean(m.group(1)) if m else ""
-        d["city"], _, county = loc.rpartition(", ")
-        d["county"] = county.replace(" County", "")
-        m = re.search(r"Contact Info:</h5><p[^>]*>(.*?)</div>", body, re.S)
-        d["contact_address"] = ", ".join(
-            clean(x) for x in re.split(r"<br\s*/?>", m.group(1)) if clean(x)) if m else ""
-        d["roles"] = {}
-        for title, frag in re.findall(
-                r'<h4 class="mb-0">([^<]+)</h4><p class="mt-0 ml-3">(.*?)</p>', body, re.S):
-            d["roles"][clean(title)] = _block_name(frag)
-        d["board_members"] = []
-        bm = body.split("Board Members</h4>", 1)
-        if len(bm) == 2:
-            for frag in re.findall(r'<p class="ml-3">(.*?)</p>', bm[1], re.S):
-                name = _block_name(frag)
+        card: dict = {"pid": pid}
+        match = re.search(r'<h1 class="mb-0">(.*?)</h1>', body, re.S)
+        card["name"] = html_text(match.group(1)) if match else ""
+        match = re.search(r"<b>DBA:</b>(.*?)</h3>", body, re.S)
+        card["dba"] = html_text(match.group(1)) if match else ""
+        for key, pattern in CARD_FIELDS:
+            match = re.search(pattern, body)
+            card[key] = html_text(match.group(1)) if match else ""
+        match = re.search(r"Location:</h5><p[^>]*>(.*?)</p>", body, re.S)
+        location = html_text(match.group(1)) if match else ""
+        card["city"], _, county = location.rpartition(", ")
+        card["county"] = county.replace(" County", "")
+        match = re.search(r"Contact Info:</h5><p[^>]*>(.*?)</div>", body, re.S)
+        card["contact_address"] = ", ".join(
+            html_text(part) for part in re.split(r"<br\s*/?>", match.group(1)) if html_text(part)) if match else ""
+        card["roles"] = {}
+        for title, block in re.findall(r'<h4 class="mb-0">([^<]+)</h4><p class="mt-0 ml-3">(.*?)</p>', body, re.S):
+            card["roles"][html_text(title)] = contact_name(block)
+        card["board_members"] = []
+        _, found, members = body.partition("Board Members</h4>")
+        if found:
+            for block in re.findall(r'<p class="ml-3">(.*?)</p>', members, re.S):
+                name = contact_name(block)
                 if name:
-                    d["board_members"].append(name)
-        return d
+                    card["board_members"].append(name)
+        return card
 
 
-def _block_name(frag: str) -> str:
-    """First line of a contact block is the name; phone/e-mail/address lines
-    that follow are deliberately dropped. A block with no name line starts
-    with the phone number instead, which is dropped too."""
-    parts = [clean(p) for p in re.split(r"<br\s*/?>", frag)]
-    parts = [p for p in parts if p]
-    return strip_contacts(parts[0]) if parts else ""
-
-
-def _iso(v: str) -> str:
-    m = re.match(r"(\d{1,2})/(\d{1,2})/(\d{4})", v or "")
-    return f"{m.group(3)}-{int(m.group(1)):02d}-{int(m.group(2)):02d}" if m else ""
-
-
-def to_record(d: dict, listing: dict) -> dict:
-    roles = d.get("roles") or {}
+def to_record(card: dict, listing: dict, retrieved_at: str = "") -> Association:
+    """A detail card (with its listing row as the fallback) as a registry record."""
+    roles = card.get("roles") or {}
     manager = roles.get("HOA Community Manager") or roles.get("Community Manager") or ""
     officers = []
-    pres = roles.get("HOA President") or roles.get("President")
-    if pres:
-        officers.append({"name": pres, "title": "President"})
-    for b in d.get("board_members") or []:
-        if b != pres:
-            officers.append({"name": b, "title": "Board member"})
-    kind = d.get("registration_type") or ""
-    status = d.get("status") or ""
-    return {
-        "state": "UT",
-        "source": SOURCE,
-        "source_url": f"{BASE}?p={d['pid']}",
-        "record_id": d.get("registration_no") or d["pid"],
-        "name": d.get("name") or listing.get("name", ""),
-        "dba": d.get("dba") or listing.get("dba", ""),
-        "status": f"{status} — {kind}".strip(" —") if kind else status,
-        "status_detail": f"expires {_iso(d.get('expires'))}" if d.get("expires") else "",
-        "recorded_date": "",
-        "address": d.get("contact_address") or "",
-        "city": (d.get("city") or listing.get("city") or "").title(),
-        "county": (d.get("county") or listing.get("county") or "").title(),
-        "zip": (re.search(r"\b(84\d{3})\b", d.get("contact_address") or "") or [None, ""])[1],
-        "units": None,
-        "manager_name": manager,
-        "officers": officers,
-        "registration_type": kind,
-    }
+    president = roles.get("HOA President") or roles.get("President")
+    if president:
+        officers.append(Officer(name=president, title="President"))
+    officers += [Officer(name=member, title="Board member") for member in card.get("board_members") or []
+                 if member != president]
+    kind = card.get("registration_type") or ""
+    status = card.get("status") or ""
+    contact_address = card.get("contact_address") or ""
+    zip_match = re.search(r"\b(84\d{3})\b", contact_address)
+    return Association(
+        state="UT", source=SOURCE, source_url=f"{REGISTRY_URL}?p={card['pid']}",
+        record_id=card.get("registration_no") or card["pid"],
+        name=card.get("name") or listing.get("name", ""), dba=card.get("dba") or listing.get("dba", ""),
+        status=f"{status} — {kind}".strip(" —") if kind else status,
+        status_detail=f"expires {iso_date(card.get('expires'))}" if card.get("expires") else "",
+        address=contact_address,
+        city=(card.get("city") or listing.get("city") or "").title(),
+        county=(card.get("county") or listing.get("county") or "").title(),
+        zip=zip_match.group(1) if zip_match else "",
+        manager_name=manager, officers=officers, registration_type=kind, retrieved_at=retrieved_at)
 
 
-def load_ckpt() -> dict[str, dict]:
-    out: dict[str, dict] = {}
-    if CKPT.exists():
-        for line in CKPT.read_text().splitlines():
-            if line.strip():
-                d = json.loads(line)
-                out[d["pid"]] = d
-    return out
+def load_checkpoint() -> dict[str, dict]:
+    """{pid: detail card} fetched by earlier runs."""
+    return {card["pid"]: card for card in read_rows(CHECKPOINT_PATH, skip_bad=True)}
 
 
-def main() -> int:
-    ap = argparse.ArgumentParser(description=__doc__,
-                                 formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--pace", type=float, default=0.7, help="seconds between requests per worker")
-    ap.add_argument("--workers", type=int, default=3,
-                    help="parallel detail fetchers, each its own session (server takes ~3 s per card)")
-    ap.add_argument("--limit", type=int, help="stop after this many new details")
-    ap.add_argument("--fresh", action="store_true", help="discard the checkpoint")
-    ap.add_argument("-v", "--verbose", action="store_true")
-    args = ap.parse_args()
-    logging.basicConfig(level=logging.DEBUG if args.verbose else logging.INFO,
-                        format="%(asctime)s %(levelname)-7s %(message)s", datefmt="%H:%M:%S")
+def add_arguments(parser: argparse.ArgumentParser) -> None:
+    parser.add_argument("--pace", type=float, default=0.7, help="seconds between requests per worker")
+    parser.add_argument("--workers", type=int, default=3,
+                        help="parallel detail fetchers, each with its own session (the server takes ~3 s per card)")
+    parser.add_argument("--limit", type=int, help="stop after this many new details")
+    parser.add_argument("--fresh", action="store_true", help="discard the checkpoint")
 
-    CACHE.mkdir(parents=True, exist_ok=True)
-    if args.fresh and CKPT.exists():
-        CKPT.unlink()
-    have = load_ckpt()
+
+def run(args: argparse.Namespace) -> int:
+    CACHE_DIR.mkdir(parents=True, exist_ok=True)
+    if args.fresh and CHECKPOINT_PATH.exists():
+        CHECKPOINT_PATH.unlink()
+    cards = load_checkpoint()
 
     client = Client(args.pace)
-    listing = client.list_all()
-    listing = [r for r in listing if r["pid"] not in TEST_RECORDS]
-    by_pid = {r["pid"]: r for r in listing}
-    todo = [r for r in listing if r["pid"] not in have]
+    listing = [row for row in client.listing() if row["pid"] not in TEST_RECORDS]
+    by_pid = {row["pid"]: row for row in listing}
+    todo = [row for row in listing if row["pid"] not in cards]
     log.info("registry lists %d associations (%d detail cards cached, %d to fetch)",
-             len(listing), len(have), len(todo))
-
+             len(listing), len(cards), len(todo))
     if args.limit:
         todo = todo[:args.limit]
+
     lock = threading.Lock()
     clients = [client] + [Client(args.pace) for _ in range(max(1, args.workers) - 1)]
-    counter = {"n": 0}
+    fetched = 0
 
-    def fetch(job):
-        idx, r = job
-        c = clients[idx % len(clients)]
+    def fetch(job: tuple[int, dict]) -> None:
+        nonlocal fetched
+        index, row = job
         try:
-            d = c.detail(r["pid"])
+            card = clients[index % len(clients)].detail(row["pid"])
         except Exception as exc:
-            log.warning("%s (%s): %s", r["pid"], r["name"], exc)
+            log.warning("%s (%s): %s", row["pid"], row["name"], exc)
             return
-        if d is None:
-            log.warning("%s (%s): no detail card", r["pid"], r["name"])
-            d = {"pid": r["pid"], "name": r["name"], "missing": True}
+        if card is None:
+            log.warning("%s (%s): no detail card", row["pid"], row["name"])
+            card = {"pid": row["pid"], "name": row["name"], "missing": True}
         with lock:
-            have[r["pid"]] = d
-            fh.write(json.dumps(d, ensure_ascii=False) + "\n")
-            fh.flush()
-            counter["n"] += 1
-            if counter["n"] % 100 == 0:
-                log.info("%d/%d details fetched", counter["n"], len(todo))
+            cards[row["pid"]] = card
+            append_row(checkpoint, card)
+            fetched += 1
+            if fetched % 100 == 0:
+                log.info("%d/%d details fetched", fetched, len(todo))
 
-    with CKPT.open("a") as fh, ThreadPoolExecutor(max_workers=len(clients)) as pool:
+    with CHECKPOINT_PATH.open("a", encoding="utf-8") as checkpoint, ThreadPoolExecutor(len(clients)) as pool:
         list(pool.map(fetch, enumerate(todo)))
 
-    rows = [to_record(d, by_pid.get(pid, {})) for pid, d in have.items()
-            if pid in by_pid or not d.get("missing")]
-    rows = [r for r in rows if r["name"]]
-    complete = all(pid in have for pid in by_pid)
-    total = write_merged(REGS, rows, {"UT"})
+    retrieved_at = now_iso()
+    records = [to_record(card, by_pid.get(pid, {}), retrieved_at) for pid, card in cards.items()
+               if pid in by_pid or not card.get("missing")]
+    records = [record for record in records if record.name]
+    complete = all(pid in cards for pid in by_pid)
+    total = replace_rows(REGISTRIES_PATH, (record.as_row() for record in records), {"UT"})
     update_coverage("UT", "hoa_registry", {
-        "source": SOURCE, "records": len(rows), "url": BASE,
+        "source": SOURCE, "records": len(records), "url": REGISTRY_URL,
         "note": ("mandatory statewide registry; current registrations only"
-                 + ("" if complete else f"; sweep incomplete ({len(have)}/{len(by_pid)} details)")),
+                 + ("" if complete else f"; sweep incomplete ({len(cards)}/{len(by_pid)} details)")),
     })
-    log.info("state_registries.jsonl: %d rows total, %d UT (%s)", total, len(rows),
+    log.info("%s: %d rows total, %d UT (%s)", REGISTRIES_PATH.name, total, len(records),
              "complete" if complete else "partial")
-    print(f"  UT: {len(rows):,} registry records")
+    print(f"  UT: {len(records):,} registry records")
     return 0
-
-
-if __name__ == "__main__":
-    sys.exit(main())
