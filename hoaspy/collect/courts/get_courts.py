@@ -1,69 +1,48 @@
-#!/usr/bin/env python
-"""Collect court records naming community associations, nationwide, from
-CourtListener (Free Law Project): RECAP federal dockets where an association
-is a party, and state supreme/appellate opinions with an association in the
-caption.
+"""Court records naming community associations, nationwide, from the
+CourtListener search API (Free Law Project): RECAP federal dockets where
+an association is a party, and state supreme and appellate opinions with
+an association in the caption.
 
-The court list (and each court's state) comes from CourtListener's own courts
-API, so all 50 states + DC are covered without a hand-maintained map.
+    python -m hoaspy courts                     # everything
+    python -m hoaspy courts --only-opinions     # skip the federal dockets
 
-    ./venv/bin/python -m hoaspy.collect.courts.get_courts                  # everything
-    ./venv/bin/python -m hoaspy.collect.courts.get_courts --only-opinions  # skip federal dockets
+The court list, and each court's state, come from CourtListener's own
+courts API, so all 50 states and DC are covered without a hand-kept map.
+The search API throttles an anonymous client hard (five requests a
+minute, then a daily cap); the bulk files (courts-bulk) have no limit.
 
-Output (default ./courts/): dockets.jsonl, opinions.jsonl. Existing records
-are kept and merged (dedup by docket id / opinion URL), and results are
-checkpointed to disk after every query, so the collector is safe to re-run
-and safe to kill.
+Output (default courts/): dockets.jsonl (Case records plus `docket_id`,
+`court_id` and `parties`) and opinions.jsonl (Opinion records plus
+`court_id`). Existing records are kept and merged (by docket id and
+opinion URL), and the files are rewritten after every query, so the
+collector is safe to re-run and safe to kill.
 """
 
 from __future__ import annotations
 
 import argparse
-import json
 import logging
 import re
-import sys
 import time
 from collections import Counter
-from datetime import datetime, timezone
 from pathlib import Path
 
 import requests
 
+from hoaspy.collect.courts import COURTS_DIR
+from hoaspy.lib import http
+from hoaspy.lib.jsonl import now_iso, read_rows, write_json, write_rows
+from hoaspy.lib.names import LIEN_PARTY_RE
 from hoaspy.lib.pacing import Pacer
-from hoaspy.collect.liens.records_broward import ASSOCIATION_RE
+from hoaspy.lib.records import Case, Opinion
+from hoaspy.lib.states import state_in
 
-from hoaspy import ROOT
-DEFAULT_OUT = ROOT / "courts"
-
-ENDPOINT = "https://www.courtlistener.com/api/rest/v4/search/"
-COURTS_ENDPOINT = "https://www.courtlistener.com/api/rest/v4/courts/"
-BASE_URL = "https://www.courtlistener.com"
+SEARCH_URL = "https://www.courtlistener.com/api/rest/v4/search/"
+COURTS_URL = "https://www.courtlistener.com/api/rest/v4/courts/"
+SITE_URL = "https://www.courtlistener.com"
 SOURCE_PAGE = "https://free.law/recap"
-
-USER_AGENT = "macos:hoa-public-records:0.1 (academic research)"
-
-STATE_NAMES = {
-    "AL": "Alabama", "AK": "Alaska", "AZ": "Arizona", "AR": "Arkansas",
-    "CA": "California", "CO": "Colorado", "CT": "Connecticut", "DE": "Delaware",
-    "FL": "Florida", "GA": "Georgia", "HI": "Hawaii", "ID": "Idaho",
-    "IL": "Illinois", "IN": "Indiana", "IA": "Iowa", "KS": "Kansas",
-    "KY": "Kentucky", "LA": "Louisiana", "ME": "Maine", "MD": "Maryland",
-    "MA": "Massachusetts", "MI": "Michigan", "MN": "Minnesota",
-    "MS": "Mississippi", "MO": "Missouri", "MT": "Montana", "NE": "Nebraska",
-    "NV": "Nevada", "NH": "New Hampshire", "NJ": "New Jersey",
-    "NM": "New Mexico", "NY": "New York", "NC": "North Carolina",
-    "ND": "North Dakota", "OH": "Ohio", "OK": "Oklahoma", "OR": "Oregon",
-    "PA": "Pennsylvania", "RI": "Rhode Island", "SC": "South Carolina",
-    "SD": "South Dakota", "TN": "Tennessee", "TX": "Texas", "UT": "Utah",
-    "VT": "Vermont", "VA": "Virginia", "WA": "Washington",
-    "WV": "West Virginia", "WI": "Wisconsin", "WY": "Wyoming",
-    "DC": "District of Columbia",
-}
-# Longest names first so "West Virginia" wins over "Virginia" and
-# "Arkansas" over the "kansas" hiding inside it.
-_STATE_BY_LEN = sorted(STATE_NAMES.items(), key=lambda kv: -len(kv[1]))
-
+DOCKET_SOURCE = "courtlistener-recap"
+OPINION_SOURCE = "courtlistener-opinions"
 PARTY_QUERIES = [
     'party:"homeowners association"',
     'party:"condominium association"',
@@ -78,191 +57,143 @@ OPINION_QUERIES = [
     'caseName:"community association"',
     'caseName:"owners association"',
 ]
+PACING = {"between_requests": [1.0, 2.5], "backoff_base": 60, "backoff_max": 900, "max_429_retries": 8}
 
-log = logging.getLogger("courts")
+log = logging.getLogger(__name__)
 
 
 def fetch_court_maps(session: requests.Session) -> tuple[dict, dict]:
-    """{district_court_id: state}, {appellate_court_id: state} for the whole
-    country, from the courts API."""
-
-    def state_of_name(full_name: str) -> str | None:
-        for code, name in _STATE_BY_LEN:
-            if re.search(r"\b" + re.escape(name) + r"\b", full_name):
-                return code
-        return None
+    """({district court id: state}, {appellate court id: state}) for the
+    whole country, from the courts API. Criminal appeals courts, territories
+    and specialty courts fall out."""
 
     def fetch(jurisdiction: str) -> dict:
         out: dict[str, str] = {}
-        url, params = COURTS_ENDPOINT, {"jurisdiction": jurisdiction, "page_size": 200}
+        url, params = COURTS_URL, {"jurisdiction": jurisdiction, "page_size": 200}
         while url:
-            resp = session.get(url, params=params, timeout=30)
-            resp.raise_for_status()
-            data = resp.json()
-            for c in data["results"]:
-                if not c.get("in_use"):
+            response = session.get(url, params=params, timeout=30)
+            response.raise_for_status()
+            data = response.json()
+            for court in data["results"]:
+                if not court.get("in_use") or "criminal" in court["full_name"].lower():
                     continue
-                if "criminal" in c["full_name"].lower():
-                    continue  # no HOA cases in criminal appeals
-                state = state_of_name(c["full_name"])
-                if state:  # territories and specialty courts fall out here
-                    out[c["id"]] = state
+                state = state_in(court["full_name"])
+                if state:
+                    out[court["id"]] = state
             url, params = data.get("next"), None
         return out
 
     districts = fetch("FD")
     appellate = {**fetch("S"), **fetch("SA")}
-    log.info("courts api: %d federal districts, %d state appellate courts",
-             len(districts), len(appellate))
+    log.info("courts api: %d federal districts, %d state appellate courts", len(districts), len(appellate))
     return districts, appellate
 
 
-def fetch_query(session: requests.Session, pacer: Pacer, query: str,
-                max_pages: int, qtype: str, courts: str, timeout: float = 30.0):
-    url, params = ENDPOINT, {"q": query, "type": qtype, "court": courts}
+def fetch_query(session: requests.Session, pacer: Pacer, query: str, max_pages: int, kind: str, courts: str,
+                timeout: float = 30.0):
+    """The results of one search query, page by page, paced and backed off on 429."""
+    url, params = SEARCH_URL, {"q": query, "type": kind, "court": courts}
     page = 0
     while url and page < max_pages:
         pacer.wait("between_requests")
         try:
-            resp = session.get(url, params=params, timeout=timeout)
+            response = session.get(url, params=params, timeout=timeout)
         except requests.RequestException as exc:
             log.warning("request failed (%s), backing off", exc)
             if not pacer.backoff(query):
                 return
             continue
-        if resp.status_code == 429:
+        if response.status_code == 429:
             if not pacer.backoff(query):
                 return
             continue
-        resp.raise_for_status()
+        response.raise_for_status()
         pacer.ok()
-        data = resp.json()
+        data = response.json()
         page += 1
         yield from data.get("results") or []
-        url, params = data.get("next"), None  # cursor URL carries everything
+        url, params = data.get("next"), None  # the cursor URL carries everything
     if url:
         log.info("stopped %r at the %d-page cap with more remaining", query, max_pages)
 
 
-def load_jsonl(path: Path, key: str) -> dict:
-    out = {}
-    if path.exists():
-        with path.open() as fh:
-            for line in fh:
-                d = json.loads(line)
-                out[d[key]] = d
-    return out
+def load_keyed(path: Path, key: str) -> dict:
+    """{row[key]: row} for the rows already in `path`."""
+    return {row[key]: row for row in read_rows(path)}
 
 
-def save_jsonl(path: Path, items: dict) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    tmp = path.with_suffix(".tmp")
-    with tmp.open("w") as fh:
-        for d in items.values():
-            fh.write(json.dumps(d, ensure_ascii=False) + "\n")
-    tmp.replace(path)
+def docket_row(hit: dict, districts: dict, retrieved_at: str) -> dict:
+    parties = hit.get("party") or []
+    return Case(
+        case_name=hit.get("caseName") or "", docket_number=hit.get("docketNumber") or "", court=hit.get("court") or "",
+        state=districts.get(hit.get("court_id") or "", ""), date_filed=hit.get("dateFiled") or "",
+        date_terminated=hit.get("dateTerminated") or "", nature_of_suit=hit.get("suitNature") or "",
+        cause=hit.get("cause") or "", associations=sorted({party for party in parties if LIEN_PARTY_RE.search(party)}),
+        url=SITE_URL + (hit.get("docket_absolute_url") or ""), source=DOCKET_SOURCE, retrieved_at=retrieved_at,
+        extras={"docket_id": hit.get("docket_id"), "court_id": hit.get("court_id") or "", "parties": parties}).as_row()
 
 
-def main() -> int:
-    ap = argparse.ArgumentParser(
-        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--out", type=Path, default=DEFAULT_OUT)
-    ap.add_argument("--max-pages", type=int, default=400,
-                    help="page cap per query (20 results per page)")
-    ap.add_argument("--only-opinions", action="store_true",
-                    help="skip the federal-docket queries")
-    ap.add_argument("--only-dockets", action="store_true",
-                    help="skip the state-opinion queries")
-    ap.add_argument("-v", "--verbose", action="store_true")
-    args = ap.parse_args()
+def opinion_row(hit: dict, url: str, appellate: dict, retrieved_at: str) -> dict:
+    segments = re.split(r"\s+v\.?\s+", hit.get("caseName") or "", flags=re.I)
+    return Opinion(
+        case_name=hit.get("caseName") or "", court=hit.get("court") or "",
+        state=appellate.get(hit.get("court_id") or "", ""), date_filed=hit.get("dateFiled") or "",
+        associations=sorted({segment.strip(" ,") for segment in segments if LIEN_PARTY_RE.search(segment)}),
+        url=url, source=OPINION_SOURCE, retrieved_at=retrieved_at,
+        extras={"court_id": hit.get("court_id") or ""}).as_row()
 
-    logging.basicConfig(
-        level=logging.DEBUG if args.verbose else logging.INFO,
-        format="%(asctime)s %(levelname)-7s %(message)s", datefmt="%H:%M:%S")
 
-    session = requests.Session()
-    session.headers["User-Agent"] = USER_AGENT
-    pacer = Pacer({"between_requests": [1.0, 2.5], "backoff_base": 60,
-                   "backoff_max": 900, "max_429_retries": 8})
+def add_arguments(parser: argparse.ArgumentParser) -> None:
+    parser.add_argument("--out", type=Path, default=COURTS_DIR)
+    parser.add_argument("--max-pages", type=int, default=400, help="page cap per query (20 results per page)")
+    parser.add_argument("--only-opinions", action="store_true", help="skip the federal-docket queries")
+    parser.add_argument("--only-dockets", action="store_true", help="skip the state-opinion queries")
 
+
+def run(args: argparse.Namespace) -> int:
+    session = http.session()
+    pacer = Pacer(PACING)
     districts, appellate = fetch_court_maps(session)
     district_param = " ".join(sorted(districts))
     appellate_param = " ".join(sorted(appellate))
-
     started = time.time()
-    now = datetime.now(timezone.utc).isoformat()
+    retrieved_at = now_iso()
 
-    dockets = load_jsonl(args.out / "dockets.jsonl", "docket_id")
+    dockets = load_keyed(args.out / "dockets.jsonl", "docket_id")
     if not args.only_opinions:
         for query in PARTY_QUERIES:
             found = 0
-            for r in fetch_query(session, pacer, query, args.max_pages,
-                                 "r", district_param):
+            for hit in fetch_query(session, pacer, query, args.max_pages, "r", district_param):
                 found += 1
-                did = r.get("docket_id")
-                if not did:
+                docket_id = hit.get("docket_id")
+                if not docket_id:
                     continue
-                entry = dockets.setdefault(did, {
-                    "docket_id": did,
-                    "case_name": r.get("caseName") or "",
-                    "docket_number": r.get("docketNumber") or "",
-                    "court": r.get("court") or "",
-                    "court_id": r.get("court_id") or "",
-                    "state": districts.get(r.get("court_id") or "", ""),
-                    "date_filed": r.get("dateFiled") or "",
-                    "date_terminated": r.get("dateTerminated") or "",
-                    "nature_of_suit": r.get("suitNature") or "",
-                    "cause": r.get("cause") or "",
-                    "parties": r.get("party") or [],
-                    "associations": sorted({p for p in (r.get("party") or [])
-                                            if ASSOCIATION_RE.search(p)}),
-                    "url": BASE_URL + (r.get("docket_absolute_url") or ""),
-                    "source": "courtlistener-recap",
-                    "queries": [],
-                    "retrieved_at": now,
-                })
+                entry = dockets.setdefault(docket_id, docket_row(hit, districts, retrieved_at))
                 if query not in entry["queries"]:
                     entry["queries"].append(query)
-            save_jsonl(args.out / "dockets.jsonl", dockets)
-            log.info("%-44s %5d results (%d dockets total) [checkpointed]",
-                     query, found, len(dockets))
+            write_rows(args.out / "dockets.jsonl", dockets.values())
+            log.info("%-44s %5d results (%d dockets total) [checkpointed]", query, found, len(dockets))
 
-    opinions = load_jsonl(args.out / "opinions.jsonl", "url")
+    opinions = load_keyed(args.out / "opinions.jsonl", "url")
     if not args.only_dockets:
         for query in OPINION_QUERIES:
             found = 0
-            for r in fetch_query(session, pacer, query, args.max_pages,
-                                 "o", appellate_param):
+            for hit in fetch_query(session, pacer, query, args.max_pages, "o", appellate_param):
                 found += 1
-                url = BASE_URL + (r.get("absolute_url") or "")
-                if url == BASE_URL:
+                url = SITE_URL + (hit.get("absolute_url") or "")
+                if url == SITE_URL:
                     continue
-                segments = re.split(r"\s+v\.?\s+", r.get("caseName") or "", flags=re.I)
-                assocs = sorted({s.strip(" ,") for s in segments
-                                 if ASSOCIATION_RE.search(s)})
-                entry = opinions.setdefault(url, {
-                    "case_name": r.get("caseName") or "",
-                    "court": r.get("court") or "",
-                    "court_id": r.get("court_id") or "",
-                    "state": appellate.get(r.get("court_id") or "", ""),
-                    "date_filed": r.get("dateFiled") or "",
-                    "associations": assocs,
-                    "url": url,
-                    "source": "courtlistener-opinions",
-                    "queries": [],
-                    "retrieved_at": now,
-                })
+                entry = opinions.setdefault(url, opinion_row(hit, url, appellate, retrieved_at))
                 if query not in entry["queries"]:
                     entry["queries"].append(query)
-            save_jsonl(args.out / "opinions.jsonl", opinions)
-            log.info("%-44s %5d results (%d opinions total) [checkpointed]",
-                     query, found, len(opinions))
+            write_rows(args.out / "opinions.jsonl", opinions.values())
+            log.info("%-44s %5d results (%d opinions total) [checkpointed]", query, found, len(opinions))
 
-    (args.out / "sources.json").write_text(json.dumps({
-        "retrieved_at": now,
+    write_json(args.out / "sources.json", {
+        "retrieved_at": retrieved_at,
         "source": "CourtListener (Free Law Project): RECAP dockets + state opinions",
         "page": SOURCE_PAGE,
-        "endpoint": ENDPOINT,
+        "endpoint": SEARCH_URL,
         "scope": "all US states + DC",
         "federal_districts": len(districts),
         "state_appellate_courts": len(appellate),
@@ -270,17 +201,11 @@ def main() -> int:
         "dockets": len(dockets),
         "opinions": len(opinions),
         "duration_seconds": round(time.time() - started, 1),
-        "caveat": ("RECAP holds what PACER users have shared; state coverage "
-                   "is appellate only — trial-court records have no free "
-                   "national index."),
-    }, indent=2))
-
+        "caveat": ("RECAP holds what PACER users have shared; state coverage is appellate only — "
+                   "trial-court records have no free national index."),
+    })
     for label, items in (("dockets", dockets), ("opinions", opinions)):
-        by_state = Counter(d["state"] for d in items.values() if d.get("state"))
-        top = ", ".join(f"{s} {n:,}" for s, n in by_state.most_common(8))
+        by_state = Counter(row["state"] for row in items.values() if row.get("state"))
+        top = ", ".join(f"{state} {count:,}" for state, count in by_state.most_common(8))
         print(f"{len(items):,} {label} — top states: {top}")
     return 0
-
-
-if __name__ == "__main__":
-    sys.exit(main())

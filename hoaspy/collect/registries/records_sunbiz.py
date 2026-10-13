@@ -1,43 +1,42 @@
 """Florida non-profit corporations from the Sunbiz quarterly extract.
 
 The Division of Corporations publishes its whole registry as fixed-width
-quarterly files (dos.fl.gov -> Sunbiz -> data downloads). The non-profit file
-covers every Florida not-for-profit corporation — which is what an HOA or
-condo association legally is — including corporate status, principal and
-mailing address, registered agent, and up to six named officers.
+quarterly files (dos.fl.gov -> Sunbiz -> data downloads). The non-profit
+file covers every Florida not-for-profit corporation — which is what an
+HOA or condo association legally is — with its status, principal and
+mailing address, registered agent and up to six named officers.
 
-Two roles here:
+This module is a parser the site build reads directly, not a collector
+that writes a file of its own: it returns plain dicts with the corporate
+columns (`corp_number`, `name`, `corp_status`, `filing_type`, `address`,
+`city`, `corp_state`, `zip`, `incorporated`, `last_activity`,
+`registered_agent`, `officers`). Two uses: standalone records for the
+corporations whose names read as community associations (the only
+statewide list of Florida HOAs proper), and a name-keyed index over all
+non-profits, so associations known from other sources can be joined to
+their corporate status and officers.
 
-  * standalone records for corporations whose names look like community
-    associations (the only statewide list of *HOAs proper*, since DBPR
-    registers condos but barely touches HOAs), and
-  * a name-keyed index over ALL non-profits, so associations known from other
-    sources (DBPR, county lien indexes) can be joined to their corporate
-    status and officers even when the name filter would have missed them.
-
-Record layout: 1,440-char fixed width, verified empirically against the data
-(officer blocks repeat every 128 chars from offset 668).
-
-The quarterly file contains ACTIVE corporations only (measured: every status
-byte is 'A'). So dissolution is detected by absence: an association that is
-registered with DBPR or actively filing liens but has no active corporation
-here has likely been administratively dissolved — a real compliance flag, but
-one to phrase as "no active corporation found" since name matching can miss.
+Record layout: 1,440 characters, fixed width, verified against the data
+(the officer blocks repeat every 128 characters from offset 668). The file
+holds ACTIVE corporations only (every status byte is "A"), so dissolution
+is detected by absence — and phrased as "no active corporation found",
+since name matching can miss.
 """
 
 from __future__ import annotations
 
 import logging
-import re
 from pathlib import Path
 
-log = logging.getLogger("records.sunbiz")
+from hoaspy.lib.names import CORPORATION_NAME_RE
+
+log = logging.getLogger(__name__)
 
 SOURCE_PAGE = "https://dos.fl.gov/sunbiz/other-services/data-downloads/quarterly-data/"
 SEARCH_URL = "https://search.sunbiz.org/Inquiry/CorporationSearch/ByName"
 
-# (start, length) into the 1440-char record.
-_F = {
+# (start, length) of each field in the 1,440-character record.
+FIELD_SPANS = {
     "corp_number": (0, 12),
     "name": (12, 192),
     "status": (204, 1),
@@ -53,77 +52,70 @@ _F = {
     "ra_addr": (587, 42),
     "ra_city": (629, 28),
 }
-
-_OFF_START = 668
-_OFF_STRIDE = 128  # title(4) type(1) name(42) addr(42) city(28) state(2) zip(9)
-
-# Community-association-looking names. Anchored at both ends where the term
-# could be a prefix of something else (VILLA vs VILLAGE is the classic trap).
-ASSOCIATION_NAME_RE = re.compile(
-    r"\b(HOMEOWNERS?|HOME OWNERS?|CONDOMINIUM|CONDO\b|PROPERTY OWNERS?|"
-    r"COMMUNITY ASSOCIATION|MASTER ASSOCIATION|RESIDENTS ASSOCIATION|"
-    r"TOWNHOMES?\b|TOWNHOUSES?\b|VILLAS\b|HOA\b)", re.I)
+OFFICER_BLOCK_START = 668
+OFFICER_BLOCK_STRIDE = 128      # title(4) type(1) name(42) addr(42) city(28) state(2) zip(9)
+OFFICER_BLOCKS = 6
+MIN_RECORD_LENGTH = 700
 
 
-def _get(line: str, key: str) -> str:
-    start, length = _F[key]
+def field_text(line: str, key: str) -> str:
+    start, length = FIELD_SPANS[key]
     return line[start:start + length].strip()
 
 
-def _date(raw: str) -> str:
-    """MMDDYYYY -> YYYY-MM-DD, or '' when blank/garbage."""
+def iso_date(raw: str) -> str:
+    """MMDDYYYY -> YYYY-MM-DD; '' when blank or not a date."""
     if len(raw) == 8 and raw.isdigit():
         return f"{raw[4:]}-{raw[:2]}-{raw[2:4]}"
     return ""
 
 
-def _officers(line: str) -> list[dict]:
+def officers(line: str) -> list[dict]:
+    """The named officers of one record: [{"title", "name"}, …]."""
     out = []
-    for i in range(6):
-        base = _OFF_START + i * _OFF_STRIDE
-        title = line[base:base + 4].strip()
-        name = " ".join(line[base + 5:base + 47].split())
-        if not name:
-            continue
-        out.append({"title": title, "name": name})
+    for block in range(OFFICER_BLOCKS):
+        start = OFFICER_BLOCK_START + block * OFFICER_BLOCK_STRIDE
+        title = line[start:start + 4].strip()
+        name = " ".join(line[start + 5:start + 47].split())
+        if name:
+            out.append({"title": title, "name": name})
     return out
 
 
 def parse_all(cache_dir: Path) -> list[dict]:
-    """Every non-profit corporation in the extract, lean normalised dicts."""
+    """Every non-profit corporation in the extract's shards (npcordata*.txt)."""
     shards = sorted(cache_dir.glob("npcordata*.txt"))
     if not shards:
         raise FileNotFoundError(f"no npcordata*.txt shards in {cache_dir}")
-
     out: list[dict] = []
     for path in shards:
         with path.open(encoding="latin-1") as fh:
             for line in fh:
                 line = line.rstrip("\r\n")
-                if len(line) < 700:
+                if len(line) < MIN_RECORD_LENGTH:
                     continue
-                name = " ".join(_get(line, "name").split())
+                name = " ".join(field_text(line, "name").split())
                 if not name:
                     continue
                 out.append({
-                    "corp_number": _get(line, "corp_number"),
+                    "corp_number": field_text(line, "corp_number"),
                     "name": name,
-                    "corp_status": "active" if _get(line, "status") == "A" else "inactive",
-                    "filing_type": _get(line, "filing_type"),
-                    "address": " ".join(
-                        p for p in (_get(line, "addr1"), _get(line, "addr2")) if p),
-                    "city": _get(line, "city").title(),
-                    "corp_state": _get(line, "state"),
-                    "zip": _get(line, "zip")[:5],
-                    "incorporated": _date(_get(line, "file_date")),
-                    "last_activity": _date(_get(line, "last_trx_date")),
-                    "registered_agent": " ".join(_get(line, "ra_name").split()),
-                    "officers": _officers(line),
+                    "corp_status": "active" if field_text(line, "status") == "A" else "inactive",
+                    "filing_type": field_text(line, "filing_type"),
+                    "address": " ".join(part for part in (field_text(line, "addr1"), field_text(line, "addr2"))
+                                        if part),
+                    "city": field_text(line, "city").title(),
+                    "corp_state": field_text(line, "state"),
+                    "zip": field_text(line, "zip")[:5],
+                    "incorporated": iso_date(field_text(line, "file_date")),
+                    "last_activity": iso_date(field_text(line, "last_trx_date")),
+                    "registered_agent": " ".join(field_text(line, "ra_name").split()),
+                    "officers": officers(line),
                 })
-    log.info("sunbiz: parsed %d non-profit corporations from %d shards",
-             len(out), len(shards))
+    log.info("sunbiz: parsed %d non-profit corporations from %d shards", len(out), len(shards))
     return out
 
 
-def associations_only(corps: list[dict]) -> list[dict]:
-    return [c for c in corps if ASSOCIATION_NAME_RE.search(c["name"])]
+def associations_only(corporations: list[dict]) -> list[dict]:
+    """The corporations whose names read as community associations."""
+    return [corp for corp in corporations if CORPORATION_NAME_RE.search(corp["name"])]

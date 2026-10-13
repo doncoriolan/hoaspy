@@ -13,17 +13,23 @@ from __future__ import annotations
 import contextlib
 import io
 import json
-import os
 import re
-import subprocess
 import sys
 import tempfile
 import unittest
-from unittest import mock
 from pathlib import Path
+from unittest import mock
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
+
+
+def association_columns() -> set[str]:
+    """The keys every registry row carries (hoaspy.lib.records.Association, extras aside)."""
+    from dataclasses import fields
+
+    from hoaspy.lib.records import Association
+    return {column.name for column in fields(Association) if column.name != "extras"}
 
 
 class TestMiamiDadeParsing(unittest.TestCase):
@@ -36,7 +42,7 @@ class TestMiamiDadeParsing(unittest.TestCase):
         try:
             from hoaspy.collect.liens import records_miamidade as md
         except Exception as exc:  # e.g. requests missing in a bare env
-            raise unittest.SkipTest(f"records_miamidade import failed: {exc}")
+            raise unittest.SkipTest(f"records_miamidade import failed: {exc}") from exc
         cls.md = md
 
     # two rows for one clerk file number: the D (filer) and R (respondent) sides
@@ -56,18 +62,18 @@ class TestMiamiDadeParsing(unittest.TestCase):
     ]
 
     def test_iso_date(self):
-        self.assertEqual(self.md._iso("11/7/2007 12:00:00 AM"), "2007-11-07")
-        self.assertEqual(self.md._iso(""), "")
-        self.assertEqual(self.md._iso("garbage"), "")
+        self.assertEqual(self.md.iso_date("11/7/2007 12:00:00 AM"), "2007-11-07")
+        self.assertEqual(self.md.iso_date(""), "")
+        self.assertEqual(self.md.iso_date("garbage"), "")
 
     def test_collapse_dedupes_parties_by_cfn(self):
-        by_cfn = self.md._collapse(self.ROWS)
+        by_cfn = self.md.collapse_parties(self.ROWS)
         self.assertEqual(list(by_cfn), [999])
         self.assertEqual(len(by_cfn[999]["_parties"]), 2)
 
     def test_to_record_shapes_a_lien(self):
-        by_cfn = self.md._collapse(self.ROWS)
-        rec = self.md.to_record(by_cfn[999], "LIEN - LIE")
+        by_cfn = self.md.collapse_parties(self.ROWS)
+        rec = self.md.to_record(by_cfn[999], "LIEN - LIE").as_row()
         self.assertEqual(rec["doc_type"], "LIE")
         self.assertEqual(rec["doc_type_label"], "claim_of_lien")
         self.assertEqual(rec["county"], "Miami-Dade")
@@ -78,13 +84,13 @@ class TestMiamiDadeParsing(unittest.TestCase):
 
     def test_session_requires_cookie(self):
         with self.assertRaises(self.md.MiamiDadeError):
-            self.md.session("")
+            self.md.open_session("")
 
     def test_fetch_for_names_skips_and_reports_done(self):
         """A resumed run must not re-query names already collected."""
         calls, done = [], []
 
-        def fake_search(sess, name, doctypes=None, pace=0):
+        def fake_search(sess, name, doctypes=None, pace=0, **kwargs):
             calls.append(name)
             return [{"doc_id": f"{name}-1", "association": name}]
 
@@ -101,36 +107,30 @@ class TestMiamiDadeParsing(unittest.TestCase):
         self.assertEqual([r["query_name"] for r in out], ["BETA"])
 
 
-class TestMiamiDadeCheckpoint(unittest.TestCase):
-    """The full-county run is thousands of requests over hours; it must resume."""
+class TestNameCheckpoint(unittest.TestCase):
+    """hoaspy/lib/checkpoint.py: a name-by-name run (Miami-Dade liens,
+    re:SearchTX, the trial-court portals) is thousands of requests over
+    hours; it must resume where it stopped."""
 
-    @classmethod
-    def setUpClass(cls):
-        try:
-            from hoaspy.collect.liens import get_miamidade_liens as g
-        except Exception as exc:
-            raise unittest.SkipTest(f"get_miamidade_liens import failed: {exc}")
-        cls.g = g
-
-    def test_checkpoint_roundtrip_and_clear(self):
+    def test_roundtrip_and_clear(self):
+        from hoaspy.lib.checkpoint import NameCheckpoint
         with tempfile.TemporaryDirectory() as td:
-            out = Path(td)
-            part, done = self.g.checkpoint_paths(out)
-            part.write_text(json.dumps({"doc_id": "X1"}) + "\n"
-                            + '{"doc_id": "TORN"'  # hard-kill partial line
-                            )
-            done.write_text("ALPHA\n")
-            recs, names = self.g.load_checkpoint(out)
-            self.assertEqual([r["doc_id"] for r in recs], ["X1"],
-                             "torn trailing line must be skipped, not fatal")
-            self.assertEqual(names, {"ALPHA"})
-            self.g.clear_checkpoint(out)
-            self.assertFalse(part.exists() or done.exists())
-
-    def test_load_checkpoint_empty_when_absent(self):
-        with tempfile.TemporaryDirectory() as td:
-            recs, names = self.g.load_checkpoint(Path(td))
-            self.assertEqual((recs, names), ([], set()))
+            checkpoint = NameCheckpoint(Path(td), "miamidade")
+            self.assertEqual((checkpoint.partial_path.name, checkpoint.done_path.name),
+                             (".miamidade_partial.jsonl", ".miamidade_done.txt"))
+            self.assertEqual(checkpoint.load(), ([], set()), "nothing yet")
+            with checkpoint:
+                checkpoint.add("ALPHA", [{"doc_id": "X1"}])
+                checkpoint.add("BETA", [])
+            torn = checkpoint.partial_path.read_text() + '{"doc_id": "TORN"'          # a hard kill mid-line
+            checkpoint.partial_path.write_text(torn)
+            rows, names = checkpoint.load()
+            self.assertEqual([row["doc_id"] for row in rows], ["X1"], "a torn trailing line is skipped, not fatal")
+            self.assertEqual(names, {"ALPHA", "BETA"})
+            with self.assertRaises(RuntimeError):
+                checkpoint.add("GAMMA", [])          # not opened
+            checkpoint.clear()
+            self.assertFalse(checkpoint.partial_path.exists() or checkpoint.done_path.exists())
 
 
 class TestTxResearchParsing(unittest.TestCase):
@@ -143,7 +143,7 @@ class TestTxResearchParsing(unittest.TestCase):
         try:
             from hoaspy.collect.courts import get_tx_research as tx
         except Exception as exc:  # e.g. requests missing in a bare env
-            raise unittest.SkipTest(f"get_tx_research import failed: {exc}")
+            raise unittest.SkipTest(f"get_tx_research import failed: {exc}") from exc
         cls.tx = tx
 
     # A re:SearchTX hit for a real HOA suit: association plaintiff + owner
@@ -184,7 +184,7 @@ class TestTxResearchParsing(unittest.TestCase):
         self.assertEqual(self.tx.association_parties(self.NOISE_HIT), [])
 
     def test_to_record_shapes_a_docket(self):
-        rec = self.tx.to_record(self.HOA_HIT, "Circle C Homeowners Association")
+        rec = self.tx.to_record(self.HOA_HIT, "Circle C Homeowners Association").as_row()
         self.assertEqual(rec["state"], "TX")
         self.assertEqual(rec["docket_number"], "D-1-GN-16-001378")
         self.assertEqual(rec["court"], "Travis County - District Clerk")
@@ -208,7 +208,7 @@ class TestTxResearchParsing(unittest.TestCase):
 
     def test_session_requires_cookie(self):
         with self.assertRaises(ValueError):
-            self.tx.session("")
+            self.tx.open_session("")
 
     def test_search_raises_quota_error_on_429(self):
         """A 429 (hourly quota) must raise QuotaError carrying Retry-After, not
@@ -280,7 +280,7 @@ class TestCaSosParsing(unittest.TestCase):
         try:
             from hoaspy.collect.registries import get_ca_sos as ca
         except Exception as exc:  # e.g. requests missing in a bare env
-            raise unittest.SkipTest(f"get_ca_sos import failed: {exc}")
+            raise unittest.SkipTest(f"get_ca_sos import failed: {exc}") from exc
         cls.ca = ca
         cls.sample = json.loads(
             (ROOT / "tests" / "fixtures" / "ca_sos_sample.json").read_text())
@@ -303,8 +303,7 @@ class TestCaSosParsing(unittest.TestCase):
 
     def test_to_record_shapes_a_state_corp_row(self):
         row = self.sample["rows"]["4209256"]  # a CID mutual-benefit corp
-        rec = self.ca.to_record(row)
-        self.assertIsNotNone(rec)
+        rec = self.ca.to_record(row).as_row()
         self.assertEqual(rec["state"], "CA")
         self.assertEqual(rec["name"], "1004 W. BALBOA HOA")
         self.assertEqual(rec["record_id"], "3477311")
@@ -356,7 +355,7 @@ class TestCaSosParsing(unittest.TestCase):
 
     def test_session_requires_cookie(self):
         with self.assertRaises(ValueError):
-            self.ca.session("")
+            self.ca.open_session("")
 
     def test_to_record_keeps_cid_rows_regardless_of_name(self):
         """A row filed as a common-interest development is an HOA by entity
@@ -367,8 +366,7 @@ class TestCaSosParsing(unittest.TestCase):
                "ENTITY_TYPE": "Unincorporated Common Interest Development",
                "STATUS": "Active", "STANDING": "Good Standing",
                "FILING_DATE": "07/01/2003", "AGENT": None}
-        rec = self.ca.to_record(row)
-        self.assertIsNotNone(rec)
+        rec = self.ca.to_record(row).as_row()
         self.assertTrue(rec["is_association"])
         self.assertEqual(rec["standing"], "Good Standing")
         self.assertEqual(rec["bizfile_id"], "4242")
@@ -484,7 +482,7 @@ class TestCaSosParsing(unittest.TestCase):
         try:
             from hoaspy.build import build_site as b
         except Exception as exc:
-            raise unittest.SkipTest(f"build_site import failed: {exc}")
+            raise unittest.SkipTest(f"build_site import failed: {exc}") from exc
         with tempfile.TemporaryDirectory() as d:
             path = Path(d) / "state_corps.jsonl"
             path.write_text(
@@ -513,11 +511,11 @@ class TestCaUccParsing(unittest.TestCase):
             from hoaspy.collect.liens import get_ca_ucc as ucc
             from hoaspy.collect.registries import get_ca_sos as sos
         except Exception as exc:
-            raise unittest.SkipTest(f"get_ca_ucc import failed: {exc}")
+            raise unittest.SkipTest(f"get_ca_ucc import failed: {exc}") from exc
         cls.ucc, cls.sos = ucc, sos
         # stand-in for records/state_corps.jsonl: one keyword name, one
         # CID-typed corporation whose name carries no HOA keyword at all
-        ucc._KNOWN = {"RIO VISTA WALK HOA", "VILLA LA PAZ MAINTENANCE CORPORATION"}
+        ucc.KNOWN_NAMES = {"RIO VISTA WALK HOA", "VILLA LA PAZ MAINTENANCE CORPORATION"}
 
     def test_parse_party_splits_name_city_state_and_strips_descriptors(self):
         pp = self.ucc.parse_party
@@ -557,7 +555,7 @@ class TestCaUccParsing(unittest.TestCase):
     def test_to_record_creditor_and_debtor_roles(self):
         r = self.ucc.to_record(self._row(
             "ALICIA CORNEJO - ANAHEIM, CA",
-            "RIO VISTA WALK HOA, A CALIFORNIA NON-PROFIT MUTUAL BENEFIT CORPORATION - OCEANSIDE, CA"))
+            "RIO VISTA WALK HOA, A CALIFORNIA NON-PROFIT MUTUAL BENEFIT CORPORATION - OCEANSIDE, CA")).as_row()
         self.assertEqual((r["hoa_role"], r["doc_type"], r["doc_type_label"]),
                          ("creditor", "JL", "judgment_lien"))
         self.assertEqual(r["association"], "RIO VISTA WALK HOA")
@@ -569,7 +567,7 @@ class TestCaUccParsing(unittest.TestCase):
             self.assertIn(k, r)
         d = self.ucc.to_record(self._row(
             "SUNSET RIDGE HOMEOWNERS ASSOCIATION - IRVINE, CA",
-            "ACME ROOFING, INC., A CALIFORNIA CORPORATION - IRVINE, CA"))
+            "ACME ROOFING, INC., A CALIFORNIA CORPORATION - IRVINE, CA")).as_row()
         self.assertEqual((d["hoa_role"], d["doc_type"]), ("debtor", "JLX"))
         self.assertEqual(d["association"], "SUNSET RIDGE HOMEOWNERS ASSOCIATION")
         self.assertIsNone(self.ucc.to_record(self._row(
@@ -641,7 +639,7 @@ class TestUtahRegistryParsing(unittest.TestCase):
         try:
             from hoaspy.collect.registries import get_ut_hoa as ut
         except Exception as exc:
-            raise unittest.SkipTest(f"get_ut_hoa import failed: {exc}")
+            raise unittest.SkipTest(f"get_ut_hoa import failed: {exc}") from exc
         cls.ut = ut
         cls.html = (ROOT / "tests" / "fixtures" / "ut_hoa_detail.html").read_text()
 
@@ -660,7 +658,7 @@ class TestUtahRegistryParsing(unittest.TestCase):
         self.assertTrue(d["county"] and not d["county"].endswith("County"))
 
     def test_record_keeps_names_drops_contacts(self):
-        rec = self.ut.to_record(self._detail(), {})
+        rec = self.ut.to_record(self._detail(), {}).as_row()
         self.assertEqual(rec["state"], "UT")
         self.assertTrue(rec["source_url"].startswith("https://services.commerce.utah.gov/hoa/?p="))
         self.assertRegex(rec["status_detail"], r"^expires \d{4}-\d{2}-\d{2}$")
@@ -783,8 +781,8 @@ class TestAzAdreParsing(unittest.TestCase):
         az = self.az
         for g in ("the Association", "Homeowners Association", "Residential Association",
                   "Neighborhood Association", "Master Association"):
-            self.assertTrue(az._generic(g), g)
-        self.assertFalse(az._generic("Jorde Farms Community Association"))
+            self.assertTrue(az.is_generic_name(g), g)
+        self.assertFalse(az.is_generic_name("Jorde Farms Community Association"))
         names = az.association_names(
             "NAME AND ASSESSMENTS: Purchaser will belong to Jorde Farms Community Association "
             "(HOA), an Arizona nonprofit corporation, and are subject to assessments.")
@@ -814,7 +812,7 @@ class TestAzAdreParsing(unittest.TestCase):
                 "associations": ["Goodyear Homeowners Association"]},
         }
         az.TEXT_DIR = ROOT / "tests" / "fixtures" / "nope"        # no cached text -> keep given parse
-        rows = az.to_records(details)
+        rows = [record.as_row() for record in az.to_records(details)]
         self.assertEqual(sorted(r["name"] for r in rows), ["Arlington Estates at South Mountain Homeowners Association",
                                                            "Goodyear Homeowners Association"],
                          "out-of-state land registered for sale in Arizona (Idaho, 'Out Of State') is not an AZ row")
@@ -871,10 +869,10 @@ class TestCookCondosShaping(unittest.TestCase):
         ]
         b = cc.group_units(units)
         self.assertEqual(set(b), {"1703228039", "0102202050"})
-        self.assertEqual(len(b["1703228039"]["pins"]), 2)
-        row = cc.to_row(b["1703228039"], {"max_char_yrblt": "1968.0", "max_char_building_non_units": "1.0"},
-                        {"prop_address_full": "850 N LAKE SHORE DR 412", "prop_address_city_name": "CHICAGO",
-                         "prop_address_zipcode_1": "60611"})
+        self.assertEqual(len(b["1703228039"].pins), 2)
+        row = cc.to_record(b["1703228039"], {"max_char_yrblt": "1968.0", "max_char_building_non_units": "1.0"},
+                           {"prop_address_full": "850 N LAKE SHORE DR 412", "prop_address_city_name": "CHICAGO",
+                            "prop_address_zipcode_1": "60611"}).as_row()
         self.assertEqual(row["name"], "850 N Lake Shore Dr Condominium")
         self.assertEqual((row["state"], row["county"], row["city"], row["zip"]), ("IL", "Cook", "Chicago", "60611"))
         self.assertEqual(row["units"], 1)
@@ -883,8 +881,9 @@ class TestCookCondosShaping(unittest.TestCase):
         self.assertAlmostEqual(row["lat"], 41.9)
         self.assertEqual(row["record_id"], "1703228039")
         # no address row -> municipality gives the city, ZIP from the parcels; no street -> no row
-        self.assertIsNone(cc.to_row(b["0102202050"], None, None))
-        self.assertEqual(cc.muni_city("VILLAGE OF BARRINGTON", "Barrington"), "Barrington")
+        self.assertIsNone(cc.to_record(b["0102202050"], None, None))
+        self.assertEqual(cc.municipality_city("VILLAGE OF BARRINGTON", "Barrington"), "Barrington")
+        self.assertEqual(set(row), association_columns() | {"pin10", "year_built", "lat", "lon"})
         blob = json.dumps(row)
         for forbidden in ("mail_address", "owner_address", "@"):
             self.assertNotIn(forbidden, blob)
@@ -901,7 +900,7 @@ class TestWiDfiParsing(unittest.TestCase):
         try:
             from hoaspy.collect.registries import get_wi_dfi as wi
         except Exception as exc:
-            raise unittest.SkipTest(f"get_wi_dfi import failed: {exc}")
+            raise unittest.SkipTest(f"get_wi_dfi import failed: {exc}") from exc
         cls.wi = wi
         cls.html = (ROOT / "tests" / "fixtures" / "wi_dfi_sample.html").read_text()
 
@@ -916,22 +915,20 @@ class TestWiDfiParsing(unittest.TestCase):
         self.assertEqual(self.wi.parse_rows("<p>Sorry your search returned no records</p>"), [])
 
     def test_record_shape_and_place_split(self):
-        recs = {r["record_id"]: r for r in map(self.wi.to_record, self.wi.parse_rows(self.html))}
+        recs = {r["record_id"]: r for r in (self.wi.to_record(row).as_row() for row in self.wi.parse_rows(self.html))}
         r = recs["HOA12041"]
         self.assertEqual((r["state"], r["city"], r["county"]), ("WI", "Ashwaubenon", "Brown"))
         self.assertTrue(r["source"].startswith("Wisconsin DFI"))
-        self.assertTrue(r["source_url"].startswith(self.wi.BASE + "?Query=HOA12041"))
+        self.assertTrue(r["source_url"].startswith(self.wi.REGISTRY_URL + "?Query=HOA12041"))
         self.assertIn("Village of Ashwaubenon", r["status_detail"])
-        self.assertEqual(set(r), {"state", "source", "source_url", "record_id", "name", "status",
-                                  "status_detail", "recorded_date", "address", "city", "county",
-                                  "zip", "units", "manager_name"})
+        self.assertEqual(set(r), association_columns(), "every registry row carries the same columns")
         self.assertEqual((recs["HOA12405"]["city"], recs["HOA12405"]["county"]), ("Howard", "Brown"))
         self.assertEqual((recs["HOA12449"]["city"], recs["HOA12449"]["county"]), ("Ixonia", "Jefferson"))
         self.assertEqual((recs["HOA12203"]["city"], recs["HOA12203"]["county"]), ("Brown Deer", "Milwaukee"))
         self.assertEqual(self.wi.split_place("City of Madison - County of Dane"), ("Madison", "Dane"))
 
     def test_manager_is_company_only(self):
-        recs = {r["record_id"]: r for r in map(self.wi.to_record, self.wi.parse_rows(self.html))}
+        recs = {r["record_id"]: r for r in (self.wi.to_record(row).as_row() for row in self.wi.parse_rows(self.html))}
         self.assertEqual(recs["HOA12449"]["manager_name"], "SENTRY MANAGEMENT INC")
         self.assertTrue(recs["HOA12029"]["manager_name"].endswith("Association, Inc."))
         self.assertEqual(recs["HOA12075"]["manager_name"], "", "a named employee is not a company")
@@ -947,14 +944,14 @@ class TestWiDfiParsing(unittest.TestCase):
         rows = self.wi.parse_rows(self.html)
         with tempfile.TemporaryDirectory() as d:
             ckpt = Path(d) / "ck.jsonl"
-            self.wi.save_ckpt("Brown", rows[:3], ckpt)
-            done, found = self.wi.load_ckpt(ckpt)
+            self.wi.save_checkpoint("Brown", rows[:3], ckpt)
+            done, found = self.wi.load_checkpoint(ckpt)
             self.assertEqual((done, sorted(found)), ({"Brown"}, ["HOA12041", "HOA12203", "HOA12543"]))
             client = type("C", (), {"requests": 0,
                                     "search": lambda self, q, c: rows[3:] if c == "Dane" else []})()
-            out = self.wi.sweep(client, ["Brown", "Dane"], ckpt=ckpt)
+            out = self.wi.sweep(client, ["Brown", "Dane"], checkpoint=ckpt)
             self.assertEqual(len(out), 7, "Brown from the checkpoint + Dane from the client")
-            self.assertEqual(self.wi.load_ckpt(ckpt)[0], {"Brown", "Dane"})
+            self.assertEqual(self.wi.load_checkpoint(ckpt)[0], {"Brown", "Dane"})
 
 
 class TestWaCcfsParsing(unittest.TestCase):
@@ -969,18 +966,17 @@ class TestWaCcfsParsing(unittest.TestCase):
         try:
             from hoaspy.collect.registries import get_wa_ccfs as wa
         except Exception as exc:
-            raise unittest.SkipTest(f"get_wa_ccfs import failed: {exc}")
+            raise unittest.SkipTest(f"get_wa_ccfs import failed: {exc}") from exc
         cls.wa = wa
         cls.raw = json.loads((ROOT / "tests" / "fixtures" / "wa_ccfs_page.json").read_text())
 
     def test_list_rows_become_corp_rows(self):
-        from hoaspy.collect.registries.get_states import ASSOC_RE
-        rows = [self.wa.to_row(r) for r in self.raw]
+        from hoaspy.lib.names import REGISTRY_NAME_RE
+        rows = [self.wa.to_record(r) for r in self.raw]
         self.assertTrue(rows and all(rows), "every fixture row is association-named")
-        want = {"state", "source", "source_url", "record_id", "name", "corp_status", "status",
-                "address", "city", "county", "zip", "incorporated", "registered_agent",
-                "entity_type", "units", "manager_name", "officers", "business_id"}
-        for raw, r in zip(self.raw, rows):
+        rows = [record.as_row() for record in rows]
+        want = association_columns() | {"business_id"}
+        for raw, r in zip(self.raw, rows, strict=True):
             self.assertEqual(set(r), want)
             self.assertEqual(r["state"], "WA")
             self.assertEqual(r["source_url"], "https://ccfs.sos.wa.gov/")
@@ -990,10 +986,11 @@ class TestWaCcfsParsing(unittest.TestCase):
             self.assertRegex(r["incorporated"], r"^\d{4}-\d{2}-\d{2}$")
             self.assertEqual(r["status"], r["corp_status"])
             self.assertIn(r["status"], ("Active", "Inactive", "Administratively Dissolved"))
-            self.assertTrue(ASSOC_RE.search(r["name"]) and r["name"] == r["name"].strip())
+            self.assertTrue(REGISTRY_NAME_RE.search(r["name"]) and r["name"] == r["name"].strip())
             self.assertTrue(r["entity_type"].startswith("WA "))
             self.assertEqual(r["city"], r["city"].title())
-            self.assertIsNone(r["units"]); self.assertEqual(r["officers"], [])
+            self.assertIsNone(r["units"])
+            self.assertEqual(r["officers"], [])
         self.assertEqual({r["status"] for r in rows},
                          {"Active", "Inactive", "Administratively Dissolved"},
                          "fixture spans every status so the site can flag dissolved corps")
@@ -1001,18 +998,18 @@ class TestWaCcfsParsing(unittest.TestCase):
     def test_assoc_gate_and_no_contacts(self):
         base = dict(self.raw[0])
         for name in ("CONDOR TRUCKING INC", "SHOAL BAY LLC", "HOANG FAMILY DENTAL", ""):
-            self.assertIsNone(self.wa.to_row(dict(base, BusinessName=name)), name)
+            self.assertIsNone(self.wa.to_record(dict(base, BusinessName=name)), name)
         # the API payload carries phone/e-mail/EIN; the row must not, even if
         # they were projected by mistake
         leaky = dict(base, PhoneNumber="360-555-0100", EmailAddress="board@example.org",
                      FEINNo="994453805",
                      PrincipalStreetAddress=dict(base["PrincipalStreetAddress"],
                                                  PhoneNumber="360-555-0100", EmailAddress="x@example.org"))
-        blob = json.dumps(self.wa.to_row(leaky))
+        blob = json.dumps(self.wa.to_record(leaky).as_row())
         for bad in ("@", "555-0100", "994453805", "PhoneNumber", "EmailAddress", "FEIN"):
             self.assertNotIn(bad, blob)
         for bad in ("PhoneNumber", "EmailAddress", "FEINNo"):
-            self.assertNotIn(bad, self.wa._JS_PROJECT, "page projection must not read contact fields")
+            self.assertNotIn(bad, self.wa.PROJECT_JS, "page projection must not read contact fields")
         self.assertRegex(json.dumps(self.raw), r'"UBINumber": "\d{3} \d{3} \d{3}"')
 
 
@@ -1027,7 +1024,7 @@ class TestNevadaLayersParsing(unittest.TestCase):
         try:
             from hoaspy.collect.registries import get_nv_hoa as nv
         except Exception as exc:
-            raise unittest.SkipTest(f"get_nv_hoa import failed: {exc}")
+            raise unittest.SkipTest(f"get_nv_hoa import failed: {exc}") from exc
         cls.nv = nv
         cls.fx = json.loads((ROOT / "tests" / "fixtures" / "nv_hoa_layers.json").read_text())
 
@@ -1037,7 +1034,7 @@ class TestNevadaLayersParsing(unittest.TestCase):
         rows += [nv.henderson_record(a, nv.LAYERS["henderson"], False) for a in self.fx["henderson"]]
         rows += [nv.henderson_record(a, nv.LAYERS["henderson_master"], True) for a in self.fx["henderson_master"]]
         rows += [nv.las_vegas_record(a, nv.LAYERS["las_vegas"]) for a in self.fx["las_vegas"]]
-        return [r for r in rows if r]
+        return [record.as_row() for record in rows if record]
 
     def test_rows_shape_and_privacy(self):
         rows = self._rows()
@@ -1067,8 +1064,8 @@ class TestNevadaLayersParsing(unittest.TestCase):
                                 nv.LAYERS["las_vegas"])
         merged = nv.merge([a, b, c])
         self.assertEqual(len(merged), 2)
-        self.assertEqual(merged[0]["manager_name"], "Acme Mgmt")
-        self.assertIn(nv.LAYERS["henderson"]["source"], merged[0]["also_listed_by"])
+        self.assertEqual(merged[0].manager_name, "Acme Mgmt")
+        self.assertIn(nv.LAYERS["henderson"]["source"], merged[0].extras["also_listed_by"])
 
 
 class TestGovLayersMapping(unittest.TestCase):
@@ -1082,7 +1079,7 @@ class TestGovLayersMapping(unittest.TestCase):
         try:
             from hoaspy.collect.registries import get_gov_layers as gl
         except Exception as exc:
-            raise unittest.SkipTest(f"get_gov_layers import failed: {exc}")
+            raise unittest.SkipTest(f"get_gov_layers import failed: {exc}") from exc
         cls.gl = gl
 
     def test_mapping_and_parcel_collapse(self):
@@ -1101,7 +1098,7 @@ class TestGovLayersMapping(unittest.TestCase):
         ]
         rows = self.gl.to_rows("MA", cfg, raw)
         self.assertEqual(len(rows), 1, "two parcels of one trust collapse; non-association dropped")
-        r = rows[0]
+        r = rows[0].as_row()
         self.assertEqual(r["name"], "HARBOR VIEW CONDOMINIUM TRUST")
         self.assertEqual(r["parcels"], 2)
         self.assertEqual((r["state"], r["county"], r["status"]), ("MA", "Test", "condominium project"))
@@ -1165,10 +1162,10 @@ class TestGovLayersMapping(unittest.TestCase):
         with zipfile.ZipFile(buf, "w") as zf:
             zf.writestr("ownership/ownership.prj", "PROJCS[]")
             zf.writestr("ownership/ownership.dbf", bytes(hdr) + body + b"\x1a")
-        rows = self.gl._read_zip_dbf(buf.getvalue(), None)
+        rows = self.gl.read_zip_dbf(buf.getvalue(), None)
         self.assertEqual(rows, [{"owner": "ASPEN HOMEOWNERS ASSOCIATION", "pidn": "22-41-1"},
                                 {"owner": "SMITH, JOHN", "pidn": "22-41-2"}])
-        self.assertEqual(self.gl._read_zip_dbf(buf.getvalue(), "ownership/ownership.dbf"), rows)
+        self.assertEqual(self.gl.read_zip_dbf(buf.getvalue(), "ownership/ownership.dbf"), rows)
 
 
 class TestStateSourceConstants(unittest.TestCase):
@@ -1189,9 +1186,9 @@ class TestStateSourceConstants(unittest.TestCase):
                               "county": "County", "zip": "Zip Code", "units": "Unit Count"}}
             rows = get_states.fetch_csv(None, cfg, "MD", registry=True)
         self.assertEqual(len(rows), 1)
-        self.assertEqual(rows[0]["county"], "Montgomery")
-        self.assertEqual(rows[0]["status"], "registered COC")
-        self.assertEqual(rows[0]["units"], 12)              # a number, not the text the export carries
+        self.assertEqual(rows[0].county, "Montgomery")
+        self.assertEqual(rows[0].status, "registered COC")
+        self.assertEqual(rows[0].units, 12)                 # a number, not the text the export carries
 
 
 class TestMiamiDadeCivilFeed(unittest.TestCase):
@@ -1208,7 +1205,7 @@ class TestMiamiDadeCivilFeed(unittest.TestCase):
         try:
             from hoaspy.collect.courts import records_miamidade_civil as m
         except Exception as exc:
-            raise unittest.SkipTest(f"records_miamidade_civil import failed: {exc}")
+            raise unittest.SkipTest(f"records_miamidade_civil import failed: {exc}") from exc
         cls.m = m
 
     @staticmethod
@@ -1432,7 +1429,7 @@ class TestMdCaseSearchParsing(unittest.TestCase):
         try:
             from hoaspy.collect.courts.court_portals import md_casesearch as md
         except Exception as exc:
-            raise unittest.SkipTest(f"md_casesearch import failed: {exc}")
+            raise unittest.SkipTest(f"md_casesearch import failed: {exc}") from exc
         cls.md = md
         cls.rows = json.loads((ROOT / "tests" / "fixtures" / "md_casesearch_rows.json").read_text())
 
@@ -1555,12 +1552,12 @@ class TestMdCaseSearchParsing(unittest.TestCase):
         def fake_query(prefix, d0=None, d1=None):
             calls.append((d0, d1))
             days = (d1 - d0).days + 1
-            n = md.CAP if days > 10 or d0 == dt.date(2020, 1, 1) else 3
+            n = md.ROW_CAP if days > 10 or d0 == dt.date(2020, 1, 1) else 3
             return [{"caseNumber": f"{d0}-{i}", "fullName": "COUNCIL OF UNIT OWNERS OF Y CONDOMINIUM",
                      "partyTypeDisplay": "Plaintiff", "locationName": "Towson District Court", "caseType": "Contract",
                      "caseStatus": "Open", "filingDate": "01/01/2020", "title": "x vs y"} for i in range(n)]
-        c._query = fake_query
-        rows = c._rows("council of unit owners", dt.date(2020, 1, 1), dt.date(2020, 2, 9))
+        c.query = fake_query
+        rows = c.result_rows("council of unit owners", dt.date(2020, 1, 1), dt.date(2020, 2, 9))
         self.assertGreater(len(calls), 4)
         self.assertEqual(calls[0], (dt.date(2020, 1, 1), dt.date(2020, 2, 9)))     # whole window first
         self.assertTrue(all(d0 <= d1 for d0, d1 in calls))
@@ -1586,35 +1583,35 @@ class TestMdCaseSearchParsing(unittest.TestCase):
                     raise AssertionError("unexpected")
 
         c = md.Client("msal=x; datadome=abc123")
-        self.assertEqual(c.s.headers["Cookie"], "datadome=abc123")
-        self.assertEqual(md.Client("abc123").s.headers["Cookie"], "datadome=abc123")
+        self.assertEqual(c.session.headers["Cookie"], "datadome=abc123")
+        self.assertEqual(md.Client("abc123").session.headers["Cookie"], "datadome=abc123")
         with self.assertRaises(ValueError):
             md.Client("")
         # the cookie file may name the browser the cookie came from; the client hints follow it
         linux = md.Client("datadome=abc123\nUser-Agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 "
                           "(KHTML, like Gecko) Chrome/152.0.0.0 Safari/537.36\n")
-        self.assertEqual(linux.s.headers["Cookie"], "datadome=abc123")
-        self.assertIn("X11; Linux", linux.s.headers["User-Agent"])
-        self.assertEqual(linux.s.headers["sec-ch-ua-platform"], '"Linux"')
-        self.assertIn('v="152"', linux.s.headers["sec-ch-ua"])
-        self.assertEqual(c.s.headers["sec-ch-ua-platform"], '"macOS"')
+        self.assertEqual(linux.session.headers["Cookie"], "datadome=abc123")
+        self.assertIn("X11; Linux", linux.session.headers["User-Agent"])
+        self.assertEqual(linux.session.headers["sec-ch-ua-platform"], '"Linux"')
+        self.assertIn('v="152"', linux.session.headers["sec-ch-ua"])
+        self.assertEqual(c.session.headers["sec-ch-ua-platform"], '"macOS"')
 
         class S:
             def __init__(self, resp):
                 self.resp = resp
             def post(self, *a, **k):
                 return self.resp
-        c.s = S(Resp(403, {"url": "https://geo.captcha-delivery.com/captcha/?x"}))
+        c.session = S(Resp(403, {"url": "https://geo.captcha-delivery.com/captcha/?x"}))
         with self.assertRaises(PermissionError):
-            c._query("wexford")
-        c.s = S(Resp(400, {"code": 404, "error": "CaseSearch will only display results for cases that exist"}))
-        self.assertEqual(c._query("zzzz"), [])
-        c.s = S(Resp(429, headers={"Retry-After": "120"}))
+            c.query("wexford")
+        c.session = S(Resp(400, {"code": 404, "error": "CaseSearch will only display results for cases that exist"}))
+        self.assertEqual(c.query("zzzz"), [])
+        c.session = S(Resp(429, headers={"Retry-After": "120"}))
         with self.assertRaises(RateLimited) as cm:
-            c._query("wexford")
+            c.query("wexford")
         self.assertEqual(cm.exception.retry_after, 120)
-        c.s = S(Resp(200, [{"caseNumber": "1"}]))
-        self.assertEqual(c._query("wexford"), [{"caseNumber": "1"}])
+        c.session = S(Resp(200, [{"caseNumber": "1"}]))
+        self.assertEqual(c.query("wexford"), [{"caseNumber": "1"}])
 
     def test_browser_transport_reloads_once_on_a_refusal(self):
         """A `cdp:` line in the cookie file sends every search through a real
@@ -1632,35 +1629,35 @@ class TestMdCaseSearchParsing(unittest.TestCase):
                 self.posted.append(body)
                 return self.answers.pop(0)
 
-        real = md._Tab
-        md._Tab = FakeTab
+        real = md.BrowserTab
+        md.BrowserTab = FakeTab
         try:
             c = md.Client("cdp: http://127.0.0.1:9612\n", pace=0)
             self.assertEqual(c.tab.endpoint, "http://127.0.0.1:9612")
-            self.assertEqual(c.s.headers["Cookie"], "datadome=")
+            self.assertEqual(c.session.headers["Cookie"], "datadome=")
             c.tab.answers = [(403, '{"url": "https://geo.captcha-delivery.com/captcha/?x"}', ""),
                              (200, '[{"caseNumber": "1"}]', "")]
-            self.assertEqual(c._query("wexford"), [{"caseNumber": "1"}])
+            self.assertEqual(c.query("wexford"), [{"caseNumber": "1"}])
             self.assertEqual(c.tab.reloads, 1)
             self.assertEqual(c.tab.posted[0]["businessName"], "wexford")
             self.assertEqual(c.tab.posted[0]["caseType"], "CIVIL")
             c.tab.answers = [(403, "{}", ""), (403, "{}", "")]
             with self.assertRaises(PermissionError):
-                c._query("wexford")
+                c.query("wexford")
             c.tab.answers = [(400, '{"code": 404, "error": "no cases"}', "")]
-            self.assertEqual(c._query("zzz"), [])
+            self.assertEqual(c.query("zzz"), [])
             c.tab.answers = [(429, "", "90")]
             from hoaspy.collect.courts.court_portals import RateLimited
             with self.assertRaises(RateLimited) as cm:
-                c._query("wexford")
+                c.query("wexford")
             self.assertEqual(cm.exception.retry_after, 90)
             c.tab.answers = [(500, "boom", "")]
             with self.assertRaises(RuntimeError):
-                c._query("wexford")
+                c.query("wexford")
         finally:
-            md._Tab = real
+            md.BrowserTab = real
         # the fetch the tab runs is same-origin, credentialed and JSON
-        js = md._FETCH_JS % ('"/api"', '"{}"')
+        js = md.FETCH_JS % ('"/api"', '"{}"')
         self.assertIn('credentials: "include"', js)
         self.assertIn('method: "POST"', js)
 
@@ -1685,9 +1682,13 @@ class TestMdCaseSearchParsing(unittest.TestCase):
                                          "FAIRHAVEN RESIDENTS ASSOCIATION INC"])
 
                 class Args:
-                    names = None; limit = None; no_sweeps = False
+                    names = None
+                    limit = None
+                    no_sweeps = False
+
                 class Mod:
-                    STATE = "MD"; SWEEPS = ("council of unit owners", "homeowners")
+                    STATE = "MD"
+                    SWEEPS = ("council of unit owners", "homeowners")
                 self.assertEqual(gsc.portal_names(Mod, Args), names + ["council of unit owners", "homeowners"])
                 Args.no_sweeps = True
                 self.assertEqual(gsc.portal_names(Mod, Args), names)
@@ -1830,7 +1831,8 @@ class TestVaGdcParsing(unittest.TestCase):
             for party in (row["plaintiff"], row["defendant"]):
                 self.assertRegex(party, r"MONTCLAIR|LLC$|^OWNER\d\d, SAMPLE$")
         text = re.sub(r"<[^>]+>", "\n", re.search(r"<main>(.*?)</main>", self.detail, re.S).group(1))
-        people = {l.strip() for l in text.splitlines() if re.fullmatch(r"\s*[A-Z][A-Z0-9' -]+, [A-Z][A-Z .;]+\s*", l)}
+        people = {line.strip() for line in text.splitlines()
+                  if re.fullmatch(r"\s*[A-Z][A-Z0-9' -]+, [A-Z][A-Z .;]+\s*", line)}
         self.assertEqual(people, {"OWNER02, SAMPLE"})
 
     def test_parse_detail(self):
@@ -1859,7 +1861,7 @@ class TestVaGdcParsing(unittest.TestCase):
         self.assertEqual((r["source"], r["state"], r["court"], r["court_fips"], r["case_data_id"]),
                          ("va_gdc", "VA", "Prince William General District Court", "153", "153-GV19013223"))
         self.assertEqual((r["queries"], r["associations"], r["association_role"], r["url"]),
-                         ([self.NAME], ["MONTCLAIR PROERTY OWNERS ASSOCIATION INC"], ["plaintiff"], self.va.BASE))
+                         ([self.NAME], ["MONTCLAIR PROERTY OWNERS ASSOCIATION INC"], ["plaintiff"], self.va.PORTAL_URL))
         # a warrant in debt and its three garnishments are one case with four actions
         g = by["GV21001050-00"]
         self.assertEqual([a["number"][-2:] for a in g["actions"]], ["00", "01", "02", "03"])
@@ -1876,7 +1878,7 @@ class TestVaGdcParsing(unittest.TestCase):
         # same docket shape as every other trial-court adapter
         from hoaspy.collect.courts.court_portals._common import record
         base = set(record(key="k", state="VA", case_name="a", court="c", docket_number="d",
-                          associations=["a"], url="u", queried="q"))
+                          associations=["a"], url="u", queried="q").as_row())
         self.assertTrue(base <= set(r))
         self.assertEqual(self.va.filed_year("GV99000001-00"), 1999)
 
@@ -1897,14 +1899,14 @@ class TestVaGdcParsing(unittest.TestCase):
             party, count = plan[i] if i < len(plan) else ("", 0)
             return {"rows": [row(i * 100 + k, party) for k in range(count)], "next": i + 1 < len(plan),
                     "counter": "0", "cursor": {"page": i}}
-        c._post = post
+        c.post_search = post
         return c
 
     def test_flooded_prefix_is_narrowed(self):
         name = "VILLAGE GREEN COMMUNITY ASSOCIATION"
         noise, ours = ("VILLAGE GREEN APARTMENTS LLC", 20), ("VILLAGE GREEN COMMUNITY ASSOC", 20)
         c = self._client({"VILLAGE GREEN": [noise] * 40, "VILLAGE GREEN C": [ours, ours]})
-        rows = c._court_rows("059", name)
+        rows = c.court_rows("059", name)
         self.assertEqual(len(rows), 40)
         self.assertTrue(all(r["plaintiff"] == ours[0] for r in rows))
         # gave up on the bare core after FLOOD_PAGES[0] pages, did not page through the apartments
@@ -1914,7 +1916,7 @@ class TestVaGdcParsing(unittest.TestCase):
         name = "LAKE MONTICELLO OWNERS ASSOCIATION"
         ours = ("LAKE MONTICELLO OWNERS ASSN", 20)
         c = self._client({"LAKE MONTICELLO": [ours] * 9})
-        rows = c._court_rows("065", name)
+        rows = c.court_rows("065", name)
         self.assertEqual(len(rows), 180)
         self.assertEqual({q for q, _ in c.asked}, {"LAKE MONTICELLO"})
 
@@ -1923,19 +1925,19 @@ class TestVaGdcParsing(unittest.TestCase):
         opened = []
 
         class Portal:
-            cdp = object()
+            devtools = object()
             courts = [("153", "Prince William General District Court"), ("059", "Fairfax County General District Court")]
             def open(self):
                 opened.append(1)
         c.portal = Portal()
-        real_post, calls = c._post, []
+        real_post, calls = c.post_search, []
 
         def flaky(fips, query, action, cursor=None):
             calls.append(fips)
             if len(calls) == 1:
-                raise self.va._SessionLost("status 200")
+                raise self.va.SessionLost("status 200")
             return real_post(fips, query, action, cursor)
-        c._post = flaky
+        c.post_search = flaky
         with mock.patch.object(self.va.time, "sleep"):
             recs = c.search(self.NAME)
         self.assertEqual(opened, [1])
@@ -2002,7 +2004,7 @@ class TestPaUjsCaptionMatching(unittest.TestCase):
         self.assertTrue(ok("Mh Townhomes LLC", "Mh Townhomes Llc"), "the roster's own spelling")
 
     def test_search_keeps_matching_parties_under_the_queried_name(self):
-        row = dict.fromkeys(self.m.COLS, "")
+        row = dict.fromkeys(self.m.RESULT_COLUMNS, "")
         hits = [dict(row, docket_number="MJ-60302-CV-0000123-2019", court_type="Magisterial District",
                      caption="Hemlock Farms Community Assoc. v. Doe, Jane", case_status="Closed",
                      filing_date="04/02/2019", county="Pike", court_office="MDJ-60-3-02"),
@@ -2013,7 +2015,7 @@ class TestPaUjsCaptionMatching(unittest.TestCase):
                      caption="Hemlock Farms Realty v. Roe, Sam", filing_date="01/09/2020")]
         client = self.m.Client()
         asked = []
-        client._post = lambda q: asked.append(q) or hits
+        client.post_search = lambda q: asked.append(q) or hits
         recs = client.search("HEMLOCK FARMS COMMUNITY ASSOCIATION")
         self.assertEqual(asked, ["HEMLOCK FARMS Comm%"])
         self.assertEqual([r["docket_number"] for r in recs],
@@ -2040,7 +2042,7 @@ class TestOhSupremeParsing(unittest.TestCase):
         try:
             from hoaspy.collect.courts.court_portals import oh_supreme
         except Exception as exc:
-            raise unittest.SkipTest(f"oh_supreme import failed: {exc}")
+            raise unittest.SkipTest(f"oh_supreme import failed: {exc}") from exc
         cls.m = oh_supreme
         cls.fx = json.loads((ROOT / "tests" / "fixtures" / "oh_supreme_cases.json").read_text())
 
@@ -2131,7 +2133,8 @@ class TestOhSupremeParsing(unittest.TestCase):
         self.assertEqual(r["associations"], ["Lost Hollow Property Owners Association"])
         self.assertEqual(r["association_role"], ["respondent"])
         self.assertEqual(r["nature_of_suit"], "Original Action in Mandamus")
-        for k in ("county", "lower_court", "lower_court_case"):
+        self.assertEqual(r["county"], "", "no county: an original action came from no lower court")
+        for k in ("lower_court", "lower_court_case"):
             self.assertNotIn(k, r)
 
     def test_shape_drops_people_insurers_developers_and_bystanders(self):
@@ -2158,7 +2161,7 @@ class TestOhSupremeParsing(unittest.TestCase):
         import datetime as dt
         m, fx = self.m, self.fx
         calls = []
-        full = [dict(fx["search"][0], CaseNumber=f"1990-{i:04d}") for i in range(m.CAP)]
+        full = [dict(fx["search"][0], CaseNumber=f"1990-{i:04d}") for i in range(m.ROW_CAP)]
 
         def fake_call(**form):
             calls.append(form)
@@ -2173,8 +2176,8 @@ class TestOhSupremeParsing(unittest.TestCase):
             return fx["search"]
 
         c = m.Client(pace=0)
-        c._call = fake_call
-        rows = c._search("big", m.FIRST_DAY, dt.date.today())
+        c.call = fake_call
+        rows = c.search_rows("big", m.FIRST_DAY, dt.date.today())
         self.assertEqual([r["CaseNumber"] for r in rows], ["2026-0797", "2017-0797"])
         self.assertEqual(len([f for f in calls if f["action"] == "CaseSearch"]), 3)
         self.assertEqual(c.capped, [])
@@ -2205,7 +2208,7 @@ class TestCookLiensParsing(unittest.TestCase):
         try:
             from hoaspy.collect.liens import get_cook_liens, records_cook
         except Exception as exc:
-            raise unittest.SkipTest(f"cook liens import failed: {exc}")
+            raise unittest.SkipTest(f"cook liens import failed: {exc}") from exc
         cls.rc, cls.driver = records_cook, get_cook_liens
         fx = ROOT / "tests" / "fixtures"
         cls.results = (fx / "cook_crs_results.html").read_text()
@@ -2233,10 +2236,10 @@ class TestCookLiensParsing(unittest.TestCase):
         self.assertEqual(self.rc.result_total(empty), 0)
         self.assertEqual(self.rc.parse_result_page(empty)[0], [])
         self.assertIsNone(self.rc.next_cursor([], 0, date(2026, 10, 1)))
-        crs = self.rc.CookCRS(pace=0)
-        url = self.rc.BASE + "/Search/ResultAddt?id1=%23collapse2"
-        self.assertFalse(crs._lost(SimpleNamespace(url=url, text=empty)))
-        self.assertTrue(crs._lost(SimpleNamespace(url=url, text=empty.replace("No Document(s) found", ""))),
+        crs = self.rc.CookCRS.__new__(self.rc.CookCRS)       # no warm(): no network
+        url = self.rc.RECORDER_URL + "/Search/ResultAddt?id1=%23collapse2"
+        self.assertFalse(crs.session_lost(SimpleNamespace(url=url, text=empty)))
+        self.assertTrue(crs.session_lost(SimpleNamespace(url=url, text=empty.replace("No Document(s) found", ""))),
                         "the search form coming back with neither rows nor that message is a lost session")
 
     def test_detail_page_keeps_parties_apart_and_decodes_entities(self):
@@ -2282,7 +2285,7 @@ class TestCookLiensParsing(unittest.TestCase):
         self.assertEqual(self.rc.pick_association(["ROCKET MTG LLC"], ["DOE JOHN"]), ("", ""))
 
     def test_lien_record_has_the_shared_shape(self):
-        rec = self.rc.to_record(self.rc.parse_detail(self.lien), "2026-10-01T00:00:00+00:00")
+        rec = self.rc.to_record(self.rc.parse_detail(self.lien), "2026-10-01T00:00:00+00:00").as_row()
         self.assertEqual((rec["doc_id"], rec["doc_type"], rec["doc_type_label"]), ("2600000001", "LIE", "claim_of_lien"))
         self.assertEqual((rec["recorded_date"], rec["recorded_ymd"], rec["year"]), ("2025-04-14", "2025-04-14", 2025))
         self.assertEqual((rec["state"], rec["county"], rec["association"]),
@@ -2304,7 +2307,7 @@ class TestCookLiensParsing(unittest.TestCase):
         self.assertEqual(p["doc_type"], "MECHANICS LIEN")
         self.assertEqual(p["filers"], ["SAMPLE CONST CORP", "ARGENT MTG CO LLC", "MERS INC", "US BK NATL ASSN"])
         self.assertIn("4068 S LAKE PK AVE CONDO ASSN", p["respondents"])
-        rec = self.rc.to_record(p, "t")
+        rec = self.rc.to_record(p, "t").as_row()
         self.assertEqual((rec["doc_type"], rec["doc_type_label"]), ("LXA", "lien_against_association"),
                          "the bank's ASSN must not make this a lien the association filed")
         self.assertEqual(rec["association"], "4068 S LAKE PK AVE CONDO ASSN")
@@ -2335,13 +2338,13 @@ class TestCookLiensParsing(unittest.TestCase):
         self.assertEqual(need, {"2600000001": True, "2600000003": True, "2600000004": True,
                                 "2600000006": False, "2600000007": False, "2600000008": False})
         lien = next(r for r in rows if r["doc_number"] == "2600000006")
-        rec = self.rc.to_record(self.rc.row_to_parsed(lien), "t")
+        rec = self.rc.to_record(self.rc.row_to_parsed(lien), "t").as_row()
         self.assertEqual((rec["doc_type"], rec["association"], rec["respondents"], rec["amount"]),
                          ("LIE", "ENCLAVE AT GALEWOOD CROSSINGS MASTER ASSN", ["DOE RICHARD"], 1520.2))
         self.assertEqual((rec["recorded_ymd"], rec["parcel_id"], rec["property_address"], rec["n_parties"]),
                          ("2026-01-29", "00-00-000-000-1004", "", 2))
         mech = next(r for r in rows if r["doc_number"] == "2600000008")
-        rec = self.rc.to_record(self.rc.row_to_parsed(mech), "t")
+        rec = self.rc.to_record(self.rc.row_to_parsed(mech), "t").as_row()
         self.assertEqual((rec["doc_type"], rec["association"]), ("LXA", "LAKE ARLINGTON TOWNE MASTER ASSN"))
         # the results page cuts names at 50 characters: such a row is recorded, and its page is wanted
         cut = dict(lien, doc_number="2600000099", grantor1="LEXINGTON COMMONS COACH HOUSES CONDOMINIUM ASSOCIA")
@@ -2350,7 +2353,7 @@ class TestCookLiensParsing(unittest.TestCase):
         self.assertFalse(self.rc.truncated(lien))
         self.assertFalse(self.rc.needs_detail(cut))
         index = {r["doc_number"]: r for r in rows + [cut]}
-        with tempfile.TemporaryDirectory() as tmp, mock.patch.object(self.driver, "DETAILS", Path(tmp)):
+        with tempfile.TemporaryDirectory() as tmp, mock.patch.object(self.driver, "DETAILS_DIR", Path(tmp)):
             decided = {k: r for k, r in index.items() if not self.rc.needs_detail(r)}
             self.assertEqual([r["doc_number"] for r in self.driver.detail_queue(decided, "needed")], ["2600000099"])
             self.assertEqual([r["doc_number"] for r in self.driver.detail_queue(decided, "all")],
@@ -2406,9 +2409,10 @@ class TestCookLiensParsing(unittest.TestCase):
             (root / "coverage.json").write_text(json.dumps({"states": {"IL": {"name": "Illinois", "collected": {}, "unavailable": [
                 {"source": "Cook County Clerk current recordings", "why": "search-only"},
                 {"source": "SOS corporate bulk", "why": "paid"}]}}}))
-            paths = {"OUT": root / "liens" / "liens_cook.jsonl", "SOURCES": root / "liens" / "sources_cook.json",
-                     "COVERAGE": root / "coverage.json", "CACHE": root / "cache", "DETAILS": root / "cache" / "details",
-                     "INDEX": root / "cache" / "index.jsonl", "SWEEP": root / "cache" / "sweep.json"}
+            paths = {"OUTPUT_PATH": root / "liens" / "liens_cook.jsonl",
+                     "SOURCES_PATH": root / "liens" / "sources_cook.json", "COVERAGE_PATH": root / "coverage.json",
+                     "CACHE_DIR": root / "cache", "DETAILS_DIR": root / "cache" / "details",
+                     "INDEX_PATH": root / "cache" / "index.jsonl", "SWEEP_PATH": root / "cache" / "sweep.json"}
             with contextlib.ExitStack() as stack:
                 for name, value in paths.items():
                     stack.enter_context(mock.patch.object(run, name, value))
@@ -2436,19 +2440,19 @@ class TestCookLiensParsing(unittest.TestCase):
                 records = run.write_outputs(index, sweep, 0.0)
                 self.assertEqual([(r["doc_id"], r["doc_type"], r["detail_page"]) for r in records],
                                  [("2600000006", "LIE", False), ("2600000007", "LIE", False), ("2600000008", "LXA", False)])
-                self.assertEqual([json.loads(line)["doc_id"] for line in paths["OUT"].read_text().splitlines()],
+                self.assertEqual([json.loads(line)["doc_id"] for line in paths["OUTPUT_PATH"].read_text().splitlines()],
                                  ["2600000006", "2600000007", "2600000008"], "newest first")
-                src = json.loads(paths["SOURCES"].read_text())
+                src = json.loads(paths["SOURCES_PATH"].read_text())
                 self.assertEqual((src["records"], src["associations"], src["years"], src["documents_indexed"]),
                                  (3, 2, "2023-2026", 6))
                 self.assertEqual(src["counts"], {"from_results_row": 3, "awaiting_detail_page": 3})
                 self.assertEqual(src["document_types"], {"claim_of_lien": 2, "lien_against_association": 1})
                 self.assertFalse(src["sweep_complete"], "one term of the list is not the whole sweep")
                 self.assertEqual(sorted(src["terms"]), ["MASTER ASSN / foreclosures", "MASTER ASSN / liens"])
-                il = json.loads(paths["COVERAGE"].read_text())["states"]["IL"]
+                il = json.loads(paths["COVERAGE_PATH"].read_text())["states"]["IL"]
                 cook = il["counties"]["Cook"]["liens"]
                 self.assertEqual((cook["collector"], cook["records"], cook["associations"], cook["years"]),
-                                 ("get_cook_liens.py", 3, 2, "2023-2026"))
+                                 ("cook-liens", 3, 2, "2023-2026"))
                 self.assertIn("sweep unfinished", cook["coverage"])
                 self.assertEqual([u["source"] for u in il["unavailable"]], ["SOS corporate bulk"])
 
@@ -2456,17 +2460,13 @@ class TestCookLiensParsing(unittest.TestCase):
                 run.sweep_term(crs, "MASTER ASSN", run.load_sweep(), run.load_index(), date(1980, 1, 1), None, fails)
                 self.assertEqual(len(crs.posts), 2)
                 # a cached detail page wins over the results row: full parties and the address
-                run.DETAILS.mkdir(parents=True)
+                run.DETAILS_DIR.mkdir(parents=True)
                 run.detail_path("2600000006").write_text(self.lien)
                 records = run.write_outputs(run.load_index(), run.load_sweep(), 0.0)
                 full = next(r for r in records if r["detail_page"])
                 self.assertEqual((full["association"], full["n_parties"], full["property_address"]),
                                  ("ARTHUR & CALIFORNIA CONDO ASSN INC", 7, "100 SAMPLE ST UNIT 1, CHICAGO"))
                 self.assertEqual(len(records), 3)
-
-
-if __name__ == "__main__":
-    unittest.main(verbosity=2)
 
 
 class TestCourtListenerBulk(unittest.TestCase):
@@ -2484,7 +2484,7 @@ class TestCourtListenerBulk(unittest.TestCase):
         try:
             from hoaspy.collect.courts import get_courts_bulk
         except Exception as exc:
-            raise unittest.SkipTest(f"get_courts_bulk import failed: {exc}")
+            raise unittest.SkipTest(f"get_courts_bulk import failed: {exc}") from exc
         cls.m = get_courts_bulk
         cls.fx = ROOT / "tests" / "fixtures" / "courtlistener_bulk"
         cls.courts = cls.m.court_table(cls.fx / "courts.csv")
@@ -2522,7 +2522,7 @@ class TestCourtListenerBulk(unittest.TestCase):
         self.assertEqual(len(parts), 8)
         self.assertEqual(parts[0][0], 0)
         self.assertEqual(parts[-1][1], 5144011100 - 1)
-        for (_, end), (start, _) in zip(parts, parts[1:]):
+        for (_, end), (start, _) in zip(parts, parts[1:], strict=False):
             self.assertEqual(start, end + 1)
         self.assertEqual(plan(81226, 8), [(0, 81225)])           # a small file is one request
         self.assertEqual(sum(e - s + 1 for s, e in plan(200 << 20, 8)), 200 << 20)
@@ -2665,7 +2665,7 @@ class TestCourtListenerBulk(unittest.TestCase):
             "docket_number": "2:23-cv-12481", "date_filed": "2023-10-02", "date_terminated": "2024-06-24",
             "nature_of_suit": "Civil Rights: Other", "cause": "42:1981 Civil Rights", "state": "MI",
             "associations": ["Poinsettia Homeowners Association, Inc"],
-            "association_role": ["defendant"],
+            "association_role": ["defendant"], "case_data_id": "", "county": "", "level": "",
             "url": "https://www.courtlistener.com/docket/67847660/doe-v-poinsettia-homeowners-association-inc/",
             "source": "courtlistener-bulk", "queries": ["bulk-data 2026-09-30"],
             "retrieved_at": "2026-10-01T00:00:00+00:00"})
@@ -2733,22 +2733,23 @@ class TestCourtListenerBulk(unittest.TestCase):
             self.assertIn("updated_at", cov)
 
     def test_sources_entry_is_merged_not_overwritten(self):
+        from hoaspy.lib.jsonl import merge_json, write_rows
         with tempfile.TemporaryDirectory() as tmp:
             path = Path(tmp) / "sources.json"
             path.write_text(json.dumps({"dockets": 7527, "tx_research": {"records": 42814}}))
-            self.m.merge_sources(path, {"snapshot": "2026-09-30", "dockets": 3})
+            merge_json(path, "courtlistener_bulk", {"snapshot": "2026-09-30", "dockets": 3})
             data = json.loads(path.read_text())
             self.assertEqual(data["dockets"], 7527)
             self.assertEqual(data["tx_research"], {"records": 42814})
             self.assertEqual(data["courtlistener_bulk"], {"snapshot": "2026-09-30", "dockets": 3})
-            self.m.write_jsonl(Path(tmp) / "bulk_dockets.jsonl", [{"a": 1}, {"a": 2}])
+            write_rows(Path(tmp) / "bulk_dockets.jsonl", [{"a": 1}, {"a": 2}])
             self.assertEqual((Path(tmp) / "bulk_dockets.jsonl").read_text(), '{"a": 1}\n{"a": 2}\n')
 
 
 class TestRecordContract(unittest.TestCase):
     """hoaspy/lib/contract.py — the keys and value shapes every row of
     collector output must carry — and its command line,
-    `python -m hoaspy.lib.validate`."""
+    `python -m hoaspy validate`."""
 
     TODAY = __import__("datetime").date(2026, 10, 2)
     LIEN = {"association": "PALM VILLAS CONDO ASSN INC", "state": "FL", "county": "Broward",
@@ -2768,8 +2769,8 @@ class TestRecordContract(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        from hoaspy.lib import contract, validate
-        cls.c, cls.v = contract, validate
+        from hoaspy.lib import cli, contract, validate
+        cls.c, cls.v, cls.cli = contract, validate, cli
 
     def problems(self, row, family, **kw):
         return [(p.severity, p.rule, p.key) for p in self.c.check(row, family, today=self.TODAY, **kw)]
@@ -2947,7 +2948,7 @@ class TestRecordContract(unittest.TestCase):
             def run(*argv):
                 out, err = io.StringIO(), io.StringIO()
                 with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
-                    code = self.v.main([str(a) for a in argv])
+                    code = self.cli.main(["validate"] + [str(a) for a in argv])
                 return code, out.getvalue(), err.getvalue()
 
             code, out, _ = run(path)
@@ -2983,11 +2984,12 @@ class TestRecordContract(unittest.TestCase):
         the output: a Utah contact block with no name line, a Florida
         managing entity's route line, and a registry's unit count kept as
         text."""
-        from hoaspy.collect.registries import get_ut_hoa, get_states
-        self.assertEqual(get_ut_hoa._block_name("Jane Roe<br>(801) 555-0155<br>jane@example.org"), "Jane Roe")
-        self.assertEqual(get_ut_hoa._block_name("(801) 555-0155<br>jane@example.org"), "")
-        self.assertEqual(get_ut_hoa._block_name(""), "")
-        self.assertEqual([get_states._units(v) for v in ("240", "1,204", "", "n/a", " 12 ")], [240, 1204, None, None, 12])
+        from hoaspy.collect.registries import get_states, get_ut_hoa
+        self.assertEqual(get_ut_hoa.contact_name("Jane Roe<br>(801) 555-0155<br>jane@example.org"), "Jane Roe")
+        self.assertEqual(get_ut_hoa.contact_name("(801) 555-0155<br>jane@example.org"), "")
+        self.assertEqual(get_ut_hoa.contact_name(""), "")
+        self.assertEqual([get_states.unit_count(v) for v in ("240", "1,204", "", "n/a", " 12 ")],
+                         [240, 1204, None, None, 12])
 
     def test_parsed_rows_conform(self):
         """Rows the collectors shape — from the captured Utah registry page
@@ -2995,22 +2997,94 @@ class TestRecordContract(unittest.TestCase):
         the tie between each parser and the contract. (`retrieved_at` is
         stamped when a collector writes its file, so its absence here is
         the one warning allowed.)"""
-        from hoaspy.collect.registries import get_ut_hoa
-        from hoaspy.collect.liens import get_ca_ucc, records_miamidade
         from hoaspy.collect.courts import get_tx_research
+        from hoaspy.collect.liens import get_ca_ucc, records_miamidade
+        from hoaspy.collect.registries import get_ut_hoa
 
         client = get_ut_hoa.Client(pace=0)
         client.call = lambda f, v: (ROOT / "tests" / "fixtures" / "ut_hoa_detail.html").read_text()   # offline
-        rows = [(get_ut_hoa.to_record(client.detail("14255465"), {}), "registry")]
-        collapsed = records_miamidade._collapse(TestMiamiDadeParsing.ROWS)
-        rows.append((records_miamidade.to_record(collapsed[999], "LIEN - LIE"), "lien"))
-        rows.append((get_tx_research.to_record(TestTxResearchParsing.HOA_HIT, "Circle C Homeowners Association"), "docket"))
-        rows.append((get_ca_ucc.to_record({
+        records = [(get_ut_hoa.to_record(client.detail("14255465"), {}), "registry")]
+        collapsed = records_miamidade.collapse_parties(TestMiamiDadeParsing.ROWS)
+        records.append((records_miamidade.to_record(collapsed[999], "LIEN - LIE"), "lien"))
+        records.append((get_tx_research.to_record(TestTxResearchParsing.HOA_HIT, "Circle C Homeowners Association"),
+                        "docket"))
+        records.append((get_ca_ucc.to_record({
             "ID": 739724, "RECORD_NUM": "177595183753", "TITLE": ["JANE ROE - ANAHEIM, CA"],
             "SEC_PARTY": ["RIO VISTA WALK HOA, A CALIFORNIA NON-PROFIT MUTUAL BENEFIT CORPORATION - OCEANSIDE, CA"],
             "FILING_DATE": "07/11/2017", "LAPSE_DATE": "07/11/2022", "RECORD_TYPE": "Judgment Lien",
             "STATUS": "Lapsed"}), "lien"))
+        rows = [(record.as_row(), family) for record, family in records]
         for row, family in rows:
             found = [str(p) for p in self.c.check(row, family, today=self.TODAY)
                      if (p.rule, p.key) != ("no-retrieved-at", "retrieved_at") and (p.rule, p.key) != ("missing", "retrieved_at")]
             self.assertEqual(found, [], f"{family} row from {row.get('source')}")
+
+
+class TestRecordTypes(unittest.TestCase):
+    """hoaspy/lib/records.py: the classes every collector writes."""
+
+    def test_rows_carry_every_shared_column_in_order(self):
+        from hoaspy.lib.records import Association, Officer
+        row = Association(name="Palm Villas", state="FL", source="s", source_url="https://x/",
+                          officers=[Officer(name="Jane Roe", title="President")], extras={"ein": "12-3456789"}).as_row()
+        self.assertEqual(list(row)[:4], ["name", "state", "source", "source_url"])
+        self.assertEqual(set(row), association_columns() | {"ein"})
+        self.assertEqual(row["officers"], [{"name": "Jane Roe", "title": "President"}])
+        self.assertEqual((row["units"], row["corp_status"], row["ein"]), (None, "", "12-3456789"))
+
+    def test_construction_is_by_keyword_and_extras_cannot_shadow_a_column(self):
+        from hoaspy.lib.records import Association, Lien
+        with self.assertRaises(TypeError):
+            Association("Palm Villas", "FL", "s", "https://x/")              # positional
+        with self.assertRaises(ValueError):
+            Association(name="x", state="FL", source="s", source_url="https://x/", extras={"name": "y"}).as_row()
+        lien = Lien(doc_id="1", doc_type="LIE", doc_type_label="claim_of_lien", recorded_date="1/2/2020",
+                    year=2020, state="FL", county="Broward", source="s", source_page="https://x/")
+        self.assertEqual((lien.as_row()["filers"], lien.as_row()["amount"]), ([], ""))
+
+
+class TestJsonlFiles(unittest.TestCase):
+    """hoaspy/lib/jsonl.py: the output files are written whole or not at all."""
+
+    def test_replace_rows_keeps_other_states(self):
+        from hoaspy.lib.jsonl import read_rows, replace_rows, write_rows
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "state_registries.jsonl"
+            write_rows(path, [{"state": "UT", "name": "A"}, {"state": "WI", "name": "B"}])
+            path.write_text(path.read_text() + '{"state": "WI"')          # a torn line from a hard kill
+            total = replace_rows(path, [{"state": "UT", "name": "C"}], {"UT"})
+            self.assertEqual(total, 2)
+            self.assertEqual([row["name"] for row in read_rows(path)], ["B", "C"])
+            self.assertFalse(list(Path(tmp).glob("*.tmp")), "no temporary file is left behind")
+
+
+class TestCommandLine(unittest.TestCase):
+    """hoaspy/lib/cli.py: `python -m hoaspy <command>` is the one entry point."""
+
+    def test_every_command_names_a_module_with_add_arguments_and_run(self):
+        import importlib
+
+        from hoaspy.lib import cli
+        for name, command in cli.COMMANDS.items():
+            module = importlib.import_module(command.module)
+            self.assertTrue(callable(getattr(module, "add_arguments", None)), name)
+            self.assertTrue(callable(getattr(module, "run", None)), name)
+            self.assertTrue(command.help and len(command.help) < 120, name)
+
+    def test_usage_and_unknown_command(self):
+        from hoaspy.lib import cli
+        out, err = io.StringIO(), io.StringIO()
+        with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
+            self.assertEqual(cli.main([]), 0)
+            self.assertEqual(cli.main(["no-such-command"]), 2)
+            with self.assertRaises(SystemExit) as stopped:
+                cli.main(["validate", "--help"])
+        self.assertEqual(stopped.exception.code, 0)
+        self.assertIn("cook-condos", out.getvalue())
+        self.assertIn("unknown command", err.getvalue())
+        self.assertNotIn("def main(", (ROOT / "hoaspy" / "collect" / "registries" / "get_cook_condos.py").read_text(),
+                         "collectors have no main() of their own")
+
+
+if __name__ == "__main__":
+    unittest.main(verbosity=2)

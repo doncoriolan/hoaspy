@@ -34,8 +34,8 @@ they collected in `coverage.json` ([DATA.md](DATA.md#master-tracking)).
 | File | Role |
 | --- | --- |
 | `hoaspy/collect/registries/get_records.py`, `records_fl.py`, `records_tx.py` | FL DBPR condo extracts + TX TREC certificates → `associations.jsonl` |
-| `hoaspy/collect/registries/records_sunbiz.py` | fixed-width parser for the Sunbiz non-profit extract; `ASSOCIATION_NAME_RE` (the name gate CA reuses) |
-| `hoaspy/collect/registries/get_states.py`, `records_socrata.py`, `records_tecuity.py` | config-driven state collector; owns `ASSOC_RE`, `write_merged()`, `update_coverage()` that the single-state collectors import |
+| `hoaspy/collect/registries/records_sunbiz.py` | fixed-width parser for the Sunbiz non-profit extract, read by the site build; its name gate (`CORPORATION_NAME_RE` in `hoaspy/lib/names.py`) is the one CA reuses |
+| `hoaspy/collect/registries/get_states.py`, `records_socrata.py`, `records_tecuity.py` | config-driven state collector (the `states` command); the single-state collectors write into the same files (`hoaspy/collect/registries/__init__.py`) with the helpers in `hoaspy/lib/` |
 | `hoaspy/collect/registries/get_wa_ccfs.py` | WA CCFS advanced search driven through BrowserOS |
 | `hoaspy/collect/registries/get_hi_registry.py`, `get_ut_hoa.py`, `get_wi_dfi.py`, `get_nv_hoa.py` | single-state HOA registries → `state_registries.jsonl` |
 | `hoaspy/collect/registries/get_gov_layers.py` | county/city inventories mapped through `gov_layers/<ST>.yml` |
@@ -46,17 +46,17 @@ they collected in `coverage.json` ([DATA.md](DATA.md#master-tracking)).
 
 ## Shared mechanics
 
-- **Merged per-state output.** `get_states.write_merged(path, rows, states)`
+- **Merged per-state output.** `hoaspy.lib.jsonl.replace_rows(path, rows, states)`
   keeps every row whose state is *not* being replaced, appends the fresh rows
   and swaps the file in atomically. A re-run of one state never touches
   another's rows. `get_ca_sos.write_merged()` does the same for
   `state_corps.jsonl` and refuses to write an empty CA result.
-- **Coverage bookkeeping.** `get_states.update_coverage(state, key, info)`
+- **Coverage bookkeeping.** `hoaspy.lib.coverage.update_coverage(state, key, info)`
   writes `coverage.json["states"][ST]["collected"][key]`, bumps a
   `pending`/`researching` state to `collected` and stamps `updated_at`. The
   collectors marked "hand-maintained" above never call it — edit
   `coverage.json` yourself after running them.
-- **Name gate.** `get_states.ASSOC_RE` (HOMEOWNER, CONDOMINIUM, CONDO,
+- **Name gate.** `hoaspy.lib.names.REGISTRY_NAME_RE` (HOMEOWNER, CONDOMINIUM, CONDO,
   PROPERTY OWNERS, COMMUNITY/MASTER/OWNERS/RESIDENTS ASSOCIATION, TOWNHOME,
   TOWNHOUSE, HOA) filters *corporate* rows; registry rows are kept whole.
 - **No contact details.** UT, WI, NV, WA and the gov-layer collectors keep
@@ -269,7 +269,7 @@ that absence means nothing.
 Downloads `eo1.csv`, `eo2.csv`, `eo3.csv` from `https://www.irs.gov/pub/irs-soi/`
 into `.cache/irs/` when missing and keeps rows whose NTEE code starts with
 `L50` ("Homeowners Associations") or whose `NAME`/`SORT_NAME` passes
-`ASSOC_RE` (when only `SORT_NAME` matches it becomes the name — `NAME` is
+`REGISTRY_NAME_RE` (when only `SORT_NAME` matches it becomes the name — `NAME` is
 often the management agent). One row per EIN: `record_id`/`ein`, `status`
 ("501(c)(4) exempt" …), `status_detail` ("IRS ruling YYYY-MM"),
 `recorded_date`, address, `in_care_of`, `ntee`, `subsection`, `tax_period`,
@@ -283,7 +283,7 @@ file with the Secretary of State under three filing types (69 mutual-benefit
 CID corporation, 62 unincorporated CID, 72 public-benefit CID). Rows under
 those types are HOAs by definition and carry `is_association: true`, so
 `build_site.add_corps` keeps them without an HOA keyword; every other entity
-type must pass `records_sunbiz.ASSOCIATION_NAME_RE`. The API
+type must pass `CORPORATION_NAME_RE` (`hoaspy/lib/names.py`). The API
 (`POST https://bizfileonline.sos.ca.gov/api/Records/businesssearch`) caps every
 query at 500 rows with no paging, so capped (term, type, filing-date) windows
 are bisected by date; search is word-based, so three phases sweep the CID
@@ -323,19 +323,19 @@ and writes `records/sc_complaints.jsonl`: `state`,
 
 From the repo root; every collector caches under `.cache/` and is safe to re-run.
 ```bash
-./venv/bin/python -m hoaspy.collect.registries.get_records               # FL + TX
-./venv/bin/python -m hoaspy.collect.registries.get_states                # every state in state_sources.yml
-./venv/bin/python -m hoaspy.collect.registries.get_wa_ccfs               # WA via BrowserOS (resumable)
-./venv/bin/python -m hoaspy.collect.registries.get_hi_registry
-./venv/bin/python -m hoaspy.collect.registries.get_ut_hoa                # resumable
-./venv/bin/python -m hoaspy.collect.registries.get_wi_dfi                # resumable
-./venv/bin/python -m hoaspy.collect.registries.get_nv_hoa
-./venv/bin/python -m hoaspy.collect.registries.get_az_adre              # resumable; --since 2005, needs pdftotext
-./venv/bin/python -m hoaspy.collect.registries.get_cook_condos
-./venv/bin/python -m hoaspy.collect.registries.get_gov_layers            # all 25 states
-./venv/bin/python -m hoaspy.collect.registries.get_irs_bmf               # all states
-./venv/bin/python -m hoaspy.collect.registries.get_ca_sos                # needs ca_cookie.txt + ca_token.txt
-./venv/bin/python -m hoaspy.collect.registries.get_sc_complaints
+./venv/bin/python -m hoaspy records               # FL + TX
+./venv/bin/python -m hoaspy states                # every state in state_sources.yml
+./venv/bin/python -m hoaspy wa-ccfs               # WA via BrowserOS (resumable)
+./venv/bin/python -m hoaspy hi-registry
+./venv/bin/python -m hoaspy ut-hoa                # resumable
+./venv/bin/python -m hoaspy wi-dfi                # resumable
+./venv/bin/python -m hoaspy nv-hoa
+./venv/bin/python -m hoaspy az-adre              # resumable; --since 2005, needs pdftotext
+./venv/bin/python -m hoaspy cook-condos
+./venv/bin/python -m hoaspy gov-layers            # all 25 states
+./venv/bin/python -m hoaspy irs-bmf               # all states
+./venv/bin/python -m hoaspy ca-sos                # needs ca_cookie.txt + ca_token.txt
+./venv/bin/python -m hoaspy sc-complaints
 ./venv/bin/python -m hoaspy.build.build_site                             # then rebuild the site
 ```
 
@@ -346,7 +346,7 @@ without WA, so run `get_wa_ccfs` (or `get_wa_ccfs --finalize-only`) after it.
 
 | File | Written by | One row per | Row shape |
 | --- | --- | --- | --- |
-| `records/associations.jsonl` / `.csv` | `get_records` | FL condo project or TX certificate | `id`, `state`, `source`, `source_region`, `source_url`, `record_id`, `file_number`, `name`, `type`, `county`, `address`, `city`, `zip`, `address_raw`, `units`, `recorded_date`, `status`, `status_detail`, `manager_*`, `document_url`, `retrieved_at` (the CSV keeps the `FIELDS` subset) |
+| `records/associations.jsonl` / `.csv` | `get_records` | FL condo project or TX certificate | `id`, `state`, `source`, `source_region`, `source_url`, `record_id`, `file_number`, `name`, `type`, `county`, `address`, `city`, `zip`, `address_raw`, `units`, `recorded_date`, `status`, `status_detail`, `manager_*`, `document_url`, `retrieved_at` (the CSV keeps the `CSV_COLUMNS` subset) |
 | `records/sources.json` | `get_records` | run | per-state source, page, files/endpoint, rows; totals, filters, duration |
 | `records/state_corps.jsonl` | `get_states`, `get_wa_ccfs`, `get_ca_sos` | association-named corporation | `state`, `source`, `source_url`, `record_id`, `name`, `corp_status`, `address`, `city`, `county`, `zip`, `incorporated`, `registered_agent`, `entity_type`, `officers`; WA adds `business_id`, CA adds `bizfile_id`, `standing`, `is_association` |
 | `records/state_registries.jsonl` | `get_states` (VA, MD), `get_hi_registry`, `get_ut_hoa`, `get_wi_dfi`, `get_nv_hoa`, `get_az_adre` | registered association | `state`, `source`, `source_url`, `record_id`, `name`, `status`, `status_detail`, `recorded_date`, `address`, `city`, `county`, `zip`, `units`, `manager_name`, plus per-source extras (`officers`, `dba`, `registration_type`, `sos_file_number`, `also_listed_by`) |

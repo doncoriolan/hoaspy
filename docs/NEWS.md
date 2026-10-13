@@ -28,8 +28,8 @@ Florida and Texas associations. **Dropped on 2026-09-07** (NEEDS.md
 ## Run it (not part of the pipeline)
 
 ```bash
-./venv/bin/python -m hoaspy.collect.news.get_news                          # sweep + targeted
-./venv/bin/python -m hoaspy.collect.news.get_news --no-sweep --top-liens 40 # quick pass
+./venv/bin/python -m hoaspy news                          # sweep + targeted
+./venv/bin/python -m hoaspy news --no-sweep --top-liens 40 # quick pass
 # also: --out news/  --sweep-records 100  --targeted-records 75  -v
 ```
 

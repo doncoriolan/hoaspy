@@ -1,0 +1,3 @@
+# Tools for working on the code; the collectors themselves need only requirements.txt.
+-r requirements.txt
+ruff==0.16.10

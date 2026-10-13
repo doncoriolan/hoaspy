@@ -1,42 +1,40 @@
-#!/usr/bin/env python
-"""South Carolina HOA complaint data from the Department of Consumer Affairs.
+"""South Carolina HOA complaints from the Department of Consumer Affairs.
 
-S.C. Code 37-6-117 makes SCDCA collect HOA complaints and report them to the
-legislature annually — the reports name the association, its county, its
-management company, the complaint category, and the outcome. The XLSX links
-are scraped off the HOA-reports page so new years appear automatically.
+    python -m hoaspy sc-complaints
 
-    ./venv/bin/python -m hoaspy.collect.registries.get_sc_complaints
+S.C. Code 37-6-117 has SCDCA collect HOA complaints and report them to the
+legislature every year. The reports name the association, its county, its
+management company, the complaint category and the outcome. The XLSX links
+are read off the HOA-reports page, so a new year's report is picked up on
+its own. A complaint that appears in two adjacent reports is kept once.
 
-Output: records/sc_complaints.jsonl — one row per complaint.
+Output: records/sc_complaints.jsonl, one row per complaint.
 """
 
 from __future__ import annotations
 
+import argparse
 import io
-import json
 import logging
 import re
-import sys
 import time
 from collections import Counter
-from datetime import datetime, timezone
-from pathlib import Path
 
 import openpyxl
-import requests
 
 from hoaspy import ROOT
-OUT = ROOT / "records" / "sc_complaints.jsonl"
-PAGE = "https://consumer.sc.gov/HOA-reports"
-BASE = "https://consumer.sc.gov"
+from hoaspy.lib import http
+from hoaspy.lib.jsonl import now_iso, write_rows
+from hoaspy.lib.records import Complaint
 
-USER_AGENT = "macos:hoa-public-records:0.1 (academic research)"
+OUTPUT_PATH = ROOT / "records" / "sc_complaints.jsonl"
+SOURCE_PAGE = "https://consumer.sc.gov/HOA-reports"
+SITE_URL = "https://consumer.sc.gov"
+SOURCE = "sc-dca-hoa-complaints"
 
-log = logging.getLogger("sc")
-
-# The header wording drifts a little between years; match loosely.
-COLS = {
+# The header wording drifts a little between years, so each column is
+# found by a pattern over the lower-cased header.
+COLUMN_PATTERNS = {
     "number": r"complaint number",
     "date": r"complaint date",
     "name": r"hoa name",
@@ -46,114 +44,97 @@ COLS = {
     "category": r"^complaint description$",
     "status": r"^status$",
 }
+NO_NAME = ("none", "n/a", "unknown")
+
+log = logging.getLogger(__name__)
 
 
-def clean(v) -> str:
-    s = str(v) if v is not None else ""
-    return " ".join(s.replace("_x000D_", " ").split())
+def cell_text(value) -> str:
+    text = str(value) if value is not None else ""
+    return " ".join(text.replace("_x000D_", " ").split())
 
 
-def parse_book(content: bytes, url: str) -> list[dict]:
-    wb = openpyxl.load_workbook(io.BytesIO(content), read_only=True)
-    out = []
-    for sheet in wb.sheetnames:
-        ws = wb[sheet]
-        rows = ws.iter_rows(values_only=True)
+def cell(row: tuple, columns: dict[str, int | None], key: str) -> str:
+    """The text of the mapped column `key` in one sheet row; '' when the sheet lacks it."""
+    index = columns[key]
+    return cell_text(row[index]) if index is not None and index < len(row) else ""
+
+
+def parse_workbook(content: bytes, url: str, retrieved_at: str = "") -> list[Complaint]:
+    """Every complaint on every sheet that has an "HOA name" column."""
+    workbook = openpyxl.load_workbook(io.BytesIO(content), read_only=True)
+    out: list[Complaint] = []
+    for sheet in workbook.worksheets:
+        rows = sheet.iter_rows(values_only=True)
         try:
-            header = [clean(h).lower() for h in next(rows)]
+            header = [cell_text(cell).lower() for cell in next(rows)]
         except StopIteration:
             continue
-        idx = {}
-        for key, pat in COLS.items():
-            for i, h in enumerate(header):
-                if re.search(pat, h):
-                    idx[key] = i
-                    break
-        if "name" not in idx:
+        columns = {}
+        for key, pattern in COLUMN_PATTERNS.items():
+            columns[key] = next((i for i, heading in enumerate(header) if re.search(pattern, heading)), None)
+        if columns["name"] is None:
             continue
-
-        def cell(row, key):
-            i = idx.get(key)
-            return clean(row[i]) if i is not None and i < len(row) else ""
-
         for row in rows:
-            name = cell(row, "name")
-            if not name or name.lower() in ("none", "n/a", "unknown"):
+            name = cell(row, columns, "name")
+            if not name or name.lower() in NO_NAME:
                 continue
-            date = cell(row, "date")[:10]
-            number = cell(row, "number")
+            date = cell(row, columns, "date")[:10]
+            number = cell(row, columns, "number")
             year = None
-            if m := re.search(r"\b(20[12]\d)\b", date):
-                year = int(m.group(1))
-            elif m := re.match(r"C(\d{2})-", number):
-                year = 2000 + int(m.group(1))
-            out.append({
-                "state": "SC",
-                "source": "sc-dca-hoa-complaints",
-                "source_url": url,
-                "complaint_number": number,
-                "date": date,
-                "year": year,
-                "name": name,
-                "city": cell(row, "city").title(),
-                "county": cell(row, "county").title(),
-                "manager_name": cell(row, "manager"),
-                "category": cell(row, "category"),
-                "status": cell(row, "status"),
-            })
+            if match := re.search(r"\b(20[12]\d)\b", date):
+                year = int(match.group(1))
+            elif match := re.match(r"C(\d{2})-", number):
+                year = 2000 + int(match.group(1))
+            out.append(Complaint(
+                state="SC", source=SOURCE, source_url=url, complaint_number=number, date=date, year=year,
+                name=name, city=cell(row, columns, "city").title(), county=cell(row, columns, "county").title(),
+                manager_name=cell(row, columns, "manager"), category=cell(row, columns, "category"),
+                status=cell(row, columns, "status"),
+                retrieved_at=retrieved_at))
     return out
 
 
-def main() -> int:
-    logging.basicConfig(level=logging.INFO,
-                        format="%(asctime)s %(levelname)-7s %(message)s",
-                        datefmt="%H:%M:%S")
-    session = requests.Session()
-    session.headers["User-Agent"] = USER_AGENT
-    started = time.time()
+def add_arguments(parser: argparse.ArgumentParser) -> None:
+    """No options."""
 
-    page = session.get(PAGE, timeout=60)
+
+def run(args: argparse.Namespace) -> int:
+    session = http.session()
+    started = time.time()
+    page = session.get(SOURCE_PAGE, timeout=60)
     page.raise_for_status()
     links = sorted(set(re.findall(r'href="([^"]*\.xlsx)"', page.text, re.I)))
     log.info("found %d report workbooks", len(links))
 
-    records: list[dict] = []
+    retrieved_at = now_iso()
+    complaints: list[Complaint] = []
     for href in links:
-        url = href if href.startswith("http") else BASE + href
+        url = href if href.startswith("http") else SITE_URL + href
         try:
-            resp = session.get(url, timeout=120)
-            resp.raise_for_status()
-            rows = parse_book(resp.content, url)
-            records.extend(rows)
-            log.info("%s -> %d complaints", url.rsplit("/", 1)[-1], len(rows))
+            response = session.get(url, timeout=120)
+            response.raise_for_status()
+            found = parse_workbook(response.content, url, retrieved_at)
         except Exception as exc:
             log.error("%s failed: %s", url, exc)
+            continue
+        complaints.extend(found)
+        log.info("%s -> %d complaints", url.rsplit("/", 1)[-1], len(found))
         time.sleep(1.0)
 
-    # A complaint can appear in two adjacent reports; dedupe on number+name.
-    seen, deduped = set(), []
-    for r in records:
-        key = (r["complaint_number"], r["name"].lower())
+    seen: set[tuple[str, str]] = set()
+    rows = []
+    for complaint in complaints:
+        key = (complaint.complaint_number, complaint.name.lower())
         if key in seen:
             continue
         seen.add(key)
-        deduped.append(r)
+        rows.append(complaint.as_row())
+    write_rows(OUTPUT_PATH, rows)
 
-    now = datetime.now(timezone.utc).isoformat()
-    for r in deduped:
-        r["retrieved_at"] = now
-    OUT.parent.mkdir(parents=True, exist_ok=True)
-    with OUT.open("w") as fh:
-        for r in deduped:
-            fh.write(json.dumps(r, ensure_ascii=False) + "\n")
-
-    by_year = Counter(r["year"] for r in deduped if r["year"])
-    print(f"\n{len(deduped):,} complaints ({len(records) - len(deduped)} duplicates dropped)")
-    for y in sorted(by_year):
-        print(f"  {y}: {by_year[y]}")
-    print(f"Wrote {OUT} in {time.time() - started:.0f}s")
+    by_year = Counter(row["year"] for row in rows if row["year"])
+    print(f"\n{len(rows):,} complaints ({len(complaints) - len(rows)} duplicates dropped)")
+    for year in sorted(by_year):
+        print(f"  {year}: {by_year[year]}")
+    print(f"Wrote {OUTPUT_PATH} in {time.time() - started:.0f}s")
     return 0
-
-
-if __name__ == "__main__":
-    sys.exit(main())

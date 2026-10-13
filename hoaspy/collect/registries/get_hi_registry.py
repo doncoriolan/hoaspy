@@ -1,79 +1,80 @@
-#!/usr/bin/env python
-"""Hawaii registered condominium associations (AOUOs) from the DCCA Real
-Estate Branch contact list PDF.
+"""Hawaii condominium associations (AOUOs) from the DCCA Real Estate
+Branch contact-list PDF.
 
-    ./venv/bin/python -m hoaspy.collect.registries.get_hi_registry
+    python -m hoaspy hi-registry
 
-Merges into records/state_registries.jsonl (state HI rows replaced).
+The PDF is downloaded once to .cache/hi_aouo.pdf and read with pdfplumber:
+one table row per association with its registration number, name, an
+officer with a title and the managing agent. The address the list carries
+is the officer's, not the property's, so none is kept.
+
+Output: Hawaii's rows in records/state_registries.jsonl (replaced on each
+run) and coverage.json collected["hoa_registry"] for HI.
 """
 
 from __future__ import annotations
 
+import argparse
 import logging
-import sys
-from datetime import datetime, timezone
 from pathlib import Path
 
 import pdfplumber
 import requests
 
-from hoaspy.collect.registries.get_states import REGS, write_merged, update_coverage
-
 from hoaspy import ROOT
-PDF = ROOT / ".cache" / "hi_aouo.pdf"
-PAGE = "https://cca.hawaii.gov/reb/condo_ed/"
-URL = "https://cca.hawaii.gov/wp-content/uploads/2026/04/AOUO-Contact-List-4.29.26.pdf"
+from hoaspy.collect.registries import REGISTRIES_PATH
+from hoaspy.lib import http
+from hoaspy.lib.coverage import update_coverage
+from hoaspy.lib.jsonl import now_iso, replace_rows
+from hoaspy.lib.records import Association, Officer
 
-log = logging.getLogger("hi")
+SOURCE_PAGE = "https://cca.hawaii.gov/reb/condo_ed/"
+PDF_URL = "https://cca.hawaii.gov/wp-content/uploads/2026/04/AOUO-Contact-List-4.29.26.pdf"
+PDF_PATH = ROOT / ".cache" / "hi_aouo.pdf"
+SOURCE = "hi-dcca-aouo-registry"
+MIN_COLUMNS = 9
+
+log = logging.getLogger(__name__)
 
 
-def main() -> int:
-    logging.basicConfig(level=logging.INFO,
-                        format="%(asctime)s %(levelname)-7s %(message)s",
-                        datefmt="%H:%M:%S")
-    if not PDF.exists():
-        resp = requests.get(URL, timeout=120, headers={
-            "User-Agent": "macos:hoa-public-records:0.1 (academic research)"})
-        resp.raise_for_status()
-        PDF.write_bytes(resp.content)
+def fetch_pdf(path: Path = PDF_PATH) -> Path:
+    if not path.exists():
+        response = requests.get(PDF_URL, timeout=120, headers={"User-Agent": http.USER_AGENT})
+        response.raise_for_status()
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_bytes(response.content)
+    return path
 
-    now = datetime.now(timezone.utc).isoformat()
-    rows: list[dict] = []
-    with pdfplumber.open(PDF) as pdf:
+
+def parse_pdf(path: Path, retrieved_at: str = "") -> list[Association]:
+    """One record per table row that carries a registration number and a name."""
+    rows: list[Association] = []
+    with pdfplumber.open(path) as pdf:
         for page in pdf.pages:
             table = page.extract_table()
             if not table:
                 continue
-            for r in table:
-                # PDF cells wrap: collapse all internal whitespace/newlines.
-                cells = [" ".join((c or "").split()) for c in r]
-                if len(cells) < 9 or not cells[0].isdigit() or not cells[1]:
+            for raw in table:
+                cells = [" ".join((cell or "").split()) for cell in raw]     # PDF cells wrap
+                if len(cells) < MIN_COLUMNS or not cells[0].isdigit() or not cells[1]:
                     continue
-                officer = " ".join(x for x in (cells[4], cells[3]) if x)
-                rows.append({
-                    "state": "HI",
-                    "source": "hi-dcca-aouo-registry",
-                    "source_url": PAGE,
-                    "record_id": cells[0],
-                    "name": cells[1],
-                    "status": "registered AOUO",
-                    "address": "",
-                    "city": "",     # listed address is the officer's, not the property's
-                    "county": "",
-                    "zip": "",
-                    "manager_name": cells[9] if len(cells) > 9 else "",
-                    "registered_agent": (f"{cells[2].title()}: {officer.title()}"
-                                         if officer else ""),
-                    "retrieved_at": now,
-                })
+                officer_name = " ".join(part for part in (cells[4], cells[3]) if part)
+                rows.append(Association(
+                    state="HI", source=SOURCE, source_url=SOURCE_PAGE, record_id=cells[0], name=cells[1],
+                    status="registered AOUO", manager_name=cells[9] if len(cells) > 9 else "",
+                    officers=[Officer(name=officer_name.title(), title=cells[2].title())] if officer_name else [],
+                    retrieved_at=retrieved_at))
+    return rows
 
-    total = write_merged(REGS, rows, {"HI"})
+
+def add_arguments(parser: argparse.ArgumentParser) -> None:
+    """No options."""
+
+
+def run(args: argparse.Namespace) -> int:
+    rows = parse_pdf(fetch_pdf(), retrieved_at=now_iso())
+    total = replace_rows(REGISTRIES_PATH, (row.as_row() for row in rows), {"HI"})
     update_coverage("HI", "hoa_registry", {
-        "source": "DCCA Real Estate Branch AOUO contact list (PDF)",
-        "records": len(rows), "url": PAGE})
-    print(f"{len(rows)} Hawaii AOUOs parsed; state_registries.jsonl now {total} rows")
+        "source": "DCCA Real Estate Branch AOUO contact list (PDF)", "records": len(rows), "url": SOURCE_PAGE})
+    print(f"{len(rows)} Hawaii AOUOs parsed; {REGISTRIES_PATH.name} now {total} rows")
     return 0
-
-
-if __name__ == "__main__":
-    sys.exit(main())

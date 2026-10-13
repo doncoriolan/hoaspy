@@ -294,33 +294,33 @@ entry adds link/ZIP/plaintiff/defendant counts and the feed statistics.
 
 ```bash
 # nationwide federal dockets + appellate opinions (hours; checkpointed per query)
-./venv/bin/python -m hoaspy.collect.courts.get_courts
-./venv/bin/python -m hoaspy.collect.courts.get_courts --only-opinions --max-pages 50
+./venv/bin/python -m hoaspy courts
+./venv/bin/python -m hoaspy courts --only-opinions --max-pages 50
 
 # every docket and opinion caption in CourtListener's bulk data (~7.7 GB download, about an hour to scan)
-./venv/bin/python -m hoaspy.collect.courts.get_courts_bulk                          # latest complete snapshot
-./venv/bin/python -m hoaspy.collect.courts.get_courts_bulk --snapshot 2026-09-30
-./venv/bin/python -m hoaspy.collect.courts.get_courts_bulk --refine-only            # re-run the name rules on the cached extract
+./venv/bin/python -m hoaspy courts_bulk                          # latest complete snapshot
+./venv/bin/python -m hoaspy courts_bulk --snapshot 2026-09-30
+./venv/bin/python -m hoaspy courts_bulk --refine-only            # re-run the name rules on the cached extract
 
 # Texas trial courts with your re:SearchTX session (resumable; 200 searches/hour)
-./venv/bin/python -m hoaspy.collect.courts.get_tx_research --cookie-file tx_cookie.txt
-./venv/bin/python -m hoaspy.collect.courts.get_tx_research --cookie-file tx_cookie.txt --wait-on-quota
-./venv/bin/python -m hoaspy.collect.courts.get_tx_research --cookie-file tx_cookie.txt --limit 200 --names names.txt
+./venv/bin/python -m hoaspy tx-research --cookie-file tx_cookie.txt
+./venv/bin/python -m hoaspy tx-research --cookie-file tx_cookie.txt --wait-on-quota
+./venv/bin/python -m hoaspy tx-research --cookie-file tx_cookie.txt --limit 200 --names names.txt
 
 # other states' trial courts through the portal adapters
-./venv/bin/python -m hoaspy.collect.courts.get_state_courts --list
-./venv/bin/python -m hoaspy.collect.courts.get_state_courts --portal ct_civil -v
-./venv/bin/python -m hoaspy.collect.courts.get_state_courts --all --wait-on-quota      # every anonymous adapter
-./venv/bin/python -m hoaspy.collect.courts.get_state_courts --portal fl_broward         # needs BrowserOS running (NEEDS.md 3c)
-./venv/bin/python -m hoaspy.collect.courts.get_state_courts --portal md_casesearch --cookie-file md_cookie.txt   # Maryland: your browser's datadome cookie
-./venv/bin/python -m hoaspy.collect.courts.get_state_courts --portal md_casesearch --cookie-file md_cookie.txt --no-sweeps --limit 50 -v
+./venv/bin/python -m hoaspy state-courts --list
+./venv/bin/python -m hoaspy state-courts --portal ct_civil -v
+./venv/bin/python -m hoaspy state-courts --all --wait-on-quota      # every anonymous adapter
+./venv/bin/python -m hoaspy state-courts --portal fl_broward         # needs BrowserOS running (NEEDS.md 3c)
+./venv/bin/python -m hoaspy state-courts --portal md_casesearch --cookie-file md_cookie.txt   # Maryland: your browser's datadome cookie
+./venv/bin/python -m hoaspy state-courts --portal md_casesearch --cookie-file md_cookie.txt --no-sweeps --limit 50 -v
 # Virginia general district courts: BrowserOS running; names from the IRS roster (courts/.trial_va_gdc_names.txt), ~5–7 h
-./venv/bin/python -m hoaspy.collect.courts.get_state_courts --portal va_gdc --names courts/.trial_va_gdc_names.txt --pace 0.5 --wait-on-quota
-HOASPY_VA_GDC_COURTS=059,153 ./venv/bin/python -m hoaspy.collect.courts.get_state_courts --portal va_gdc --limit 5 -v   # two courts, five names
+./venv/bin/python -m hoaspy state-courts --portal va_gdc --names courts/.trial_va_gdc_names.txt --pace 0.5 --wait-on-quota
+HOASPY_VA_GDC_COURTS=059,153 ./venv/bin/python -m hoaspy state-courts --portal va_gdc --limit 5 -v   # two courts, five names
 
 # Miami-Dade trial courts from the staged Civil feed
-./venv/bin/python -m hoaspy.collect.courts.records_miamidade_civil
-./venv/bin/python -m hoaspy.collect.courts.records_miamidade_civil --no-links -v
+./venv/bin/python -m hoaspy miamidade-civil
+./venv/bin/python -m hoaspy miamidade-civil --no-links -v
 
 # then fold everything into the site
 ./venv/bin/python -m hoaspy.build.build_site && ./venv/bin/python -m hoaspy.build.build_map

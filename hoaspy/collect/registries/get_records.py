@@ -1,18 +1,20 @@
-#!/usr/bin/env python
-"""Collect named community associations with locations from Florida and Texas
-public records.
+"""Florida condominium projects (DBPR) and Texas management certificates
+(TREC): the two registries that give every association a real name and a
+real location, joined into one file.
 
-Every record carries a real association name and a real location, so it can
-be joined to county land records, management companies, or each other.
+    python -m hoaspy records                  # both states
+    python -m hoaspy records --state FL       # one state
+    python -m hoaspy records --county Harris --name-contains oaks
 
-    ./venv/bin/python -m hoaspy.collect.registries.get_records                 # both states
-    ./venv/bin/python -m hoaspy.collect.registries.get_records --state FL      # one state
-    ./venv/bin/python -m hoaspy.collect.registries.get_records --county Harris --name-contains oaks
-
-Output (default ./records/):
-    associations.jsonl   one record per association, unified schema
-    associations.csv     same, flattened for a spreadsheet
-    sources.json         provenance: URLs fetched, row counts, timestamp
+Output (default records/):
+    associations.jsonl   one row per association: the registry columns plus
+                         `id` (a hash of state, source, record id and ZIP,
+                         so re-runs keep their ids), `type`, `source_region`,
+                         `file_number`, `address_raw` and the managing
+                         entity's `manager_id`, `manager_address`,
+                         `manager_city`, `manager_state`, `manager_zip`
+    associations.csv     the same rows, the CSV_COLUMNS only
+    sources.json         what was fetched, row counts, timestamp
 """
 
 from __future__ import annotations
@@ -20,207 +22,156 @@ from __future__ import annotations
 import argparse
 import csv
 import hashlib
-import json
 import logging
 import sys
 import time
 from collections import Counter
-from datetime import datetime, timezone
 from pathlib import Path
 
 import requests
 
-from hoaspy.collect.registries import records_fl
-from hoaspy.collect.registries import records_tx
 from hoaspy import ROOT
-DEFAULT_OUT = ROOT / "records"
+from hoaspy.collect.registries import records_fl, records_tx
+from hoaspy.lib import http
+from hoaspy.lib.jsonl import now_iso, write_json, write_rows
+from hoaspy.lib.records import Association
 
-USER_AGENT = "macos:hoa-public-records:0.1 (academic research)"
+DEFAULT_OUT_DIR = ROOT / "records"
+STATES = ("FL", "TX")
 
-log = logging.getLogger("records")
-
-FIELDS = [
+CSV_COLUMNS = [
     "id", "state", "source", "name", "type", "address", "city", "county", "zip",
     "units", "status", "status_detail", "recorded_date",
     "manager_name", "manager_city", "manager_state", "manager_zip",
     "document_url", "source_url", "retrieved_at",
 ]
 
+log = logging.getLogger(__name__)
 
-def record_id(rec: dict) -> str:
-    """Stable id from the fields that identify a community.
 
-    The state registries have no shared key, so this is derived rather than
-    given — which also makes re-runs idempotent.
-    """
-    basis = "|".join([
-        rec.get("state", ""),
-        rec.get("source", ""),
-        rec.get("record_id", "") or rec.get("name", "").upper(),
-        rec.get("zip", ""),
-    ])
+def derived_id(record: Association) -> str:
+    """A stable id from what identifies a community. The registries share
+    no key, so one is derived — which also makes re-runs idempotent."""
+    basis = "|".join([record.state, record.source, record.record_id or record.name.upper(), record.zip])
     return hashlib.sha256(basis.encode()).hexdigest()[:16]
 
 
-def collect(states: list[str], timeout: float) -> tuple[list[dict], dict]:
-    session = requests.Session()
-    session.headers["User-Agent"] = USER_AGENT
-    now = datetime.now(timezone.utc).isoformat()
-
-    records: list[dict] = []
-    sources: dict = {"retrieved_at": now, "states": {}}
+def collect(session: requests.Session, states: list[str], timeout: float) -> tuple[list[dict], dict]:
+    """(rows, sources) for the requested states, de-duplicated on `id` (an
+    association can appear twice where extracts overlap a region boundary)."""
+    retrieved_at = now_iso()
+    records: list[Association] = []
+    sources: dict = {"retrieved_at": retrieved_at, "states": {}}
 
     if "FL" in states:
         log.info("Florida: fetching DBPR condominium extracts ...")
-        fl = records_fl.fetch(session, timeout=timeout)
-        records.extend(fl)
+        found = records_fl.fetch(session, timeout=timeout, retrieved_at=retrieved_at)
+        records.extend(found)
         sources["states"]["FL"] = {
             "source": "DBPR Division of Florida Condominiums, Timeshares and Mobile Homes",
-            "page": records_fl.SOURCE_PAGE,
-            "files": list(records_fl.EXTRACTS),
-            "rows": len(fl),
-        }
-
+            "page": records_fl.SOURCE_PAGE, "files": list(records_fl.EXTRACTS), "rows": len(found)}
     if "TX" in states:
         log.info("Texas: fetching TREC management certificates ...")
-        tx = records_tx.fetch(session, timeout=timeout)
-        records.extend(tx)
+        found = records_tx.fetch(session, timeout=timeout, retrieved_at=retrieved_at)
+        records.extend(found)
         sources["states"]["TX"] = {
             "source": "Texas Real Estate Commission HOA management certificates",
-            "page": records_tx.SOURCE_PAGE,
-            "endpoint": records_tx.ENDPOINT,
-            "rows": len(tx),
-        }
+            "page": records_tx.SOURCE_PAGE, "endpoint": records_tx.DATASET_URL, "rows": len(found)}
 
-    for rec in records:
-        rec["id"] = record_id(rec)
-        rec["retrieved_at"] = now
-
-    # Same association can appear twice if an extract overlaps a region boundary.
+    rows: list[dict] = []
     seen: set[str] = set()
-    deduped = []
-    for rec in records:
-        if rec["id"] in seen:
+    for record in records:
+        record.extras["id"] = derived_id(record)
+        if record.extras["id"] in seen:
             continue
-        seen.add(rec["id"])
-        deduped.append(rec)
-    if len(deduped) != len(records):
-        log.info("dropped %d duplicate rows", len(records) - len(deduped))
+        seen.add(record.extras["id"])
+        rows.append(record.as_row())
+    if len(rows) != len(records):
+        log.info("dropped %d duplicate rows", len(records) - len(rows))
+    sources["total_records"] = len(rows)
+    return rows, sources
 
-    sources["total_records"] = len(deduped)
-    return deduped, sources
 
-
-def apply_filters(records: list[dict], args) -> list[dict]:
-    out = records
+def apply_filters(rows: list[dict], args: argparse.Namespace) -> list[dict]:
+    out = rows
     if args.county:
-        want = {c.lower() for c in args.county}
-        out = [r for r in out if r.get("county", "").lower() in want]
+        wanted = {county.lower() for county in args.county}
+        out = [row for row in out if row.get("county", "").lower() in wanted]
     if args.name_contains:
         needle = args.name_contains.lower()
-        out = [r for r in out if needle in r.get("name", "").lower()]
+        out = [row for row in out if needle in row.get("name", "").lower()]
     if args.status:
-        want = {s.lower() for s in args.status}
-        out = [r for r in out
-               if r.get("status_detail", "").lower() in want
-               or r.get("status", "").lower() in want]
+        wanted = {status.lower() for status in args.status}
+        out = [row for row in out
+               if row.get("status_detail", "").lower() in wanted or row.get("status", "").lower() in wanted]
     if args.with_address:
-        out = [r for r in out if r.get("address")]
+        out = [row for row in out if row.get("address")]
     return out
 
 
-def write_outputs(records: list[dict], sources: dict, out_dir: Path) -> None:
+def write_outputs(rows: list[dict], sources: dict, out_dir: Path) -> None:
     out_dir.mkdir(parents=True, exist_ok=True)
-
-    with (out_dir / "associations.jsonl").open("w") as fh:
-        for r in records:
-            fh.write(json.dumps(r, ensure_ascii=False) + "\n")
-
+    write_rows(out_dir / "associations.jsonl", rows)
     with (out_dir / "associations.csv").open("w", newline="") as fh:
-        writer = csv.DictWriter(fh, fieldnames=FIELDS, extrasaction="ignore")
+        writer = csv.DictWriter(fh, fieldnames=CSV_COLUMNS, extrasaction="ignore")
         writer.writeheader()
-        writer.writerows(records)
+        writer.writerows(rows)
+    write_json(out_dir / "sources.json", sources)
 
-    (out_dir / "sources.json").write_text(json.dumps(sources, indent=2))
 
-
-def print_summary(records: list[dict]) -> None:
-    if not records:
+def print_summary(rows: list[dict]) -> None:
+    if not rows:
         print("\nNo records matched.")
         return
+    by_state = Counter(row["state"] for row in rows)
+    with_address = sum(1 for row in rows if row.get("address"))
+    with_manager = sum(1 for row in rows if row.get("manager_name"))
+    print(f"\n{len(rows)} associations  ({', '.join(f'{state} {n}' for state, n in sorted(by_state.items()))})")
+    print(f"  {with_address} with a street address, {with_manager} with a named manager")
 
-    by_state = Counter(r["state"] for r in records)
-    with_addr = sum(1 for r in records if r.get("address"))
-    with_mgr = sum(1 for r in records if r.get("manager_name"))
-    counties = Counter(r["county"] for r in records if r.get("county"))
-    flags = Counter(r["status_detail"] for r in records if r.get("status_detail"))
-    mgrs = Counter(r["manager_name"] for r in records if r.get("manager_name"))
-
-    print(f"\n{len(records)} associations  "
-          f"({', '.join(f'{s} {n}' for s, n in sorted(by_state.items()))})")
-    print(f"  {with_addr} with a street address, {with_mgr} with a named manager")
-
-    def show(title: str, counter: Counter, n: int = 8) -> None:
+    def show(title: str, counter: Counter, top: int = 8) -> None:
         if not counter:
             return
         print(f"\n{title}")
-        width = max(len(str(k)) for k, _ in counter.most_common(n))
-        for key, count in counter.most_common(n):
+        width = max(len(str(key)) for key, _ in counter.most_common(top))
+        for key, count in counter.most_common(top):
             print(f"  {key:<{width}}  {count}")
 
-    show("Counties", counties)
-    show("Registration flags", flags)
-    show("Managing entities", mgrs)
+    show("Counties", Counter(row["county"] for row in rows if row.get("county")))
+    show("Registration flags", Counter(row["status_detail"] for row in rows if row.get("status_detail")))
+    show("Managing entities", Counter(row["manager_name"] for row in rows if row.get("manager_name")))
 
 
-def main() -> int:
-    ap = argparse.ArgumentParser(
-        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--state", action="append", choices=["FL", "TX"],
-                    help="limit to one state (repeatable); default both")
-    ap.add_argument("--out", type=Path, default=DEFAULT_OUT)
-    ap.add_argument("--county", action="append", help="filter by county (repeatable)")
-    ap.add_argument("--name-contains", help="filter by substring of the association name")
-    ap.add_argument("--status", action="append",
-                    help="filter by registration status, e.g. Delinquent")
-    ap.add_argument("--with-address", action="store_true",
-                    help="keep only records that have a street address")
-    ap.add_argument("--timeout", type=float, default=120.0)
-    ap.add_argument("-v", "--verbose", action="store_true")
-    args = ap.parse_args()
+def add_arguments(parser: argparse.ArgumentParser) -> None:
+    parser.add_argument("--state", action="append", choices=STATES,
+                        help="limit to one state (repeatable); default both")
+    parser.add_argument("--out", type=Path, default=DEFAULT_OUT_DIR)
+    parser.add_argument("--county", action="append", help="filter by county (repeatable)")
+    parser.add_argument("--name-contains", help="filter by a substring of the association name")
+    parser.add_argument("--status", action="append", help="filter by registration status, e.g. Delinquent")
+    parser.add_argument("--with-address", action="store_true", help="keep only records that have a street address")
+    parser.add_argument("--timeout", type=float, default=120.0)
 
-    logging.basicConfig(
-        level=logging.DEBUG if args.verbose else logging.INFO,
-        format="%(asctime)s %(levelname)-7s %(message)s", datefmt="%H:%M:%S")
 
-    states = args.state or ["FL", "TX"]
+def run(args: argparse.Namespace) -> int:
+    states = args.state or list(STATES)
     started = time.time()
-
     try:
-        records, sources = collect(states, args.timeout)
+        rows, sources = collect(http.session(), states, args.timeout)
     except requests.RequestException as exc:
         print(f"\nFetch failed: {exc}\n", file=sys.stderr)
         return 1
-
-    if not records:
+    if not rows:
         print("\nNothing collected — both sources returned no rows.\n", file=sys.stderr)
         return 1
 
-    filtered = apply_filters(records, args)
-    sources["filters_applied"] = {
-        k: v for k, v in {
-            "county": args.county, "name_contains": args.name_contains,
-            "status": args.status, "with_address": args.with_address or None,
-        }.items() if v
-    }
+    filtered = apply_filters(rows, args)
+    sources["filters_applied"] = {key: value for key, value in {
+        "county": args.county, "name_contains": args.name_contains,
+        "status": args.status, "with_address": args.with_address or None}.items() if value}
     sources["records_written"] = len(filtered)
     sources["duration_seconds"] = round(time.time() - started, 1)
-
     write_outputs(filtered, sources, args.out)
     print_summary(filtered)
     print(f"\nWrote {len(filtered)} records to {args.out}/")
     return 0
-
-
-if __name__ == "__main__":
-    sys.exit(main())

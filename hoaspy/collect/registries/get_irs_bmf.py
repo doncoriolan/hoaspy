@@ -1,50 +1,52 @@
-#!/usr/bin/env python
-"""Homeowners / condominium associations in the IRS Exempt Organizations
-Business Master File (EO BMF) — every state.
+"""Homeowners and condominium associations in the IRS Exempt Organizations
+Business Master File (EO BMF), every state.
 
-    ./venv/bin/python -m hoaspy.collect.registries.get_irs_bmf                # all states
-    ./venv/bin/python -m hoaspy.collect.registries.get_irs_bmf --state OK WY  # a few
+    python -m hoaspy irs-bmf                  # all states
+    python -m hoaspy irs-bmf --state OK WY    # a few
 
 The BMF is the IRS's public roster of organizations that hold a ruling of
-tax exemption. Most HOAs file Form 1120-H and never appear here, but the
-ones that sought 501(c)(4)/(c)(7) status do — with EIN, address, ruling
-date, NTEE code (L50 = "Homeowners Associations") and the latest reported
-income/assets. It is the only free, nationwide, government-published list
-of associations, so it is the floor for the 30+ states that publish no
-registry or corporate bulk file.
+tax exemption. Most HOAs file Form 1120-H and never appear in it, but the
+ones that sought 501(c)(4) or (c)(7) status do — with EIN, address, ruling
+date, NTEE code (L50 is "Homeowners Associations") and the latest reported
+income and assets. It is the only free, nationwide, government-published
+list of associations, so it is the floor for the states that publish no
+registry or corporate file.
 
-Selection: NTEE code L50, or an association-looking name (same regex as
-get_states.py). Regional files eo1/eo2/eo3.csv (US) are cached under
+An organization is kept when its NTEE code is L50 or its name reads as an
+association. The regional files eo1/eo2/eo3.csv are cached under
 .cache/irs/ and downloaded when missing.
 
-Output: records/irs_exempt_orgs.jsonl — registry-shaped rows (one per EIN)
-that build_site.py folds in exactly like a state HOA registry, with
-source "irs-eo-bmf". coverage.json gets a collected["irs_exempt"] entry
-per state.
+Output: records/irs_exempt_orgs.jsonl, one row per EIN in the registry
+shape plus `ein`, `in_care_of`, `ntee`, `subsection`, `tax_period`,
+`income_amt` and `asset_amt`; coverage.json collected["irs_exempt"] per
+state.
 """
 
 from __future__ import annotations
 
 import argparse
 import csv
-import json
 import logging
-import sys
 import time
 from collections import Counter
 from pathlib import Path
 
 import requests
 
-from hoaspy.collect.registries.get_states import ASSOC_RE, update_coverage, write_merged
-
 from hoaspy import ROOT
-CACHE = ROOT / ".cache" / "irs"
-OUT = ROOT / "records" / "irs_exempt_orgs.jsonl"
-PAGE = "https://www.irs.gov/charities-non-profits/exempt-organizations-business-master-file-extract-eo-bmf"
-FILES = {n: f"https://www.irs.gov/pub/irs-soi/{n}.csv" for n in ("eo1", "eo2", "eo3")}
-USER_AGENT = "macos:hoa-public-records:0.1 (academic research)"
+from hoaspy.lib import http
+from hoaspy.lib.coverage import update_coverage
+from hoaspy.lib.jsonl import now_iso, replace_rows
+from hoaspy.lib.names import REGISTRY_NAME_RE
+from hoaspy.lib.records import Association
+from hoaspy.lib.states import STATE_CODES
+
+CACHE_DIR = ROOT / ".cache" / "irs"
+OUTPUT_PATH = ROOT / "records" / "irs_exempt_orgs.jsonl"
+SOURCE_PAGE = "https://www.irs.gov/charities-non-profits/exempt-organizations-business-master-file-extract-eo-bmf"
+EXTRACT_URLS = {name: f"https://www.irs.gov/pub/irs-soi/{name}.csv" for name in ("eo1", "eo2", "eo3")}
 SOURCE = "irs-eo-bmf"
+MIN_EXTRACT_BYTES = 1_000_000           # a smaller file is a failed download
 
 SUBSECTION = {
     "03": "501(c)(3)", "04": "501(c)(4)", "05": "501(c)(5)", "06": "501(c)(6)",
@@ -53,38 +55,34 @@ SUBSECTION = {
 }
 STATUS = {"01": "exempt", "02": "conditional exemption", "12": "trust (Form 990-PF)",
           "25": "terminated (990-N filer)"}
-STATES = {
-    "AL", "AK", "AZ", "AR", "CA", "CO", "CT", "DE", "DC", "FL", "GA", "HI", "ID",
-    "IL", "IN", "IA", "KS", "KY", "LA", "ME", "MD", "MA", "MI", "MN", "MS", "MO",
-    "MT", "NE", "NV", "NH", "NJ", "NM", "NY", "NC", "ND", "OH", "OK", "OR", "PA",
-    "RI", "SC", "SD", "TN", "TX", "UT", "VT", "VA", "WA", "WV", "WI", "WY",
-}
 
-log = logging.getLogger("irs")
+log = logging.getLogger(__name__)
 
 
-def ensure_files(session: requests.Session) -> list[Path]:
-    CACHE.mkdir(parents=True, exist_ok=True)
+def ensure_extracts(session: requests.Session) -> list[Path]:
+    """The three regional files, downloaded when missing or truncated."""
+    CACHE_DIR.mkdir(parents=True, exist_ok=True)
     paths = []
-    for name, url in FILES.items():
-        p = CACHE / f"{name}.csv"
-        if not p.exists() or p.stat().st_size < 1_000_000:
+    for name, url in EXTRACT_URLS.items():
+        path = CACHE_DIR / f"{name}.csv"
+        if not path.exists() or path.stat().st_size < MIN_EXTRACT_BYTES:
             log.info("downloading %s", url)
-            resp = session.get(url, timeout=900)
-            resp.raise_for_status()
-            p.write_bytes(resp.content)
-        paths.append(p)
+            response = session.get(url, timeout=900)
+            response.raise_for_status()
+            path.write_bytes(response.content)
+        paths.append(path)
     return paths
 
 
-def _ruling(v: str) -> str:
-    v = (v or "").strip()
-    return f"{v[:4]}-{v[4:6]}" if len(v) >= 6 and v.isdigit() else ""
+def ruling_month(value: str) -> str:
+    """The RULING column (YYYYMM, sometimes longer) as YYYY-MM; '' otherwise."""
+    value = (value or "").strip()
+    return f"{value[:4]}-{value[4:6]}" if len(value) >= 6 and value.isdigit() else ""
 
 
-def _amt(v: str):
+def dollar_amount(value: str) -> int | None:
     try:
-        return int(v)
+        return int(value)
     except (TypeError, ValueError):
         return None
 
@@ -92,94 +90,69 @@ def _amt(v: str):
 def is_association(row: dict) -> bool:
     if (row.get("NTEE_CD") or "").startswith("L50"):
         return True
-    return bool(ASSOC_RE.search(row.get("NAME") or "")
-                or ASSOC_RE.search(row.get("SORT_NAME") or ""))
+    return bool(REGISTRY_NAME_RE.search(row.get("NAME") or "") or REGISTRY_NAME_RE.search(row.get("SORT_NAME") or ""))
 
 
-def to_record(row: dict) -> dict:
+def to_record(row: dict, retrieved_at: str = "") -> Association:
     name = " ".join((row.get("NAME") or "").split())
     sort_name = " ".join((row.get("SORT_NAME") or "").split())
-    if sort_name and not ASSOC_RE.search(name) and ASSOC_RE.search(sort_name):
-        name = sort_name           # e.g. NAME is the management agent, SORT_NAME the HOA
-    sub = SUBSECTION.get(row.get("SUBSECTION") or "", f"501(c)({int(row['SUBSECTION'])})"
-                         if (row.get("SUBSECTION") or "").isdigit() else "")
+    if sort_name and not REGISTRY_NAME_RE.search(name) and REGISTRY_NAME_RE.search(sort_name):
+        name = sort_name            # NAME is the management agent, SORT_NAME the association
+    code = row.get("SUBSECTION") or ""
+    subsection = SUBSECTION.get(code, f"501(c)({int(code)})" if code.isdigit() else "")
     status = STATUS.get(row.get("STATUS") or "", row.get("STATUS") or "")
-    ruling = _ruling(row.get("RULING") or "")
+    ruling = ruling_month(row.get("RULING") or "")
     ein = (row.get("EIN") or "").strip()
-    return {
-        "state": row["STATE"],
-        "source": SOURCE,
-        "source_url": PAGE,
-        "record_id": ein,
-        "ein": f"{ein[:2]}-{ein[2:]}" if len(ein) == 9 else ein,
-        "name": name,
-        "status": f"{sub} {status}".strip(),
-        "status_detail": f"IRS ruling {ruling}" if ruling else "",
-        "recorded_date": ruling,
-        "address": " ".join((row.get("STREET") or "").split()),
-        "city": " ".join((row.get("CITY") or "").split()).title(),
-        "county": "",
-        "zip": (row.get("ZIP") or "")[:5],
-        "in_care_of": " ".join((row.get("ICO") or "").replace("%", "").split()),
-        "ntee": row.get("NTEE_CD") or "",
-        "subsection": sub,
-        "tax_period": row.get("TAX_PERIOD") or "",
-        "income_amt": _amt(row.get("INCOME_AMT")),
-        "asset_amt": _amt(row.get("ASSET_AMT")),
-        "units": None,
-        "manager_name": "",
-    }
+    return Association(
+        state=row["STATE"], source=SOURCE, source_url=SOURCE_PAGE, record_id=ein, name=name,
+        status=f"{subsection} {status}".strip(), status_detail=f"IRS ruling {ruling}" if ruling else "",
+        recorded_date=ruling, address=" ".join((row.get("STREET") or "").split()),
+        city=" ".join((row.get("CITY") or "").split()).title(), zip=(row.get("ZIP") or "")[:5],
+        retrieved_at=retrieved_at,
+        extras={
+            "ein": f"{ein[:2]}-{ein[2:]}" if len(ein) == 9 else ein,
+            "in_care_of": " ".join((row.get("ICO") or "").replace("%", "").split()),
+            "ntee": row.get("NTEE_CD") or "", "subsection": subsection,
+            "tax_period": row.get("TAX_PERIOD") or "",
+            "income_amt": dollar_amount(row.get("INCOME_AMT")), "asset_amt": dollar_amount(row.get("ASSET_AMT")),
+        })
 
 
-def collect(paths: list[Path], states: set[str] | None) -> list[dict]:
-    out: list[dict] = []
+def collect(paths: list[Path], states: set[str] | None, retrieved_at: str = "") -> list[Association]:
+    """The association rows of the extracts, one per EIN, for `states` (or every state)."""
+    out: list[Association] = []
     seen: set[str] = set()
-    for p in paths:
-        with p.open(newline="", encoding="latin-1") as fh:
+    for path in paths:
+        with path.open(newline="", encoding="latin-1") as fh:
             for row in csv.DictReader(fh):
-                st = (row.get("STATE") or "").strip()
-                if st not in STATES or (states and st not in states):
+                state = (row.get("STATE") or "").strip()
+                if state not in STATE_CODES or (states and state not in states) or not is_association(row):
                     continue
-                if not is_association(row):
+                record = to_record(row, retrieved_at)
+                if not record.name or record.record_id in seen:
                     continue
-                rec = to_record(row)
-                if not rec["name"] or rec["record_id"] in seen:
-                    continue
-                seen.add(rec["record_id"])
-                out.append(rec)
-        log.info("%s: %d association rows so far", p.name, len(out))
+                seen.add(record.record_id)
+                out.append(record)
+        log.info("%s: %d association rows so far", path.name, len(out))
     return out
 
 
-def main() -> int:
-    ap = argparse.ArgumentParser(description=__doc__,
-                                 formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--state", nargs="+", help="limit to these state codes")
-    ap.add_argument("-v", "--verbose", action="store_true")
-    args = ap.parse_args()
-    logging.basicConfig(level=logging.DEBUG if args.verbose else logging.INFO,
-                        format="%(asctime)s %(levelname)-7s %(message)s", datefmt="%H:%M:%S")
+def add_arguments(parser: argparse.ArgumentParser) -> None:
+    parser.add_argument("--state", nargs="+", help="limit to these state codes")
 
-    session = requests.Session()
-    session.headers["User-Agent"] = USER_AGENT
+
+def run(args: argparse.Namespace) -> int:
     started = time.time()
-    paths = ensure_files(session)
-    states = {s.upper() for s in args.state} if args.state else None
-    rows = collect(paths, states)
+    paths = ensure_extracts(http.session())
+    states = {code.upper() for code in args.state} if args.state else None
+    records = collect(paths, states, retrieved_at=now_iso())
 
-    by_state = Counter(r["state"] for r in rows)
-    total = write_merged(OUT, rows, set(by_state) | (states or set()))
-    for st, n in sorted(by_state.items()):
-        update_coverage(st, "irs_exempt", {
-            "source": "IRS Exempt Organizations Business Master File",
-            "records": n, "url": PAGE,
-            "note": "501(c) HOAs/condos only (NTEE L50 or association name); 1120-H filers absent",
-        })
-        print(f"  {st}: {n:,} tax-exempt associations")
-    log.info("%s: %d rows total (%d fresh) in %.0fs", OUT.name, total, len(rows),
-             time.time() - started)
+    by_state = Counter(record.state for record in records)
+    total = replace_rows(OUTPUT_PATH, (record.as_row() for record in records), set(by_state) | (states or set()))
+    for state, count in sorted(by_state.items()):
+        update_coverage(state, "irs_exempt", {
+            "source": "IRS Exempt Organizations Business Master File", "records": count, "url": SOURCE_PAGE,
+            "note": "501(c) HOAs/condos only (NTEE L50 or association name); 1120-H filers absent"})
+        print(f"  {state}: {count:,} tax-exempt associations")
+    log.info("%s: %d rows total (%d fresh) in %.0fs", OUTPUT_PATH.name, total, len(records), time.time() - started)
     return 0
-
-
-if __name__ == "__main__":
-    sys.exit(main())
