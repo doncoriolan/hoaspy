@@ -356,7 +356,8 @@ SEARCH_JS = r"""(async () => {
   const q = new URLSearchParams({partyName: P.party, dateRangeFrom: P.frm, dateRangeTo: P.to,
     documentType: P.doctype, searchT: P.doctype, firstQuery: 'y', searchtype: 'Name/Document'});
   const r = await fetch('/officialrecords/api/home/standardsearch?' + q, {method: 'POST', body: '',
-    headers: {Accept: 'application/json', 'x-recaptcha-token': token, 'content-type': 'application/json; charset=utf-8'}});
+    headers: {Accept: 'application/json', 'x-recaptcha-token': token,
+              'content-type': 'application/json; charset=utf-8'}});
   if (!r.ok) return JSON.stringify({ok: false, err: 'standardsearch HTTP ' + r.status});
   const t = await r.json();
   if (!t || !t.isValidSearch || !t.qs) return JSON.stringify({ok: true, rows: [], criteria: null});

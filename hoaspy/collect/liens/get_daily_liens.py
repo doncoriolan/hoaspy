@@ -86,7 +86,8 @@ def fetch_broward(out_dir: Path, cache_dir: Path, lookback: int, refetch: set[da
     written = []
     try:
         listed = records_broward.daily_days(sftp)
-        complete = [day for day, parts in listed.items() if {"doc", "nme"} <= parts and day >= today - timedelta(days=lookback)]
+        oldest = today - timedelta(days=lookback)
+        complete = [day for day, parts in listed.items() if {"doc", "nme"} <= parts and day >= oldest]
         for day in pending_days(out_dir, "broward", complete, refetch):
             records = records_broward.fetch_day(sftp, day, cache_dir, retrieved_at=retrieved_at)
             path = write_day(out_dir, "broward", day, [record.as_row() for record in records])
@@ -113,7 +114,8 @@ def fetch_miami_dade(out_dir: Path, lookback: int, refetch: set[date], today: da
     written = []
     try:
         for day in days:
-            rows, truncated = records_miamidade.enumerate_window(session, day, day, pace=pace, retrieved_at=retrieved_at)
+            rows, truncated = records_miamidade.enumerate_window(session, day, day, pace=pace,
+                                                                 retrieved_at=retrieved_at)
             path = write_day(out_dir, "miami-dade", day, rows)
             log.info("miami-dade %s: %d association lien-family documents -> %s%s", day, len(rows), path.name,
                      " (TRUNCATED: " + ", ".join(truncated) + ")" if truncated else "")
@@ -155,7 +157,8 @@ def run(args: argparse.Namespace) -> int:
     if "miami-dade" in counties:
         try:
             written = fetch_miami_dade(args.out, args.days, refetch, today, args.pace, args.devtools)
-            summary.append(f"miami-dade: {len(written)} day(s) written" + (f" ({', '.join(written)})" if written else ""))
+            summary.append(f"miami-dade: {len(written)} day(s) written"
+                           + (f" ({', '.join(written)})" if written else ""))
         except PermissionError as exc:
             # No browser: not a failure of the source, so the exit status
             # stays clean when Broward went through; the summary says so.
