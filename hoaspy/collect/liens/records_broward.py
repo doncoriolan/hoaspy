@@ -25,6 +25,7 @@ import logging
 import re
 from collections import defaultdict
 from collections.abc import Iterator
+from datetime import date
 from pathlib import Path
 
 import paramiko
@@ -42,6 +43,13 @@ YEARLY_DIR = "OR_Yearly_Exports"
 DAILY_DIR = "Official_Records_Download"
 SOURCE_PAGE = "https://www.broward.org/RecordsTaxesTreasury/Records/Pages/IndexFiles-Completed.aspx"
 SOURCE = "broward-or-yearly-export"
+# The daily folder: the last ten or so recording days as
+# MM-DD-YYYY{doc,nme,lgl}-ver.txt (plus lnk-ver, the links from releases to
+# the documents they release, and img.zip, the scanned pages — neither
+# read), posted one to four days after the recording day, in the yearly
+# files' layout.
+DAILY_SOURCE = "broward-or-daily-download"
+DAILY_FILE_RE = re.compile(r"^(\d{2})-(\d{2})-(\d{4})(doc|nme|lgl|lnk)-ver\.txt$")
 
 # The lien lifecycle. Pulling the whole family lets a reader measure
 # duration (lien -> satisfaction) and escalation (lien -> lis pendens).
@@ -174,3 +182,57 @@ def fetch_years(years: list[int], cache_dir: Path, keep_types: list[str] | None 
     finally:
         transport.close()
     return records
+
+
+# ---- the daily folder ------------------------------------------------------
+
+def daily_days(sftp: paramiko.SFTPClient) -> dict[date, set[str]]:
+    """The recording days the daily folder holds, each with the parts
+    present (`doc`, `nme`, `lgl`, `lnk`)."""
+    days: dict[date, set[str]] = defaultdict(set)
+    for name in sftp.listdir(DAILY_DIR):
+        if match := DAILY_FILE_RE.match(name):
+            month, day, year, part = match.groups()
+            days[date(int(year), int(month), int(day))].add(part)
+    return dict(days)
+
+
+def daily_name(day: date, part: str) -> str:
+    return f"{day.month:02d}-{day.day:02d}-{day.year}{part}-ver.txt"
+
+
+def fetch_day(sftp: paramiko.SFTPClient, day: date, cache_dir: Path, keep_types: list[str] | None = None,
+              associations_only: bool = True, retrieved_at: str = "") -> list[Lien]:
+    """One recording day's lien-family records from the daily folder: the
+    yearly parser over the day's doc/nme/lgl files, `source` set to the
+    daily download."""
+    keep_types = keep_types or DEFAULT_TYPES
+    doc = download(sftp, f"{DAILY_DIR}/{daily_name(day, 'doc')}", cache_dir / daily_name(day, "doc"))
+    nme = download(sftp, f"{DAILY_DIR}/{daily_name(day, 'nme')}", cache_dir / daily_name(day, "nme"))
+    try:
+        lgl = download(sftp, f"{DAILY_DIR}/{daily_name(day, 'lgl')}", cache_dir / daily_name(day, "lgl"))
+    except OSError:
+        log.debug("no lgl-ver for %s", day)
+        lgl = None
+    records = parse_year(doc, nme, lgl, keep_types, associations_only, year=day.year, retrieved_at=retrieved_at)
+    out = []
+    for record in records:
+        record.source = DAILY_SOURCE
+        record.association = community_party(record.filers, record.respondents)
+        if record.association or not associations_only:
+            out.append(record)
+    return out
+
+
+def community_party(filers: list[str], respondents: list[str]) -> str:
+    """The association among the parties, filer side first — a bank's
+    charter name ("FIFTH THIRD BANK NATIONAL ASSN") matches the lien-party
+    vocabulary on ASSN and is passed over (records_cook's financial-name
+    guard), so a bank's lis pendens is kept only when it names the
+    community on the other side. The yearly parser keeps its wider gate;
+    this is what the daily alerts use."""
+    from hoaspy.collect.liens.records_cook import is_financial_name
+    for name in [*filers, *respondents]:
+        if LIEN_PARTY_RE.search(name) and not is_financial_name(name):
+            return name
+    return ""

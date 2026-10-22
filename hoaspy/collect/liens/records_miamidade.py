@@ -13,9 +13,16 @@ https://onlineservices.miamidadeclerk.gov/officialrecords/. Two calls:
 Three things shape the collector:
 
 1. Auth is one opaque cookie, `.PremierIDDade`: anonymous, issued by the
-   site's SSO, no login and no captcha (the `x-recaptcha-token` header the
-   site sends is not validated). Copy it once from a browser (DevTools ->
-   Application -> Cookies); it is never committed.
+   site's SSO, no login. Copy it once from a browser (DevTools ->
+   Application -> Cookies); it is never committed. Since October 2026 the
+   page is a React app behind Cloudflare Turnstile and `standardsearch`
+   answers `isValidSearch: false` to any call without a fresh
+   `x-recaptcha-token` from the page's own widget: a token made outside a
+   browser would be captcha circumvention, so `BrowserSession` (bottom)
+   runs the same two calls inside the site's own page in a local browser
+   (hoaspy/lib/browser.py), the page's own widget minting the token. The
+   cookie session (`open_session`) stays for a cookie copied from a
+   browser that the Clerk still honours.
 2. Results are capped at 500 rows, ordered by (recorded date, sequence)
    ascending: a wider window silently returns only its earliest dates.
    The complete mode is therefore the per-association party-name query
@@ -34,6 +41,7 @@ mode, `query_name`.
 
 from __future__ import annotations
 
+import json
 import logging
 import time
 import urllib.parse
@@ -127,9 +135,12 @@ def fetch_rows(session: requests.Session, query: str, timeout: int = 60) -> list
     return rows
 
 
-def query(session: requests.Session, doctype: str, frm: str, to: str, party: str = "") -> tuple[list[dict], bool]:
+def query(session, doctype: str, frm: str, to: str, party: str = "") -> tuple[list[dict], bool]:
     """One search: (rows, capped), where capped means the row count hit the
-    server limit and the window's later dates were cut off."""
+    server limit and the window's later dates were cut off. `session` is
+    the cookie session or a `BrowserSession`."""
+    if isinstance(session, BrowserSession):
+        return session.query(doctype, frm, to, party)
     minted = mint_query(session, doctype, party, frm, to)
     if minted is None:
         return [], False
@@ -297,3 +308,103 @@ def enumerate_window(session: requests.Session, start: date, end: date, doctypes
                 out.append(record.as_row())
             day += timedelta(days=1)
     return out, truncated
+
+
+# ---- the page's own search, in a local browser ---------------------------------
+# The Turnstile widget the app renders for its Search button is used as the
+# app uses it: rendered from the site key the page itself carries, executed
+# in the page, the token sent on the page's own fetch. Nothing is minted or
+# solved outside the browser.
+
+SEARCH_PAGE_READY_JS = "!!(window.turnstile && document.readyState === 'complete')"
+
+# The app's site key: off the widget iframe when the app has rendered one,
+# else off the app bundle, where the widget is rendered from a literal.
+SITE_KEY_JS = r"""(async () => {
+  const f = document.querySelector('iframe[src*="challenges.cloudflare.com"]');
+  const m = f && f.src.match(/\/(0x[0-9A-Za-z_-]{16,})\//);
+  if (m) return m[1];
+  for (const s of document.querySelectorAll('script[src*="/assets/"]')) {
+    try {
+      const t = await (await fetch(s.src)).text();
+      const k = t.match(/"(0x4[0-9A-Za-z_-]{19,40})"/);
+      if (k) return k[1];
+    } catch (e) {}
+  }
+  return "";
+})()"""
+
+# One search: a token from a widget executed for it, then the app's two
+# calls. Answers JSON: {ok, rows, criteria} or {ok: false, err}.
+SEARCH_JS = r"""(async () => {
+  const P = __PARAMS__;
+  const div = document.createElement('div');
+  div.style.cssText = 'position:absolute;left:-9999px';
+  document.body.appendChild(div);
+  const token = await new Promise((ok) => {
+    let w;
+    try {
+      w = window.turnstile.render(div, {sitekey: P.sitekey, action: 'submit', execution: 'execute',
+        appearance: 'interaction-only', callback: ok,
+        'error-callback': (e) => ok('ERR:' + e), 'expired-callback': () => ok('ERR:expired')});
+      window.turnstile.execute(w);
+    } catch (e) { ok('ERR:' + e); }
+    setTimeout(() => ok('ERR:timeout'), 45000);
+  });
+  div.remove();
+  if (!token || token.startsWith('ERR:')) return JSON.stringify({ok: false, err: 'turnstile ' + token});
+  const q = new URLSearchParams({partyName: P.party, dateRangeFrom: P.frm, dateRangeTo: P.to,
+    documentType: P.doctype, searchT: P.doctype, firstQuery: 'y', searchtype: 'Name/Document'});
+  const r = await fetch('/officialrecords/api/home/standardsearch?' + q, {method: 'POST', body: '',
+    headers: {Accept: 'application/json', 'x-recaptcha-token': token,
+              'content-type': 'application/json; charset=utf-8'}});
+  if (!r.ok) return JSON.stringify({ok: false, err: 'standardsearch HTTP ' + r.status});
+  const t = await r.json();
+  if (!t || !t.isValidSearch || !t.qs) return JSON.stringify({ok: true, rows: [], criteria: null});
+  const r2 = await fetch('/officialrecords/api/SearchResults/getStandardRecords?qs=' + encodeURIComponent(t.qs),
+    {headers: {Accept: 'application/json'}});
+  if (!r2.ok) return JSON.stringify({ok: false, err: 'getStandardRecords HTTP ' + r2.status});
+  const b = await r2.json();
+  return JSON.stringify({ok: true, rows: b.recordingModels || [], criteria: b.searchCritiriea || null});
+})()"""
+
+
+class BrowserSession:
+    """The search page open in a throw-away context of the local browser
+    (DevTools on 127.0.0.1:9100 unless `devtools_url` says otherwise);
+    `query()` has the same contract as the module function."""
+
+    def __init__(self, devtools_url: str | None = None):
+        from hoaspy.lib.browser import DEVTOOLS_URL, DevTools
+        self.devtools = DevTools(devtools_url or DEVTOOLS_URL)
+        self.context = self.devtools.context()
+        self.tab = self.context.open_tab(SEARCH_PAGE, background=False)
+        for _ in range(60):
+            time.sleep(0.5)
+            if self.tab.evaluate(SEARCH_PAGE_READY_JS, timeout=5):
+                break
+        else:
+            raise MiamiDadeError("the Official Records page never finished loading in the browser")
+        self.sitekey = self.tab.evaluate(SITE_KEY_JS, timeout=60, await_promise=True) or ""
+        if not self.sitekey:
+            raise MiamiDadeError("no Turnstile site key on the Official Records page — has the app changed?")
+
+    def query(self, doctype: str, frm: str, to: str, party: str = "") -> tuple[list[dict], bool]:
+        params = {"sitekey": self.sitekey, "doctype": doctype, "frm": frm, "to": to, "party": party}
+        answer = self.tab.evaluate(SEARCH_JS.replace("__PARAMS__", json.dumps(params)), timeout=180, await_promise=True)
+        try:
+            out = json.loads(answer or "")
+        except ValueError:
+            raise MiamiDadeError("no answer from the search page") from None
+        if not out.get("ok"):
+            raise MiamiDadeError(str(out.get("err") or "search failed in the browser"))
+        rows = out.get("rows") or []
+        if rows and (out.get("criteria") or {}).get("documentType") is None:
+            raise MiamiDadeError("results returned with null criteria — the search was not accepted")
+        return rows, len(rows) >= ROW_CAP
+
+    def close(self) -> None:
+        try:
+            self.context.dispose()
+        finally:
+            self.devtools.close()

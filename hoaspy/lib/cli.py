@@ -54,6 +54,8 @@ COMMANDS: dict[str, Command] = {
     "liens": Command("hoaspy.collect.liens.get_liens", "Broward County FL official-records index (SFTP)"),
     "miamidade-liens": Command("hoaspy.collect.liens.get_miamidade_liens",
                                "Miami-Dade County FL official records, by association name (cookie)"),
+    "daily-liens": Command("hoaspy.collect.liens.get_daily_liens",
+                           "yesterday's Broward and Miami-Dade recordings, a file per day (alerts)"),
     "nyc-liens": Command("hoaspy.collect.liens.get_nyc_liens", "NYC ACRIS condo-board liens"),
     "cook-liens": Command("hoaspy.collect.liens.get_cook_liens", "Cook County IL recorder liens (resumable)"),
     "ca-ucc": Command("hoaspy.collect.liens.get_ca_ucc", "California judgment liens from the SOS UCC search"),
