@@ -215,6 +215,24 @@ def fetch_day(sftp: paramiko.SFTPClient, day: date, cache_dir: Path, keep_types:
         log.debug("no lgl-ver for %s", day)
         lgl = None
     records = parse_year(doc, nme, lgl, keep_types, associations_only, year=day.year, retrieved_at=retrieved_at)
+    out = []
     for record in records:
         record.source = DAILY_SOURCE
-    return records
+        record.association = community_party(record.filers, record.respondents)
+        if record.association or not associations_only:
+            out.append(record)
+    return out
+
+
+def community_party(filers: list[str], respondents: list[str]) -> str:
+    """The association among the parties, filer side first — a bank's
+    charter name ("FIFTH THIRD BANK NATIONAL ASSN") matches the lien-party
+    vocabulary on ASSN and is passed over (records_cook's financial-name
+    guard), so a bank's lis pendens is kept only when it names the
+    community on the other side. The yearly parser keeps its wider gate;
+    this is what the daily alerts use."""
+    from hoaspy.collect.liens.records_cook import is_financial_name
+    for name in [*filers, *respondents]:
+        if LIEN_PARTY_RE.search(name) and not is_financial_name(name):
+            return name
+    return ""

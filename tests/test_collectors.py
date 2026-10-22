@@ -3095,6 +3095,10 @@ class TestDailyLiens(unittest.TestCase):
         self.assertEqual(reverse["association"], "SOUTHPOINTE II HOMEOWNERS' ASSN INC",
                          "a bank's lis pendens naming the association on the reverse side is kept, association from R")
         self.assertEqual(reverse["filers"], ["SAMPLE BANK NA"])
+        self.assertNotIn("121162999", by_id, "a bank's charter name (NATIONAL ASSN) is not an association: dropped")
+        self.assertEqual(rb.community_party(["FIFTH THIRD BANK NATIONAL ASSN"], ["DOE,JOHN"]), "")
+        self.assertEqual(rb.community_party(["U S BANK TRUST NATIONAL ASSN"], ["DOE,JOHN", "LAGO WEST CONDOMINIUM ASSN INC"]),
+                         "LAGO WEST CONDOMINIUM ASSN INC")
         for r in rows:
             self.assertEqual(contract.check(r, "lien"), [], r["doc_id"])
         self.assertEqual(rb.daily_name(__import__("datetime").date(2026, 10, 5), "doc"), "10-05-2026doc-ver.txt")

@@ -118,7 +118,10 @@ Broward's `Official_Records_Download` folder holds the last ten or so
 days as `MM-DD-YYYY{doc,nme,lgl}-ver.txt` in the yearly layout (`lnk-ver`,
 the links from releases to the documents they release, and `img.zip` are
 not read), posted one to four days after the recording day; `parse_year`
-reads them unchanged, `source` is `broward-or-daily-download`. Miami-Dade
+reads them, then `community_party` passes over a bank's charter name
+("… BANK NATIONAL ASSN" matches the lien-party vocabulary on ASSN) so a
+bank's lis pendens is kept only when the community is on the other side;
+`source` is `broward-or-daily-download`. Miami-Dade
 is `enumerate_window` one day at a time through `BrowserSession` (below).
 Output is one file per recording day under `liens/daily/<county>/`, the
 input of the lien alerts — ALERTS.md has the whole pipeline.
