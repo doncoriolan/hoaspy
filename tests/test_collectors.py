@@ -3058,6 +3058,162 @@ class TestJsonlFiles(unittest.TestCase):
             self.assertFalse(list(Path(tmp).glob("*.tmp")), "no temporary file is left behind")
 
 
+class TestDailyLiens(unittest.TestCase):
+    """get_daily_liens (docs/ALERTS.md): Broward's daily index folder parsed
+    with the yearly parser, the day bookkeeping, and the Miami-Dade browser
+    session's contract — no network."""
+
+    FIXTURE = ROOT / "tests" / "fixtures" / "broward_daily"
+
+    def _records(self):
+        from datetime import date
+
+        from hoaspy.collect.liens import records_broward as rb
+        with mock.patch.object(rb, "download", lambda sftp, remote, local: self.FIXTURE / Path(remote).name):
+            return rb.fetch_day(None, date(2026, 10, 20), Path("/nonexistent"), retrieved_at="2026-10-21T00:00:00+00:00")
+
+    def test_broward_day_parses_the_daily_layout(self):
+        """A day's doc/nme/lgl files are the yearly layout: the lien-family
+        types pass the association gate (filer first, reverse side second),
+        a person's lien and a non-lien document do not; `source` names the
+        daily download and every row conforms to the lien family."""
+        from hoaspy.collect.liens import records_broward as rb
+        from hoaspy.lib import contract
+        rows = [r.as_row() for r in self._records()]
+        by_id = {r["doc_id"]: r for r in rows}
+        self.assertEqual(sorted(by_id), ["121160606", "121160613", "121160801", "121161217", "121162141"])
+        self.assertEqual({r["doc_type"] for r in rows}, {"LIE", "LP"})
+        lien = by_id["121160606"]
+        self.assertEqual((lien["association"], lien["respondents"], lien["filers"]),
+                         ("CORAL REEF CLUB HOMEOWNERS ASSN INC", ["DOE,JOHN"], ["CORAL REEF CLUB HOMEOWNERS ASSN INC"]))
+        self.assertEqual((lien["recorded_date"], lien["recorded_ymd"], lien["year"], lien["state"], lien["county"]),
+                         ("10/20/2026", "20261020", 2026, "FL", "Broward"))
+        self.assertEqual((lien["legal_description"], lien["parcel_id"]), ("SAMPLE SUB 1-2 B LOT 3 BLK 4", "494116AC0700"))
+        self.assertEqual((lien["source"], lien["source_page"]), (rb.DAILY_SOURCE, rb.SOURCE_PAGE))
+        self.assertEqual(by_id["121161217"]["case_number"], "CACE-26-017015", "a lis pendens carries its case")
+        reverse = by_id["121162141"]
+        self.assertEqual(reverse["association"], "SOUTHPOINTE II HOMEOWNERS' ASSN INC",
+                         "a bank's lis pendens naming the association on the reverse side is kept, association from R")
+        self.assertEqual(reverse["filers"], ["SAMPLE BANK NA"])
+        for r in rows:
+            self.assertEqual(contract.check(r, "lien"), [], r["doc_id"])
+        self.assertEqual(rb.daily_name(__import__("datetime").date(2026, 10, 5), "doc"), "10-05-2026doc-ver.txt")
+
+    def test_daily_folder_listing_and_pending_days(self):
+        """`daily_days` reads the recording day and parts off the folder's
+        file names; `pending_days` is the candidates without a file, plus
+        the days asked for again, oldest first."""
+        from datetime import date
+
+        from hoaspy.collect.liens import get_daily_liens as dl
+        from hoaspy.collect.liens import records_broward as rb
+        sftp = mock.Mock()
+        sftp.listdir.return_value = ["10-20-2026doc-ver.txt", "10-20-2026nme-ver.txt", "10-20-2026lgl-ver.txt",
+                                     "10-20-2026lnk-ver.txt", "10-20-2026img.zip", "10-20-2026doc-ver-rng.txt",
+                                     "10-19-2026doc-ver.txt", "junk.txt"]
+        days = rb.daily_days(sftp)
+        self.assertEqual(days, {date(2026, 10, 20): {"doc", "nme", "lgl", "lnk"}, date(2026, 10, 19): {"doc"}})
+        sftp.listdir.assert_called_once_with(rb.DAILY_DIR)
+        with tempfile.TemporaryDirectory() as tmp:
+            out = Path(tmp)
+            dl.write_day(out, "broward", date(2026, 10, 19), [{"doc_id": "1"}])
+            self.assertTrue((out / "broward" / "2026-10-19.jsonl").exists())
+            candidates = [date(2026, 10, 20), date(2026, 10, 19), date(2026, 10, 16)]
+            self.assertEqual(dl.pending_days(out, "broward", candidates), [date(2026, 10, 16), date(2026, 10, 20)])
+            self.assertEqual(dl.pending_days(out, "broward", candidates, refetch={date(2026, 10, 19)}),
+                             [date(2026, 10, 16), date(2026, 10, 19), date(2026, 10, 20)])
+            self.assertEqual(dl.pending_days(out, "miami-dade", candidates), sorted(candidates), "per county")
+
+    def test_run_writes_days_reports_a_missing_browser_and_fails_loudly(self):
+        """`run`: Broward days become files and status.json; Miami-Dade without
+        a browser is SKIPPED (exit 0, the error in its status); a source
+        failure is FAILED with exit 1."""
+        import argparse
+        from datetime import date
+
+        from hoaspy.collect.liens import get_daily_liens as dl
+        from hoaspy.collect.liens import records_broward as rb
+        from hoaspy.collect.liens import records_miamidade as md
+        from hoaspy.lib.jsonl import read_json, read_rows
+        records = self._records()
+        today = date(2026, 10, 21)
+        sftp = mock.Mock()
+        sftp.listdir.return_value = ["10-20-2026doc-ver.txt", "10-20-2026nme-ver.txt", "10-19-2026doc-ver.txt",
+                                     "09-01-2026doc-ver.txt", "09-01-2026nme-ver.txt"]
+        transport = mock.Mock()
+        with tempfile.TemporaryDirectory() as tmp:
+            out = Path(tmp)
+            args = argparse.Namespace(county=None, days=10, refetch=[], out=out, cache=out / "cache", pace=0,
+                                      devtools=None, verbose=False)
+            with mock.patch.object(rb, "connect", return_value=(transport, sftp)), \
+                    mock.patch.object(rb, "fetch_day", return_value=records) as fetched, \
+                    mock.patch.object(dl, "date", mock.Mock(today=lambda: today, fromisoformat=date.fromisoformat)), \
+                    mock.patch.object(md, "BrowserSession", side_effect=PermissionError("no browser answers at x")), \
+                    contextlib.redirect_stdout(io.StringIO()) as out_text, contextlib.redirect_stderr(io.StringIO()):
+                self.assertEqual(dl.run(args), 0)
+            printed = out_text.getvalue()
+            self.assertIn("broward: 1 day(s) written (2026-10-20)", printed, "10-19 lacks nme, 09-01 is too old")
+            self.assertIn("miami-dade: SKIPPED — no browser answers", printed)
+            fetched.assert_called_once()
+            self.assertEqual(fetched.call_args.args[1], date(2026, 10, 20))
+            transport.close.assert_called_once()
+            rows = read_rows(out / "broward" / "2026-10-20.jsonl")
+            self.assertEqual([r["doc_id"] for r in rows][:2], ["121160606", "121160613"])
+            status = read_json(out / "broward" / "status.json")
+            self.assertEqual((status["days_written"], status["last_error"]), (["2026-10-20"], ""))
+            self.assertIn("Official_Records_Download", status["access"])
+            self.assertIn("no browser answers", read_json(out / "miami-dade" / "status.json")["last_error"])
+            self.assertFalse((out / "miami-dade").glob("*.jsonl").__next__ if False else list((out / "miami-dade").glob("*.jsonl")))
+            # second run: the day is done, nothing is fetched again
+            with mock.patch.object(rb, "connect", return_value=(transport, sftp)), \
+                    mock.patch.object(rb, "fetch_day", return_value=records) as fetched, \
+                    mock.patch.object(dl, "date", mock.Mock(today=lambda: today, fromisoformat=date.fromisoformat)), \
+                    contextlib.redirect_stdout(io.StringIO()) as out_text, contextlib.redirect_stderr(io.StringIO()):
+                self.assertEqual(dl.run(argparse.Namespace(**{**vars(args), "county": "broward"})), 0)
+            fetched.assert_not_called()
+            self.assertIn("broward: 0 day(s) written", out_text.getvalue())
+            # a source failure
+            with mock.patch.object(rb, "connect", side_effect=OSError("sftp down")), \
+                    contextlib.redirect_stdout(io.StringIO()) as out_text, contextlib.redirect_stderr(io.StringIO()):
+                self.assertEqual(dl.run(argparse.Namespace(**{**vars(args), "county": "broward"})), 1)
+            self.assertIn("broward: FAILED — OSError: sftp down", out_text.getvalue())
+            self.assertEqual(read_json(out / "broward" / "status.json")["last_error"], "OSError: sftp down")
+
+    def test_miami_dade_browser_session_contract(self):
+        """`query()` routes a BrowserSession to the page; the page script
+        sends the token header on the app's own standardsearch call and
+        reads getStandardRecords; the site key is read off the page, never
+        written here; null criteria and a browser error raise; the row cap
+        marks a truncated day."""
+        from hoaspy.collect.liens import records_miamidade as md
+        self.assertNotRegex(md.SITE_KEY_JS + md.SEARCH_JS, r"0x4[0-9A-Za-z_-]{19,}", "no hard-coded Turnstile site key")
+        for needle in ("x-recaptcha-token", "/officialrecords/api/home/standardsearch", "getStandardRecords",
+                       "turnstile.render", "turnstile.execute", "execution: 'execute'"):
+            self.assertIn(needle, md.SEARCH_JS, needle)
+        session = md.BrowserSession.__new__(md.BrowserSession)
+        session.sitekey = "0xSITEKEY"
+        session.tab = mock.Mock()
+        row = {"cfN_MASTER_ID": 1, "clerk_File": "2026 R 1", "doC_TYPE": "LIEN - LIE", "reC_DATE": "10/20/2026 12:00:00 AM",
+               "firsT_PARTY": "VILA MARA CONDO ASSN INC", "partY_CODE": "D"}
+        session.tab.evaluate.return_value = json.dumps({"ok": True, "rows": [row], "criteria": {"documentType": "LIE"}})
+        rows, capped = md.query(session, "LIE", "2026-10-20", "2026-10-20")
+        self.assertEqual((rows, capped), ([row], False))
+        js = session.tab.evaluate.call_args.args[0]
+        self.assertIn('"sitekey": "0xSITEKEY"', js)
+        self.assertIn('"doctype": "LIE"', js)
+        self.assertNotIn("__PARAMS__", js)
+        session.tab.evaluate.return_value = json.dumps({"ok": True, "rows": [row] * md.ROW_CAP, "criteria": {"documentType": "LIE"}})
+        self.assertTrue(md.query(session, "LIE", "2026-10-20", "2026-10-20")[1], "capped at the server limit")
+        session.tab.evaluate.return_value = json.dumps({"ok": True, "rows": [row], "criteria": {"documentType": None}})
+        with self.assertRaises(md.MiamiDadeError):
+            session.query("LIE", "2026-10-20", "2026-10-20")
+        session.tab.evaluate.return_value = json.dumps({"ok": False, "err": "turnstile ERR:600010"})
+        with self.assertRaisesRegex(md.MiamiDadeError, "600010"):
+            session.query("LIE", "2026-10-20", "2026-10-20")
+        session.tab.evaluate.return_value = json.dumps({"ok": True, "rows": [], "criteria": None})
+        self.assertEqual(session.query("LIE", "2026-10-18", "2026-10-18"), ([], False), "a day with nothing")
+
+
 class TestCommandLine(unittest.TestCase):
     """hoaspy/lib/cli.py: `python -m hoaspy <command>` is the one entry point."""
 

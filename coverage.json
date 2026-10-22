@@ -26,20 +26,20 @@
           "note": "501(c) HOAs/condos only (NTEE L50 or association name); 1120-H filers absent"
         },
         "local_inventory": {
-          "source": "Birmingham AL \u2014 official neighborhood associations (city GIS, Citizen Participation Program) (99)",
+          "source": "Birmingham AL — official neighborhood associations (city GIS, Citizen Participation Program) (99)",
           "records": 99,
           "url": "https://www.birminghamal.gov/live/about-birmingham/23-communities-99-neighborhoods",
           "coverage": "partial",
-          "note": "county/city inventories, not a statewide registry \u2014 absence means nothing"
+          "note": "county/city inventories, not a statewide registry — absence means nothing"
         },
         "courts_bulk_dockets": {
-          "source": "CourtListener bulk data \u2014 docket captions",
+          "source": "CourtListener bulk data — docket captions",
           "url": "https://www.courtlistener.com/help/api/bulk-data/",
           "dockets": 229,
           "snapshot": "2026-09-30"
         },
         "courts_bulk_opinions": {
-          "source": "CourtListener bulk data \u2014 opinion captions",
+          "source": "CourtListener bulk data — opinion captions",
           "url": "https://www.courtlistener.com/help/api/bulk-data/",
           "opinions": 170,
           "snapshot": "2026-09-30"
@@ -50,7 +50,7 @@
           "source": "SOS Domestic HOA database (post-2016 HOAs, statutory registry)",
           "access": "none",
           "url": "https://arc-sos.state.al.us/cgi/corpname.mbr/output",
-          "note": "robots.txt disallows automated access \u2014 respect; manual use free"
+          "note": "robots.txt disallows automated access — respect; manual use free"
         }
       ],
       "unavailable": [
@@ -75,7 +75,7 @@
           "opinions": 3
         },
         "corporate": {
-          "source": "Alaska DCCED \u2014 Corporations database download",
+          "source": "Alaska DCCED — Corporations database download",
           "records": 1338,
           "url": "https://www.commerce.alaska.gov/cbp/main/",
           "coverage": "active_only",
@@ -88,13 +88,13 @@
           "note": "501(c) HOAs/condos only (NTEE L50 or association name); 1120-H filers absent"
         },
         "courts_bulk_dockets": {
-          "source": "CourtListener bulk data \u2014 docket captions",
+          "source": "CourtListener bulk data — docket captions",
           "url": "https://www.courtlistener.com/help/api/bulk-data/",
           "dockets": 32,
           "snapshot": "2026-09-30"
         },
         "courts_bulk_opinions": {
-          "source": "CourtListener bulk data \u2014 opinion captions",
+          "source": "CourtListener bulk data — opinion captions",
           "url": "https://www.courtlistener.com/help/api/bulk-data/",
           "opinions": 29,
           "snapshot": "2026-09-30"
@@ -128,7 +128,7 @@
           "note": "501(c) HOAs/condos only (NTEE L50 or association name); 1120-H filers absent"
         },
         "hoa_registry": {
-          "source": "Arizona Department of Real Estate \u2014 subdivision Public Reports",
+          "source": "Arizona Department of Real Estate — subdivision Public Reports",
           "url": "https://services.azre.gov/PdbWeb/Development/SearchDevelopments",
           "records": 2232,
           "reports": 9404,
@@ -140,13 +140,13 @@
           "duration_seconds": 142.3
         },
         "courts_bulk_dockets": {
-          "source": "CourtListener bulk data \u2014 docket captions",
+          "source": "CourtListener bulk data — docket captions",
           "url": "https://www.courtlistener.com/help/api/bulk-data/",
           "dockets": 190,
           "snapshot": "2026-09-30"
         },
         "courts_bulk_opinions": {
-          "source": "CourtListener bulk data \u2014 opinion captions",
+          "source": "CourtListener bulk data — opinion captions",
           "url": "https://www.courtlistener.com/help/api/bulk-data/",
           "opinions": 125,
           "snapshot": "2026-09-30"
@@ -169,7 +169,7 @@
       ],
       "counties": {},
       "notes": [
-        "ACC eCorp moved to an Angular SPA (arizonabusinesscenter.azcc.gov) whose search API is captcha-gated \u2014 not scripted"
+        "ACC eCorp moved to an Angular SPA (arizonabusinesscenter.azcc.gov) whose search API is captcha-gated — not scripted"
       ]
     },
     "AR": {
@@ -191,20 +191,20 @@
           "note": "501(c) HOAs/condos only (NTEE L50 or association name); 1120-H filers absent"
         },
         "local_inventory": {
-          "source": "Little Rock AR \u2014 registered neighborhood associations (city GIS) (216); Little Rock AR \u2014 neighborhood associations contact list 2018 (city XLSX) (175)",
+          "source": "Little Rock AR — registered neighborhood associations (city GIS) (216); Little Rock AR — neighborhood associations contact list 2018 (city XLSX) (175)",
           "records": 357,
           "url": "https://maps.littlerock.gov/server/rest/services/Neighborhood_Associations/MapServer/0",
           "coverage": "partial",
-          "note": "county/city inventories, not a statewide registry \u2014 absence means nothing"
+          "note": "county/city inventories, not a statewide registry — absence means nothing"
         },
         "courts_bulk_dockets": {
-          "source": "CourtListener bulk data \u2014 docket captions",
+          "source": "CourtListener bulk data — docket captions",
           "url": "https://www.courtlistener.com/help/api/bulk-data/",
           "dockets": 63,
           "snapshot": "2026-09-30"
         },
         "courts_bulk_opinions": {
-          "source": "CourtListener bulk data \u2014 opinion captions",
+          "source": "CourtListener bulk data — opinion captions",
           "url": "https://www.courtlistener.com/help/api/bulk-data/",
           "opinions": 57,
           "snapshot": "2026-09-30"
@@ -239,11 +239,11 @@
           "note": "501(c) HOAs/condos only (NTEE L50 or association name); 1120-H filers absent"
         },
         "local_inventory": {
-          "source": "City of Irvine CA \u2014 Homeowners' Associations (sub-associations with management company) (214); City of Irvine CA \u2014 Homeowners' Associations (master associations) (123); City of Sacramento CA \u2014 Neighborhood Associations (112); City of San Jose CA \u2014 Neighborhood, Homeowner & Mobile Home Associations (200); City of Pasadena CA \u2014 Neighborhood Associations (87); City of San Clemente CA \u2014 HOA_Residential (HOAs, master HOAs & condominiums) (163); City of Rancho Santa Margarita CA \u2014 HOA_Master (7); City of Aliso Viejo CA \u2014 HOAs (with management company) (101); City of San Juan Capistrano CA \u2014 Homeowner Associations (with management company) (100); City of San Ramon CA \u2014 HOAs (with management company) (92); City of Dana Point CA \u2014 DP_HOA (63); City of Indian Wells CA \u2014 HOAs (58); City of Menifee CA \u2014 HOAs (with management company) (42); City of Temecula CA \u2014 HOAs / CC&R areas (with management company) (75); City of Cupertino CA \u2014 Home Owners Association designations (with management company) (55); City of Cupertino CA \u2014 Neighborhood designations (non-HOA neighborhoods) (36); City of Torrance CA \u2014 Homeowner Associations (26); City of Elk Grove CA \u2014 Homeowners Associations (26); City of Elk Grove CA \u2014 Neighborhood Associations (11); City of Glendale CA \u2014 HOA areas (27); City of Agoura Hills CA \u2014 HOAs (with management mailing address) (30); City of Calabasas CA \u2014 Homeowners Associations (CWPP layer) (49); City of Brisbane CA \u2014 Home Owners Association parcels (grouped by HOA) (12); City of La Habra CA \u2014 Home Owners Associations (with management company & unit count) (44); City of Rolling Hills Estates CA \u2014 HOA layer (32); City of Oakley CA \u2014 HOA locations (with management company) (14); City of South Lake Tahoe CA \u2014 Homeowners Associations (7); City of Roseville CA \u2014 registered Neighborhood Associations (45); City of San Bernardino CA \u2014 Neighborhood Associations (57); City of Vacaville CA \u2014 Neighborhood Associations (23); Rancho California Water District CA \u2014 HOAs in the district (Temecula / Murrieta, with management company) (89); LA County GIS (City of Arcadia) \u2014 Homeowners Association areas (architectural-review HOAs) (5)",
+          "source": "City of Irvine CA — Homeowners' Associations (sub-associations with management company) (214); City of Irvine CA — Homeowners' Associations (master associations) (123); City of Sacramento CA — Neighborhood Associations (112); City of San Jose CA — Neighborhood, Homeowner & Mobile Home Associations (200); City of Pasadena CA — Neighborhood Associations (87); City of San Clemente CA — HOA_Residential (HOAs, master HOAs & condominiums) (163); City of Rancho Santa Margarita CA — HOA_Master (7); City of Aliso Viejo CA — HOAs (with management company) (101); City of San Juan Capistrano CA — Homeowner Associations (with management company) (100); City of San Ramon CA — HOAs (with management company) (92); City of Dana Point CA — DP_HOA (63); City of Indian Wells CA — HOAs (58); City of Menifee CA — HOAs (with management company) (42); City of Temecula CA — HOAs / CC&R areas (with management company) (75); City of Cupertino CA — Home Owners Association designations (with management company) (55); City of Cupertino CA — Neighborhood designations (non-HOA neighborhoods) (36); City of Torrance CA — Homeowner Associations (26); City of Elk Grove CA — Homeowners Associations (26); City of Elk Grove CA — Neighborhood Associations (11); City of Glendale CA — HOA areas (27); City of Agoura Hills CA — HOAs (with management mailing address) (30); City of Calabasas CA — Homeowners Associations (CWPP layer) (49); City of Brisbane CA — Home Owners Association parcels (grouped by HOA) (12); City of La Habra CA — Home Owners Associations (with management company & unit count) (44); City of Rolling Hills Estates CA — HOA layer (32); City of Oakley CA — HOA locations (with management company) (14); City of South Lake Tahoe CA — Homeowners Associations (7); City of Roseville CA — registered Neighborhood Associations (45); City of San Bernardino CA — Neighborhood Associations (57); City of Vacaville CA — Neighborhood Associations (23); Rancho California Water District CA — HOAs in the district (Temecula / Murrieta, with management company) (89); LA County GIS (City of Arcadia) — Homeowners Association areas (architectural-review HOAs) (5)",
           "records": 1954,
           "url": "https://www.cityofirvine.org/community-development/homeowners-associations",
           "coverage": "partial",
-          "note": "county/city inventories, not a statewide registry \u2014 absence means nothing"
+          "note": "county/city inventories, not a statewide registry — absence means nothing"
         },
         "corporate": {
           "source": "SOS bizfile business search (get_ca_sos.py keyword x entity-type x filing-date sweep, 2026-09-01)",
@@ -264,13 +264,13 @@
           "note": "Personal-property judgment liens filed with the SOS; county-recorder abstracts of judgment are not covered."
         },
         "courts_bulk_dockets": {
-          "source": "CourtListener bulk data \u2014 docket captions",
+          "source": "CourtListener bulk data — docket captions",
           "url": "https://www.courtlistener.com/help/api/bulk-data/",
           "dockets": 912,
           "snapshot": "2026-09-30"
         },
         "courts_bulk_opinions": {
-          "source": "CourtListener bulk data \u2014 opinion captions",
+          "source": "CourtListener bulk data — opinion captions",
           "url": "https://www.courtlistener.com/help/api/bulk-data/",
           "opinions": 508,
           "snapshot": "2026-09-30"
@@ -301,7 +301,7 @@
       "status": "collected",
       "collected": {
         "corporate": {
-          "source": "Colorado Secretary of State \u2014 Business Entities (Colorado Information Marketplace)",
+          "source": "Colorado Secretary of State — Business Entities (Colorado Information Marketplace)",
           "records": 20776,
           "url": "https://data.colorado.gov/Business/Business-Entities-in-Colorado/4ykn-tg5h",
           "coverage": "all"
@@ -321,13 +321,13 @@
           "note": "501(c) HOAs/condos only (NTEE L50 or association name); 1120-H filers absent"
         },
         "courts_bulk_dockets": {
-          "source": "CourtListener bulk data \u2014 docket captions",
+          "source": "CourtListener bulk data — docket captions",
           "url": "https://www.courtlistener.com/help/api/bulk-data/",
           "dockets": 494,
           "snapshot": "2026-09-30"
         },
         "courts_bulk_opinions": {
-          "source": "CourtListener bulk data \u2014 opinion captions",
+          "source": "CourtListener bulk data — opinion captions",
           "url": "https://www.courtlistener.com/help/api/bulk-data/",
           "opinions": 264,
           "snapshot": "2026-09-30"
@@ -352,7 +352,7 @@
       "status": "collected",
       "collected": {
         "corporate": {
-          "source": "Connecticut Secretary of the State \u2014 Business Registry Master (data.ct.gov)",
+          "source": "Connecticut Secretary of the State — Business Registry Master (data.ct.gov)",
           "records": 6084,
           "url": "https://data.ct.gov/d/n7gp-d28j",
           "coverage": "all"
@@ -372,13 +372,13 @@
           "note": "501(c) HOAs/condos only (NTEE L50 or association name); 1120-H filers absent"
         },
         "courts_bulk_dockets": {
-          "source": "CourtListener bulk data \u2014 docket captions",
+          "source": "CourtListener bulk data — docket captions",
           "url": "https://www.courtlistener.com/help/api/bulk-data/",
           "dockets": 290,
           "snapshot": "2026-09-30"
         },
         "courts_bulk_opinions": {
-          "source": "CourtListener bulk data \u2014 opinion captions",
+          "source": "CourtListener bulk data — opinion captions",
           "url": "https://www.courtlistener.com/help/api/bulk-data/",
           "opinions": 245,
           "snapshot": "2026-09-30"
@@ -410,20 +410,20 @@
           "note": "501(c) HOAs/condos only (NTEE L50 or association name); 1120-H filers absent"
         },
         "local_inventory": {
-          "source": "New Castle County DE GIS \u2014 Maintenance Corporations (mandatory-dues HOAs) (608); New Castle County DE GIS \u2014 Civic Associations (1749)",
+          "source": "New Castle County DE GIS — Maintenance Corporations (mandatory-dues HOAs) (608); New Castle County DE GIS — Civic Associations (1749)",
           "records": 1795,
           "url": "https://gis.nccde.org/agsserver/rest/services/BaseMaps/Civic/MapServer/1",
           "coverage": "partial",
-          "note": "county/city inventories, not a statewide registry \u2014 absence means nothing"
+          "note": "county/city inventories, not a statewide registry — absence means nothing"
         },
         "courts_bulk_dockets": {
-          "source": "CourtListener bulk data \u2014 docket captions",
+          "source": "CourtListener bulk data — docket captions",
           "url": "https://www.courtlistener.com/help/api/bulk-data/",
           "dockets": 184,
           "snapshot": "2026-09-30"
         },
         "courts_bulk_opinions": {
-          "source": "CourtListener bulk data \u2014 opinion captions",
+          "source": "CourtListener bulk data — opinion captions",
           "url": "https://www.courtlistener.com/help/api/bulk-data/",
           "opinions": 180,
           "snapshot": "2026-09-30"
@@ -474,13 +474,13 @@
           "note": "501(c) HOAs/condos only (NTEE L50 or association name); 1120-H filers absent"
         },
         "courts_bulk_dockets": {
-          "source": "CourtListener bulk data \u2014 docket captions",
+          "source": "CourtListener bulk data — docket captions",
           "url": "https://www.courtlistener.com/help/api/bulk-data/",
           "dockets": 12832,
           "snapshot": "2026-09-30"
         },
         "courts_bulk_opinions": {
-          "source": "CourtListener bulk data \u2014 opinion captions",
+          "source": "CourtListener bulk data — opinion captions",
           "url": "https://www.courtlistener.com/help/api/bulk-data/",
           "opinions": 3602,
           "snapshot": "2026-09-30"
@@ -502,7 +502,13 @@
           "liens": {
             "source": "Official Records yearly index exports, public SFTP",
             "records": 553668,
-            "years": "1978-2025"
+            "years": "1978-2025",
+            "daily": {
+              "source": "Official_Records_Download daily folder, same public SFTP",
+              "collector": "get_daily_liens.py",
+              "since": "2026-10-12",
+              "output": "liens/daily/broward/<day>.jsonl (the lien alerts, docs/ALERTS.md)"
+            }
           }
         },
         "Miami-Dade": {
@@ -519,7 +525,8 @@
               "lis_pendens": 95424,
               "notice_of_contest_of_lien": 395
             },
-            "complete_source": "paid Official Records FTP folder, $110/mo (see NEEDS.md)"
+            "complete_source": "paid Official Records FTP folder, $110/mo (see NEEDS.md)",
+            "access_note": "since 2026-10 the search page is Turnstile-gated: records_miamidade.BrowserSession runs the search inside the page in a desktop browser (docs/ALERTS.md); the cookie path alone no longer answers"
           },
           "courts": {
             "source": "Miami-Dade Clerk Commercial Data Services Civil FTP feed (daily civil tables + weekly indebtedness dump)",
@@ -560,20 +567,20 @@
           "note": "501(c) HOAs/condos only (NTEE L50 or association name); 1120-H filers absent"
         },
         "local_inventory": {
-          "source": "DeKalb County GA GIS \u2014 HOA and Neighborhoods (homeowner, condo, townhome, neighborhood & civic associations) (422); City of Sandy Springs GA \u2014 Neighborhoods (HOAs, condos, neighborhood & civic associations) (277); City of Milton GA \u2014 Milton_HOA neighborhoods (subdivisions, townhomes & condominiums with management company) (220); City of Johns Creek GA \u2014 Neighborhoods (subdivisions, townhomes, senior & mixed communities) (290); City of Brookhaven GA \u2014 Neighborhoods & Subdivisions (165); City of Atlanta GA (Dept. of City Planning) \u2014 Neighborhood Associations & HOAs by NPU (166); City of Savannah GA / SAGIS \u2014 Neighborhood Associations (84); Fulton County GA GIS \u2014 LandBase Subdivisions (condominium & townhome plats) (342); Gwinnett County GA GIS \u2014 Subdivisions (condominium & townhome plats) (108); City of Duluth GA \u2014 Neighborhoods (condominium & townhome communities) (30); City of Peachtree Corners GA \u2014 Subdivisions (condominium & townhome plats) (11); DeKalb County GA GIS \u2014 Subdivisions (condominium & townhome plats) (467); City of Kennesaw GA \u2014 Major subdivisions (condominium & attached-home plats) (37); City of Canton GA \u2014 Subdivision HOA lookup (HOA name & management company) (7)",
+          "source": "DeKalb County GA GIS — HOA and Neighborhoods (homeowner, condo, townhome, neighborhood & civic associations) (422); City of Sandy Springs GA — Neighborhoods (HOAs, condos, neighborhood & civic associations) (277); City of Milton GA — Milton_HOA neighborhoods (subdivisions, townhomes & condominiums with management company) (220); City of Johns Creek GA — Neighborhoods (subdivisions, townhomes, senior & mixed communities) (290); City of Brookhaven GA — Neighborhoods & Subdivisions (165); City of Atlanta GA (Dept. of City Planning) — Neighborhood Associations & HOAs by NPU (166); City of Savannah GA / SAGIS — Neighborhood Associations (84); Fulton County GA GIS — LandBase Subdivisions (condominium & townhome plats) (342); Gwinnett County GA GIS — Subdivisions (condominium & townhome plats) (108); City of Duluth GA — Neighborhoods (condominium & townhome communities) (30); City of Peachtree Corners GA — Subdivisions (condominium & townhome plats) (11); DeKalb County GA GIS — Subdivisions (condominium & townhome plats) (467); City of Kennesaw GA — Major subdivisions (condominium & attached-home plats) (37); City of Canton GA — Subdivision HOA lookup (HOA name & management company) (7)",
           "records": 2587,
           "url": "https://dcgis-dekalbgis.hub.arcgis.com/datasets/hoa-and-neighborhoods",
           "coverage": "partial",
-          "note": "county/city inventories, not a statewide registry \u2014 absence means nothing"
+          "note": "county/city inventories, not a statewide registry — absence means nothing"
         },
         "courts_bulk_dockets": {
-          "source": "CourtListener bulk data \u2014 docket captions",
+          "source": "CourtListener bulk data — docket captions",
           "url": "https://www.courtlistener.com/help/api/bulk-data/",
           "dockets": 704,
           "snapshot": "2026-09-30"
         },
         "courts_bulk_opinions": {
-          "source": "CourtListener bulk data \u2014 opinion captions",
+          "source": "CourtListener bulk data — opinion captions",
           "url": "https://www.courtlistener.com/help/api/bulk-data/",
           "opinions": 549,
           "snapshot": "2026-09-30"
@@ -617,13 +624,13 @@
           "note": "501(c) HOAs/condos only (NTEE L50 or association name); 1120-H filers absent"
         },
         "courts_bulk_dockets": {
-          "source": "CourtListener bulk data \u2014 docket captions",
+          "source": "CourtListener bulk data — docket captions",
           "url": "https://www.courtlistener.com/help/api/bulk-data/",
           "dockets": 623,
           "snapshot": "2026-09-30"
         },
         "courts_bulk_opinions": {
-          "source": "CourtListener bulk data \u2014 opinion captions",
+          "source": "CourtListener bulk data — opinion captions",
           "url": "https://www.courtlistener.com/help/api/bulk-data/",
           "opinions": 375,
           "snapshot": "2026-09-30"
@@ -655,7 +662,7 @@
       "status": "collected",
       "collected": {
         "corporate": {
-          "source": "Idaho Secretary of State \u2014 SOSBiz business search API (partial extract)",
+          "source": "Idaho Secretary of State — SOSBiz business search API (partial extract)",
           "records": 4087,
           "url": "https://sosbiz.idaho.gov/search/business",
           "coverage": "partial"
@@ -675,13 +682,13 @@
           "note": "501(c) HOAs/condos only (NTEE L50 or association name); 1120-H filers absent"
         },
         "courts_bulk_dockets": {
-          "source": "CourtListener bulk data \u2014 docket captions",
+          "source": "CourtListener bulk data — docket captions",
           "url": "https://www.courtlistener.com/help/api/bulk-data/",
           "dockets": 57,
           "snapshot": "2026-09-30"
         },
         "courts_bulk_opinions": {
-          "source": "CourtListener bulk data \u2014 opinion captions",
+          "source": "CourtListener bulk data — opinion captions",
           "url": "https://www.courtlistener.com/help/api/bulk-data/",
           "opinions": 56,
           "snapshot": "2026-09-30"
@@ -713,14 +720,14 @@
           "note": "501(c) HOAs/condos only (NTEE L50 or association name); 1120-H filers absent"
         },
         "local_inventory": {
-          "source": "City of Chicago \u2014 House Share Prohibited Buildings List (condo/co-op associations) (1006); DuPage County IL GIS \u2014 Subdivisions (condominium & townhome plats) (1070); McHenry County IL GIS \u2014 Subdivisions (condominium & townhome plats) (27); City of Wood Dale IL \u2014 HOA contact inventory (24); City of Danville IL \u2014 Neighborhood Associations (9); Village of Oak Park IL \u2014 Neighborhood Associations (3); Village of Maryville IL \u2014 Subdivisions (condominium & townhome plats) (1); Kane County IL \u2014 condominium unit parcels (condo project from legal description) (586)",
+          "source": "City of Chicago — House Share Prohibited Buildings List (condo/co-op associations) (1006); DuPage County IL GIS — Subdivisions (condominium & townhome plats) (1070); McHenry County IL GIS — Subdivisions (condominium & townhome plats) (27); City of Wood Dale IL — HOA contact inventory (24); City of Danville IL — Neighborhood Associations (9); Village of Oak Park IL — Neighborhood Associations (3); Village of Maryville IL — Subdivisions (condominium & townhome plats) (1); Kane County IL — condominium unit parcels (condo project from legal description) (586)",
           "records": 2725,
           "url": "https://data.cityofchicago.org/d/7bzs-jsyj",
           "coverage": "partial",
-          "note": "county/city inventories, not a statewide registry \u2014 absence means nothing"
+          "note": "county/city inventories, not a statewide registry — absence means nothing"
         },
         "condo_buildings": {
-          "source": "Cook County Assessor \u2014 residential condominium buildings (class 299)",
+          "source": "Cook County Assessor — residential condominium buildings (class 299)",
           "url": "https://datacatalog.cookcountyil.gov/d/3r7i-mrz4",
           "records": 18616,
           "unit_pins": 456795,
@@ -730,13 +737,13 @@
           "duration_seconds": 730.0
         },
         "courts_bulk_dockets": {
-          "source": "CourtListener bulk data \u2014 docket captions",
+          "source": "CourtListener bulk data — docket captions",
           "url": "https://www.courtlistener.com/help/api/bulk-data/",
           "dockets": 996,
           "snapshot": "2026-09-30"
         },
         "courts_bulk_opinions": {
-          "source": "CourtListener bulk data \u2014 opinion captions",
+          "source": "CourtListener bulk data — opinion captions",
           "url": "https://www.courtlistener.com/help/api/bulk-data/",
           "opinions": 506,
           "snapshot": "2026-09-30"
@@ -750,13 +757,13 @@
         },
         {
           "source": "Cook County recorder bulk indexes 2011-2015 (historic)",
-          "why": "checked 2026-09-28: PIN, document type, date and amount only \u2014 no party names, so a lis pendens cannot be tied to an association; series ended March 2015"
+          "why": "checked 2026-09-28: PIN, document type, date and amount only — no party names, so a lis pendens cannot be tied to an association; series ended March 2015"
         }
       ],
       "counties": {
         "Cook": {
           "liens": {
-            "source": "Cook County Clerk \u2014 Recordings System (CRS), Advanced Search by party name",
+            "source": "Cook County Clerk — Recordings System (CRS), Advanced Search by party name",
             "collector": "get_cook_liens.py",
             "coverage": "party-name sweep: liens naming an association on either side, foreclosures it filed; complete back to 1985-10-01; 44,084 records shaped from the results row (first parties only, no address); lender foreclosures naming an association not collected",
             "records": 48647,
@@ -771,7 +778,7 @@
         }
       },
       "notes": [
-        "condo ombudsperson registration requirement repealed 2017 \u2014 no registry"
+        "condo ombudsperson registration requirement repealed 2017 — no registry"
       ]
     },
     "IN": {
@@ -793,20 +800,20 @@
           "note": "501(c) HOAs/condos only (NTEE L50 or association name); 1120-H filers absent"
         },
         "local_inventory": {
-          "source": "City of Indianapolis / Marion County IN \u2014 Registered Community Organizations (homeowners associations) (226); City of Indianapolis / Marion County IN \u2014 Registered Community Organizations (neighborhood associations) (415); City of Greenwood IN \u2014 Homeowners Association polygons (106); Johnson County IN \u2014 Subdivisions (condominium & townhome plats) (4); City of Bloomington IN \u2014 HAND-registered Neighborhood Associations (68); City of Evansville / Vanderburgh County IN GIS \u2014 Neighborhood Associations (49); City of Elkhart IN GIS \u2014 Neighborhood Associations (70); City of Indianapolis / Marion County IN \u2014 Subdivision boundaries (condominium & townhome plats) (44); Lake County IN \u2014 Subdivisions / simultaneous conveyances (condominium & townhome plats) (196)",
+          "source": "City of Indianapolis / Marion County IN — Registered Community Organizations (homeowners associations) (226); City of Indianapolis / Marion County IN — Registered Community Organizations (neighborhood associations) (415); City of Greenwood IN — Homeowners Association polygons (106); Johnson County IN — Subdivisions (condominium & townhome plats) (4); City of Bloomington IN — HAND-registered Neighborhood Associations (68); City of Evansville / Vanderburgh County IN GIS — Neighborhood Associations (49); City of Elkhart IN GIS — Neighborhood Associations (70); City of Indianapolis / Marion County IN — Subdivision boundaries (condominium & townhome plats) (44); Lake County IN — Subdivisions / simultaneous conveyances (condominium & townhome plats) (196)",
           "records": 1172,
           "url": "https://data.indy.gov/datasets/IndyGIS::registered-community-organizations",
           "coverage": "partial",
-          "note": "county/city inventories, not a statewide registry \u2014 absence means nothing"
+          "note": "county/city inventories, not a statewide registry — absence means nothing"
         },
         "courts_bulk_dockets": {
-          "source": "CourtListener bulk data \u2014 docket captions",
+          "source": "CourtListener bulk data — docket captions",
           "url": "https://www.courtlistener.com/help/api/bulk-data/",
           "dockets": 211,
           "snapshot": "2026-09-30"
         },
         "courts_bulk_opinions": {
-          "source": "CourtListener bulk data \u2014 opinion captions",
+          "source": "CourtListener bulk data — opinion captions",
           "url": "https://www.courtlistener.com/help/api/bulk-data/",
           "opinions": 187,
           "snapshot": "2026-09-30"
@@ -831,7 +838,7 @@
       "status": "collected",
       "collected": {
         "corporate": {
-          "source": "Iowa Secretary of State \u2014 Active Iowa Business Entities (Iowa Data Hub)",
+          "source": "Iowa Secretary of State — Active Iowa Business Entities (Iowa Data Hub)",
           "records": 4252,
           "url": "https://data.iowa.gov/catalog/dataset/554",
           "coverage": "active_only"
@@ -851,13 +858,13 @@
           "note": "501(c) HOAs/condos only (NTEE L50 or association name); 1120-H filers absent"
         },
         "courts_bulk_dockets": {
-          "source": "CourtListener bulk data \u2014 docket captions",
+          "source": "CourtListener bulk data — docket captions",
           "url": "https://www.courtlistener.com/help/api/bulk-data/",
           "dockets": 56,
           "snapshot": "2026-09-30"
         },
         "courts_bulk_opinions": {
-          "source": "CourtListener bulk data \u2014 opinion captions",
+          "source": "CourtListener bulk data — opinion captions",
           "url": "https://www.courtlistener.com/help/api/bulk-data/",
           "opinions": 45,
           "snapshot": "2026-09-30"
@@ -889,20 +896,20 @@
           "note": "501(c) HOAs/condos only (NTEE L50 or association name); 1120-H filers absent"
         },
         "local_inventory": {
-          "source": "Wichita KS \u2014 homeowners associations (city GIS) (339); Wichita KS \u2014 neighborhood associations (city GIS) (76); Overland Park KS \u2014 homes associations (city Neighborhoods layer) (311); Leawood KS \u2014 2026 HOAs (city GIS) (120); Lawrence KS \u2014 registered neighborhood associations (city GIS) (55); Wyandotte County / Kansas City KS \u2014 neighborhood groups (Unified Government GIS) (21); Topeka KS \u2014 neighborhood improvement associations (NIAs, city GIS) (21); Manhattan KS \u2014 homeowners/neighborhood associations 2014 (city GIS) (19)",
+          "source": "Wichita KS — homeowners associations (city GIS) (339); Wichita KS — neighborhood associations (city GIS) (76); Overland Park KS — homes associations (city Neighborhoods layer) (311); Leawood KS — 2026 HOAs (city GIS) (120); Lawrence KS — registered neighborhood associations (city GIS) (55); Wyandotte County / Kansas City KS — neighborhood groups (Unified Government GIS) (21); Topeka KS — neighborhood improvement associations (NIAs, city GIS) (21); Manhattan KS — homeowners/neighborhood associations 2014 (city GIS) (19)",
           "records": 940,
           "url": "https://gismaps.wichita.gov/ageweb/rest/services/COWGIS/Districts/MapServer/6",
           "coverage": "partial",
-          "note": "county/city inventories, not a statewide registry \u2014 absence means nothing"
+          "note": "county/city inventories, not a statewide registry — absence means nothing"
         },
         "courts_bulk_dockets": {
-          "source": "CourtListener bulk data \u2014 docket captions",
+          "source": "CourtListener bulk data — docket captions",
           "url": "https://www.courtlistener.com/help/api/bulk-data/",
           "dockets": 48,
           "snapshot": "2026-09-30"
         },
         "courts_bulk_opinions": {
-          "source": "CourtListener bulk data \u2014 opinion captions",
+          "source": "CourtListener bulk data — opinion captions",
           "url": "https://www.courtlistener.com/help/api/bulk-data/",
           "opinions": 42,
           "snapshot": "2026-09-30"
@@ -937,20 +944,20 @@
           "note": "501(c) HOAs/condos only (NTEE L50 or association name); 1120-H filers absent"
         },
         "local_inventory": {
-          "source": "Lexington-Fayette KY \u2014 registered neighborhood/homeowner associations (LFUCG Planning) (209); Louisville-Jefferson County KY \u2014 neighborhood associations (LOJIC open data) (44)",
+          "source": "Lexington-Fayette KY — registered neighborhood/homeowner associations (LFUCG Planning) (209); Louisville-Jefferson County KY — neighborhood associations (LOJIC open data) (44)",
           "records": 253,
           "url": "https://data.lexingtonky.gov/datasets/neighborhood-association",
           "coverage": "partial",
-          "note": "county/city inventories, not a statewide registry \u2014 absence means nothing"
+          "note": "county/city inventories, not a statewide registry — absence means nothing"
         },
         "courts_bulk_dockets": {
-          "source": "CourtListener bulk data \u2014 docket captions",
+          "source": "CourtListener bulk data — docket captions",
           "url": "https://www.courtlistener.com/help/api/bulk-data/",
           "dockets": 67,
           "snapshot": "2026-09-30"
         },
         "courts_bulk_opinions": {
-          "source": "CourtListener bulk data \u2014 opinion captions",
+          "source": "CourtListener bulk data — opinion captions",
           "url": "https://www.courtlistener.com/help/api/bulk-data/",
           "opinions": 45,
           "snapshot": "2026-09-30"
@@ -985,20 +992,20 @@
           "note": "501(c) HOAs/condos only (NTEE L50 or association name); 1120-H filers absent"
         },
         "local_inventory": {
-          "source": "East Baton Rouge Parish LA \u2014 neighborhood associations (Open Data BR) (317); East Baton Rouge Parish LA \u2014 existing neighborhood association boundaries (EBRGIS) (270); St. George LA \u2014 neighborhood associations (city GIS) (108); Shreveport LA \u2014 neighborhood associations (city/MPC GIS) (35); New Orleans LA \u2014 self-reported neighborhood organizations (Neighborhood Engagement Office) (65); Jefferson Parish LA \u2014 civic associations (parish GIS) (53)",
+          "source": "East Baton Rouge Parish LA — neighborhood associations (Open Data BR) (317); East Baton Rouge Parish LA — existing neighborhood association boundaries (EBRGIS) (270); St. George LA — neighborhood associations (city GIS) (108); Shreveport LA — neighborhood associations (city/MPC GIS) (35); New Orleans LA — self-reported neighborhood organizations (Neighborhood Engagement Office) (65); Jefferson Parish LA — civic associations (parish GIS) (53)",
           "records": 479,
           "url": "https://data.brla.gov/Housing-and-Development/Neighborhood-Association/m7ct-r5ua",
           "coverage": "partial",
-          "note": "county/city inventories, not a statewide registry \u2014 absence means nothing"
+          "note": "county/city inventories, not a statewide registry — absence means nothing"
         },
         "courts_bulk_dockets": {
-          "source": "CourtListener bulk data \u2014 docket captions",
+          "source": "CourtListener bulk data — docket captions",
           "url": "https://www.courtlistener.com/help/api/bulk-data/",
           "dockets": 704,
           "snapshot": "2026-09-30"
         },
         "courts_bulk_opinions": {
-          "source": "CourtListener bulk data \u2014 opinion captions",
+          "source": "CourtListener bulk data — opinion captions",
           "url": "https://www.courtlistener.com/help/api/bulk-data/",
           "opinions": 493,
           "snapshot": "2026-09-30"
@@ -1017,7 +1024,7 @@
       ],
       "counties": {},
       "notes": [
-        "New Orleans Sheriff Sales dataset (data.nola.gov d52w-8nva) checked 2026-09-02: 1,771 rows, zero association/condominium plaintiffs \u2014 not an HOA source"
+        "New Orleans Sheriff Sales dataset (data.nola.gov d52w-8nva) checked 2026-09-02: 1,771 rows, zero association/condominium plaintiffs — not an HOA source"
       ]
     },
     "ME": {
@@ -1039,13 +1046,13 @@
           "note": "501(c) HOAs/condos only (NTEE L50 or association name); 1120-H filers absent"
         },
         "courts_bulk_dockets": {
-          "source": "CourtListener bulk data \u2014 docket captions",
+          "source": "CourtListener bulk data — docket captions",
           "url": "https://www.courtlistener.com/help/api/bulk-data/",
           "dockets": 99,
           "snapshot": "2026-09-30"
         },
         "courts_bulk_opinions": {
-          "source": "CourtListener bulk data \u2014 opinion captions",
+          "source": "CourtListener bulk data — opinion captions",
           "url": "https://www.courtlistener.com/help/api/bulk-data/",
           "opinions": 37,
           "snapshot": "2026-09-30"
@@ -1059,7 +1066,7 @@
         },
         {
           "source": "SOS ICRS corporate name search",
-          "why": "terms on the search form prohibit data mining and 'automated tools in any form' (checked 2026-09-02) \u2014 not scripted; bulk is a paid subscription"
+          "why": "terms on the search form prohibit data mining and 'automated tools in any form' (checked 2026-09-02) — not scripted; bulk is a paid subscription"
         }
       ],
       "counties": {},
@@ -1086,18 +1093,18 @@
           "note": "501(c) HOAs/condos only (NTEE L50 or association name); 1120-H filers absent"
         },
         "hoa_registry": {
-          "source": "Montgomery County DHCA \u2014 registered common ownership communities (CCOC)",
+          "source": "Montgomery County DHCA — registered common ownership communities (CCOC)",
           "records": 1256,
           "url": "https://www.montgomerycountymd.gov/department-housing-community-affairs/common-ownership-communities-coc"
         },
         "courts_bulk_dockets": {
-          "source": "CourtListener bulk data \u2014 docket captions",
+          "source": "CourtListener bulk data — docket captions",
           "url": "https://www.courtlistener.com/help/api/bulk-data/",
           "dockets": 235,
           "snapshot": "2026-09-30"
         },
         "courts_bulk_opinions": {
-          "source": "CourtListener bulk data \u2014 opinion captions",
+          "source": "CourtListener bulk data — opinion captions",
           "url": "https://www.courtlistener.com/help/api/bulk-data/",
           "opinions": 201,
           "snapshot": "2026-09-30"
@@ -1139,20 +1146,20 @@
           "note": "501(c) HOAs/condos only (NTEE L50 or association name); 1120-H filers absent"
         },
         "local_inventory": {
-          "source": "MassGIS statewide property-tax parcels \u2014 condominium trusts & homeowners associations (parcel owner name) (12069)",
+          "source": "MassGIS statewide property-tax parcels — condominium trusts & homeowners associations (parcel owner name) (12069)",
           "records": 12069,
           "url": "https://www.mass.gov/info-details/massgis-data-property-tax-parcels",
           "coverage": "partial",
-          "note": "county/city inventories, not a statewide registry \u2014 absence means nothing"
+          "note": "county/city inventories, not a statewide registry — absence means nothing"
         },
         "courts_bulk_dockets": {
-          "source": "CourtListener bulk data \u2014 docket captions",
+          "source": "CourtListener bulk data — docket captions",
           "url": "https://www.courtlistener.com/help/api/bulk-data/",
           "dockets": 272,
           "snapshot": "2026-09-30"
         },
         "courts_bulk_opinions": {
-          "source": "CourtListener bulk data \u2014 opinion captions",
+          "source": "CourtListener bulk data — opinion captions",
           "url": "https://www.courtlistener.com/help/api/bulk-data/",
           "opinions": 165,
           "snapshot": "2026-09-30"
@@ -1189,20 +1196,20 @@
           "note": "501(c) HOAs/condos only (NTEE L50 or association name); 1120-H filers absent"
         },
         "local_inventory": {
-          "source": "Oakland County MI \u2014 Simultaneous Conveyance condominium projects (2334); City of Ann Arbor MI \u2014 Condominium Associations (247); City of Farmington Hills MI \u2014 Subdivisions and Condominiums (condominium projects) (151); Roscommon County MI \u2014 Subdivisions and Condominiums (condominium projects) (53); Montcalm County MI \u2014 Subdivision & Condominium boundaries (condominiums by name) (35); Kalamazoo County MI \u2014 Plats and condominiums (condominium projects) (160); Lenawee County MI \u2014 Subdivisions (condominium & site-condominium projects) (73); City of Lansing MI \u2014 registered Neighborhood Associations (39); City of Grand Rapids MI \u2014 Neighborhood Associations (34)",
+          "source": "Oakland County MI — Simultaneous Conveyance condominium projects (2334); City of Ann Arbor MI — Condominium Associations (247); City of Farmington Hills MI — Subdivisions and Condominiums (condominium projects) (151); Roscommon County MI — Subdivisions and Condominiums (condominium projects) (53); Montcalm County MI — Subdivision & Condominium boundaries (condominiums by name) (35); Kalamazoo County MI — Plats and condominiums (condominium projects) (160); Lenawee County MI — Subdivisions (condominium & site-condominium projects) (73); City of Lansing MI — registered Neighborhood Associations (39); City of Grand Rapids MI — Neighborhood Associations (34)",
           "records": 2969,
           "url": "https://accessoakland.oakgov.com/",
           "coverage": "partial",
-          "note": "county/city inventories, not a statewide registry \u2014 absence means nothing"
+          "note": "county/city inventories, not a statewide registry — absence means nothing"
         },
         "courts_bulk_dockets": {
-          "source": "CourtListener bulk data \u2014 docket captions",
+          "source": "CourtListener bulk data — docket captions",
           "url": "https://www.courtlistener.com/help/api/bulk-data/",
           "dockets": 412,
           "snapshot": "2026-09-30"
         },
         "courts_bulk_opinions": {
-          "source": "CourtListener bulk data \u2014 opinion captions",
+          "source": "CourtListener bulk data — opinion captions",
           "url": "https://www.courtlistener.com/help/api/bulk-data/",
           "opinions": 270,
           "snapshot": "2026-09-30"
@@ -1241,20 +1248,20 @@
           "note": "501(c) HOAs/condos only (NTEE L50 or association name); 1120-H filers absent"
         },
         "local_inventory": {
-          "source": "Minneapolis MN \u2014 NCR neighborhood organizations (city open data) (70); Minnetonka MN \u2014 townhome, condo and cooperative associations (city GIS) (102); Rochester / Olmsted County MN \u2014 neighborhood associations (county open data) (53); Lake County MN \u2014 common interest communities (CIC unit plats, county GIS) (10)",
+          "source": "Minneapolis MN — NCR neighborhood organizations (city open data) (70); Minnetonka MN — townhome, condo and cooperative associations (city GIS) (102); Rochester / Olmsted County MN — neighborhood associations (county open data) (53); Lake County MN — common interest communities (CIC unit plats, county GIS) (10)",
           "records": 235,
           "url": "https://opendata.minneapolismn.gov/datasets/6d3c4cca729f41818f38d267afc323a8_0/about",
           "coverage": "partial",
-          "note": "county/city inventories, not a statewide registry \u2014 absence means nothing"
+          "note": "county/city inventories, not a statewide registry — absence means nothing"
         },
         "courts_bulk_dockets": {
-          "source": "CourtListener bulk data \u2014 docket captions",
+          "source": "CourtListener bulk data — docket captions",
           "url": "https://www.courtlistener.com/help/api/bulk-data/",
           "dockets": 146,
           "snapshot": "2026-09-30"
         },
         "courts_bulk_opinions": {
-          "source": "CourtListener bulk data \u2014 opinion captions",
+          "source": "CourtListener bulk data — opinion captions",
           "url": "https://www.courtlistener.com/help/api/bulk-data/",
           "opinions": 83,
           "snapshot": "2026-09-30"
@@ -1287,7 +1294,7 @@
           "opinions": 22
         },
         "corporate": {
-          "source": "Mississippi Secretary of State \u2014 corp-reporting nonprofit export",
+          "source": "Mississippi Secretary of State — corp-reporting nonprofit export",
           "records": 2387,
           "url": "https://corp.sos.ms.gov/corpreporting/",
           "coverage": "all"
@@ -1299,13 +1306,13 @@
           "note": "501(c) HOAs/condos only (NTEE L50 or association name); 1120-H filers absent"
         },
         "courts_bulk_dockets": {
-          "source": "CourtListener bulk data \u2014 docket captions",
+          "source": "CourtListener bulk data — docket captions",
           "url": "https://www.courtlistener.com/help/api/bulk-data/",
           "dockets": 118,
           "snapshot": "2026-09-30"
         },
         "courts_bulk_opinions": {
-          "source": "CourtListener bulk data \u2014 opinion captions",
+          "source": "CourtListener bulk data — opinion captions",
           "url": "https://www.courtlistener.com/help/api/bulk-data/",
           "opinions": 74,
           "snapshot": "2026-09-30"
@@ -1338,20 +1345,20 @@
           "note": "501(c) HOAs/condos only (NTEE L50 or association name); 1120-H filers absent"
         },
         "local_inventory": {
-          "source": "Kansas City MO \u2014 registered neighborhood/homes associations (Open Data KC) (239); Kansas City MO \u2014 registered neighborhood associations (city GIS, current) (79); Columbia MO \u2014 neighborhood associations (city open data) (92); Springfield MO \u2014 registered neighborhood organizations (city GIS) (24); Independence MO \u2014 home owners association districts (city GIS) (44)",
+          "source": "Kansas City MO — registered neighborhood/homes associations (Open Data KC) (239); Kansas City MO — registered neighborhood associations (city GIS, current) (79); Columbia MO — neighborhood associations (city open data) (92); Springfield MO — registered neighborhood organizations (city GIS) (24); Independence MO — home owners association districts (city GIS) (44)",
           "records": 417,
           "url": "https://data.kcmo.org/dataset/Registered-Neighborhood-Homes-Associations/gctf-zc2y",
           "coverage": "partial",
-          "note": "county/city inventories, not a statewide registry \u2014 absence means nothing"
+          "note": "county/city inventories, not a statewide registry — absence means nothing"
         },
         "courts_bulk_dockets": {
-          "source": "CourtListener bulk data \u2014 docket captions",
+          "source": "CourtListener bulk data — docket captions",
           "url": "https://www.courtlistener.com/help/api/bulk-data/",
           "dockets": 280,
           "snapshot": "2026-09-30"
         },
         "courts_bulk_opinions": {
-          "source": "CourtListener bulk data \u2014 opinion captions",
+          "source": "CourtListener bulk data — opinion captions",
           "url": "https://www.courtlistener.com/help/api/bulk-data/",
           "opinions": 235,
           "snapshot": "2026-09-30"
@@ -1388,20 +1395,20 @@
           "note": "501(c) HOAs/condos only (NTEE L50 or association name); 1120-H filers absent"
         },
         "local_inventory": {
-          "source": "Montana Cadastral (MSL/DOR) \u2014 condominium projects by subdivision, Yellowstone County (457); Montana Cadastral (MSL/DOR) \u2014 condominium projects by subdivision, Flathead County (420); Montana Cadastral (MSL/DOR) \u2014 condominium projects by subdivision, Missoula County (178); Montana Cadastral (MSL/DOR) \u2014 condominium projects by subdivision, Cascade County (85); Montana Cadastral (MSL/DOR) \u2014 condominium projects by subdivision, Silver Bow County (15); Montana Cadastral (MSL/DOR) \u2014 condominium projects by subdivision, Lake County (11); Montana Cadastral (MSL/DOR) \u2014 condominium projects by subdivision, Gallatin County (5); Montana Cadastral (MSL/DOR) \u2014 condominium projects by subdivision, Ravalli County (2); Montana Cadastral (MSL/DOR) \u2014 condominium projects by subdivision, other counties (12); Flathead County MT \u2014 Subdivisions (condominium & townhome plats) (445); Gallatin County MT \u2014 Major Subdivisions (condominium & townhome plats) (21); Madison County MT \u2014 Subdivisions (condominium & townhome plats) (43)",
+          "source": "Montana Cadastral (MSL/DOR) — condominium projects by subdivision, Yellowstone County (457); Montana Cadastral (MSL/DOR) — condominium projects by subdivision, Flathead County (420); Montana Cadastral (MSL/DOR) — condominium projects by subdivision, Missoula County (178); Montana Cadastral (MSL/DOR) — condominium projects by subdivision, Cascade County (85); Montana Cadastral (MSL/DOR) — condominium projects by subdivision, Silver Bow County (15); Montana Cadastral (MSL/DOR) — condominium projects by subdivision, Lake County (11); Montana Cadastral (MSL/DOR) — condominium projects by subdivision, Gallatin County (5); Montana Cadastral (MSL/DOR) — condominium projects by subdivision, Ravalli County (2); Montana Cadastral (MSL/DOR) — condominium projects by subdivision, other counties (12); Flathead County MT — Subdivisions (condominium & townhome plats) (445); Gallatin County MT — Major Subdivisions (condominium & townhome plats) (21); Madison County MT — Subdivisions (condominium & townhome plats) (43)",
           "records": 1339,
           "url": "https://msl.mt.gov/geoinfo/msdi/cadastral",
           "coverage": "partial",
-          "note": "county/city inventories, not a statewide registry \u2014 absence means nothing"
+          "note": "county/city inventories, not a statewide registry — absence means nothing"
         },
         "courts_bulk_dockets": {
-          "source": "CourtListener bulk data \u2014 docket captions",
+          "source": "CourtListener bulk data — docket captions",
           "url": "https://www.courtlistener.com/help/api/bulk-data/",
           "dockets": 42,
           "snapshot": "2026-09-30"
         },
         "courts_bulk_opinions": {
-          "source": "CourtListener bulk data \u2014 opinion captions",
+          "source": "CourtListener bulk data — opinion captions",
           "url": "https://www.courtlistener.com/help/api/bulk-data/",
           "opinions": 58,
           "snapshot": "2026-09-30"
@@ -1440,20 +1447,20 @@
           "note": "501(c) HOAs/condos only (NTEE L50 or association name); 1120-H filers absent"
         },
         "local_inventory": {
-          "source": "Lincoln NE \u2014 Homeowner Association Contacts (Planning Dept opt-in list) (132); Omaha NE \u2014 Planning Dept neighborhood associations (HOA-named only) (46)",
+          "source": "Lincoln NE — Homeowner Association Contacts (Planning Dept opt-in list) (132); Omaha NE — Planning Dept neighborhood associations (HOA-named only) (46)",
           "records": 178,
           "url": "https://opendata.lincoln.ne.gov/datasets/homeowners-association-contacts",
           "coverage": "partial",
-          "note": "county/city inventories, not a statewide registry \u2014 absence means nothing"
+          "note": "county/city inventories, not a statewide registry — absence means nothing"
         },
         "courts_bulk_dockets": {
-          "source": "CourtListener bulk data \u2014 docket captions",
+          "source": "CourtListener bulk data — docket captions",
           "url": "https://www.courtlistener.com/help/api/bulk-data/",
           "dockets": 45,
           "snapshot": "2026-09-30"
         },
         "courts_bulk_opinions": {
-          "source": "CourtListener bulk data \u2014 opinion captions",
+          "source": "CourtListener bulk data — opinion captions",
           "url": "https://www.courtlistener.com/help/api/bulk-data/",
           "opinions": 44,
           "snapshot": "2026-09-30"
@@ -1495,13 +1502,13 @@
           "note": "Clark County only (clark 1016, henderson 366, henderson_master 24, las_vegas 508; 1914 rows merged to 1835). NRED registers ~3,700 statewide but publishes no roster; Washoe/Carson/Douglas (~700) have no public layer"
         },
         "courts_bulk_dockets": {
-          "source": "CourtListener bulk data \u2014 docket captions",
+          "source": "CourtListener bulk data — docket captions",
           "url": "https://www.courtlistener.com/help/api/bulk-data/",
           "dockets": 889,
           "snapshot": "2026-09-30"
         },
         "courts_bulk_opinions": {
-          "source": "CourtListener bulk data \u2014 opinion captions",
+          "source": "CourtListener bulk data — opinion captions",
           "url": "https://www.courtlistener.com/help/api/bulk-data/",
           "opinions": 467,
           "snapshot": "2026-09-30"
@@ -1525,7 +1532,7 @@
       "counties": {},
       "notes": [
         "NRED ombudsman quarterly reports (PDF) carry registration/complaint statistics",
-        "2026-09-02: NRED lookup needs an image captcha per query (not solved); Clark County / Henderson / Las Vegas ArcGIS HOA layers collected instead by get_nv_hoa.py (1,835 associations after merge). NRED Ombudsman report 1/31/2025: 3,720 associations statewide (Clark 2,994, Washoe 546, Carson 81, Douglas 64) \u2014 northern NV has no public layer"
+        "2026-09-02: NRED lookup needs an image captcha per query (not solved); Clark County / Henderson / Las Vegas ArcGIS HOA layers collected instead by get_nv_hoa.py (1,835 associations after merge). NRED Ombudsman report 1/31/2025: 3,720 associations statewide (Clark 2,994, Washoe 546, Carson 81, Douglas 64) — northern NV has no public layer"
       ]
     },
     "NH": {
@@ -1547,13 +1554,13 @@
           "note": "501(c) HOAs/condos only (NTEE L50 or association name); 1120-H filers absent"
         },
         "courts_bulk_dockets": {
-          "source": "CourtListener bulk data \u2014 docket captions",
+          "source": "CourtListener bulk data — docket captions",
           "url": "https://www.courtlistener.com/help/api/bulk-data/",
           "dockets": 112,
           "snapshot": "2026-09-30"
         },
         "courts_bulk_opinions": {
-          "source": "CourtListener bulk data \u2014 opinion captions",
+          "source": "CourtListener bulk data — opinion captions",
           "url": "https://www.courtlistener.com/help/api/bulk-data/",
           "opinions": 66,
           "snapshot": "2026-09-30"
@@ -1573,7 +1580,7 @@
       "counties": {},
       "notes": [
         "nhdeeds.org free per-county index search",
-        "2026-09-02 survey: DOJ condo registry unpublished and doj.nh.gov returned 403; GRANIT parcels carry no owner names \u2014 nothing enumerable"
+        "2026-09-02 survey: DOJ condo registry unpublished and doj.nh.gov returned 403; GRANIT parcels carry no owner names — nothing enumerable"
       ]
     },
     "NJ": {
@@ -1595,13 +1602,13 @@
           "note": "501(c) HOAs/condos only (NTEE L50 or association name); 1120-H filers absent"
         },
         "courts_bulk_dockets": {
-          "source": "CourtListener bulk data \u2014 docket captions",
+          "source": "CourtListener bulk data — docket captions",
           "url": "https://www.courtlistener.com/help/api/bulk-data/",
           "dockets": 646,
           "snapshot": "2026-09-30"
         },
         "courts_bulk_opinions": {
-          "source": "CourtListener bulk data \u2014 opinion captions",
+          "source": "CourtListener bulk data — opinion captions",
           "url": "https://www.courtlistener.com/help/api/bulk-data/",
           "opinions": 388,
           "snapshot": "2026-09-30"
@@ -1621,7 +1628,7 @@
       "counties": {},
       "notes": [
         "several county clerks (e.g. Monmouth) have free search-only land-records portals",
-        "2026-09-02 survey: PREDFDA registrations unpublished; MOD-IV flags 309,953 condo units but owner names are blank (Daniel's Law) \u2014 nothing enumerable"
+        "2026-09-02 survey: PREDFDA registrations unpublished; MOD-IV flags 309,953 condo units but owner names are blank (Daniel's Law) — nothing enumerable"
       ]
     },
     "NM": {
@@ -1643,20 +1650,20 @@
           "note": "501(c) HOAs/condos only (NTEE L50 or association name); 1120-H filers absent"
         },
         "local_inventory": {
-          "source": "Albuquerque NM \u2014 recognized neighborhood associations (association-named only) (2); Santa Fe NM \u2014 registered neighborhood associations (HOA/condo types) (39); Santa Fe NM \u2014 condominium plats (project names) (333); Bernalillo County NM \u2014 recognized neighborhood associations (association-named only) (9)",
+          "source": "Albuquerque NM — recognized neighborhood associations (association-named only) (2); Santa Fe NM — registered neighborhood associations (HOA/condo types) (39); Santa Fe NM — condominium plats (project names) (333); Bernalillo County NM — recognized neighborhood associations (association-named only) (9)",
           "records": 382,
           "url": "https://www.arcgis.com/home/item.html?id=ea84772907ae48c5b667b4fcfab15439",
           "coverage": "partial",
-          "note": "county/city inventories, not a statewide registry \u2014 absence means nothing"
+          "note": "county/city inventories, not a statewide registry — absence means nothing"
         },
         "courts_bulk_dockets": {
-          "source": "CourtListener bulk data \u2014 docket captions",
+          "source": "CourtListener bulk data — docket captions",
           "url": "https://www.courtlistener.com/help/api/bulk-data/",
           "dockets": 61,
           "snapshot": "2026-09-30"
         },
         "courts_bulk_opinions": {
-          "source": "CourtListener bulk data \u2014 opinion captions",
+          "source": "CourtListener bulk data — opinion captions",
           "url": "https://www.courtlistener.com/help/api/bulk-data/",
           "opinions": 47,
           "snapshot": "2026-09-30"
@@ -1679,7 +1686,7 @@
       "status": "collected",
       "collected": {
         "corporate": {
-          "source": "NYS Department of State \u2014 Active Corporations (data.ny.gov)",
+          "source": "NYS Department of State — Active Corporations (data.ny.gov)",
           "records": 11198,
           "url": "https://data.ny.gov/Economic-Development/Active-Corporations-Beginning-1800/n9v6-gdp6",
           "coverage": "active_only"
@@ -1699,13 +1706,13 @@
           "note": "501(c) HOAs/condos only (NTEE L50 or association name); 1120-H filers absent"
         },
         "courts_bulk_dockets": {
-          "source": "CourtListener bulk data \u2014 docket captions",
+          "source": "CourtListener bulk data — docket captions",
           "url": "https://www.courtlistener.com/help/api/bulk-data/",
           "dockets": 2263,
           "snapshot": "2026-09-30"
         },
         "courts_bulk_opinions": {
-          "source": "CourtListener bulk data \u2014 opinion captions",
+          "source": "CourtListener bulk data — opinion captions",
           "url": "https://www.courtlistener.com/help/api/bulk-data/",
           "opinions": 1903,
           "snapshot": "2026-09-30"
@@ -1751,20 +1758,20 @@
           "note": "501(c) HOAs/condos only (NTEE L50 or association name); 1120-H filers absent"
         },
         "local_inventory": {
-          "source": "NC OneMap statewide parcels (NC CGIA) \u2014 association-owned parcels, owner name + mailing address (12446); City of Charlotte \u2014 Neighborhood Organization Contact List (HOA / neighborhood associations) (289); City of Raleigh \u2014 Neighborhood Registry (HOA-named entries, home counts) (256); City of Asheville \u2014 Neighborhood Organizations (association-named entries) (17)",
+          "source": "NC OneMap statewide parcels (NC CGIA) — association-owned parcels, owner name + mailing address (12446); City of Charlotte — Neighborhood Organization Contact List (HOA / neighborhood associations) (289); City of Raleigh — Neighborhood Registry (HOA-named entries, home counts) (256); City of Asheville — Neighborhood Organizations (association-named entries) (17)",
           "records": 12975,
           "url": "https://www.nconemap.gov/pages/parcels",
           "coverage": "partial",
-          "note": "county/city inventories, not a statewide registry \u2014 absence means nothing"
+          "note": "county/city inventories, not a statewide registry — absence means nothing"
         },
         "courts_bulk_dockets": {
-          "source": "CourtListener bulk data \u2014 docket captions",
+          "source": "CourtListener bulk data — docket captions",
           "url": "https://www.courtlistener.com/help/api/bulk-data/",
           "dockets": 504,
           "snapshot": "2026-09-30"
         },
         "courts_bulk_opinions": {
-          "source": "CourtListener bulk data \u2014 opinion captions",
+          "source": "CourtListener bulk data — opinion captions",
           "url": "https://www.courtlistener.com/help/api/bulk-data/",
           "opinions": 464,
           "snapshot": "2026-09-30"
@@ -1789,7 +1796,7 @@
       "status": "collected",
       "collected": {
         "corporate": {
-          "source": "North Dakota Secretary of State \u2014 FirstStop business search API (partial extract)",
+          "source": "North Dakota Secretary of State — FirstStop business search API (partial extract)",
           "records": 1156,
           "url": "https://firststop.sos.nd.gov/search/business",
           "coverage": "partial"
@@ -1809,13 +1816,13 @@
           "note": "501(c) HOAs/condos only (NTEE L50 or association name); 1120-H filers absent"
         },
         "courts_bulk_dockets": {
-          "source": "CourtListener bulk data \u2014 docket captions",
+          "source": "CourtListener bulk data — docket captions",
           "url": "https://www.courtlistener.com/help/api/bulk-data/",
           "dockets": 17,
           "snapshot": "2026-09-30"
         },
         "courts_bulk_opinions": {
-          "source": "CourtListener bulk data \u2014 opinion captions",
+          "source": "CourtListener bulk data — opinion captions",
           "url": "https://www.courtlistener.com/help/api/bulk-data/",
           "opinions": 14,
           "snapshot": "2026-09-30"
@@ -1841,7 +1848,7 @@
           "opinions": 0
         },
         "corporate": {
-          "source": "Ohio Secretary of State \u2014 monthly business filings reports",
+          "source": "Ohio Secretary of State — monthly business filings reports",
           "records": 28,
           "url": "https://www.ohiosos.gov/business/business-reports",
           "coverage": "partial"
@@ -1853,13 +1860,13 @@
           "note": "501(c) HOAs/condos only (NTEE L50 or association name); 1120-H filers absent"
         },
         "courts_bulk_dockets": {
-          "source": "CourtListener bulk data \u2014 docket captions",
+          "source": "CourtListener bulk data — docket captions",
           "url": "https://www.courtlistener.com/help/api/bulk-data/",
           "dockets": 445,
           "snapshot": "2026-09-30"
         },
         "courts_bulk_opinions": {
-          "source": "CourtListener bulk data \u2014 opinion captions",
+          "source": "CourtListener bulk data — opinion captions",
           "url": "https://www.courtlistener.com/help/api/bulk-data/",
           "opinions": 364,
           "snapshot": "2026-09-30"
@@ -1867,7 +1874,7 @@
       },
       "available": [
         {
-          "source": "SOS monthly filings reports \u2014 additional months",
+          "source": "SOS monthly filings reports — additional months",
           "access": "excel-browser",
           "url": "https://www.ohiosos.gov/business/business-reports",
           "note": "July 2026 nonprofit-articles report collected; drop more monthly files into .cache/oh/*.txt and re-run get_states.py to accumulate"
@@ -1881,7 +1888,7 @@
       "unavailable": [],
       "counties": {},
       "notes": [
-        "Monthly report route opened 2026-08-17: new nonprofit incorporations only (no status, no back catalog) \u2014 corp coverage stays partial; full extract remains paid"
+        "Monthly report route opened 2026-08-17: new nonprofit incorporations only (no status, no back catalog) — corp coverage stays partial; full extract remains paid"
       ]
     },
     "OK": {
@@ -1903,20 +1910,20 @@
           "note": "501(c) HOAs/condos only (NTEE L50 or association name); 1120-H filers absent"
         },
         "local_inventory": {
-          "source": "Oklahoma City OK \u2014 registered neighborhood associations (HOA/POA/condo types) (216); Tulsa OK \u2014 registered neighborhoods (Homeowners Association type) (145)",
+          "source": "Oklahoma City OK — registered neighborhood associations (HOA/POA/condo types) (216); Tulsa OK — registered neighborhoods (Homeowners Association type) (145)",
           "records": 361,
           "url": "https://data.okc.gov/portal/page/viewer?datasetName=Neighborhood+Associations&view=table",
           "coverage": "partial",
-          "note": "county/city inventories, not a statewide registry \u2014 absence means nothing"
+          "note": "county/city inventories, not a statewide registry — absence means nothing"
         },
         "courts_bulk_dockets": {
-          "source": "CourtListener bulk data \u2014 docket captions",
+          "source": "CourtListener bulk data — docket captions",
           "url": "https://www.courtlistener.com/help/api/bulk-data/",
           "dockets": 63,
           "snapshot": "2026-09-30"
         },
         "courts_bulk_opinions": {
-          "source": "CourtListener bulk data \u2014 opinion captions",
+          "source": "CourtListener bulk data — opinion captions",
           "url": "https://www.courtlistener.com/help/api/bulk-data/",
           "opinions": 50,
           "snapshot": "2026-09-30"
@@ -1943,7 +1950,7 @@
       "status": "collected",
       "collected": {
         "corporate": {
-          "source": "Oregon Secretary of State \u2014 Active Businesses (data.oregon.gov)",
+          "source": "Oregon Secretary of State — Active Businesses (data.oregon.gov)",
           "records": 5648,
           "url": "https://data.oregon.gov/Business/Active-Businesses-ALL/tckn-sxa6",
           "coverage": "active_only"
@@ -1963,13 +1970,13 @@
           "note": "501(c) HOAs/condos only (NTEE L50 or association name); 1120-H filers absent"
         },
         "courts_bulk_dockets": {
-          "source": "CourtListener bulk data \u2014 docket captions",
+          "source": "CourtListener bulk data — docket captions",
           "url": "https://www.courtlistener.com/help/api/bulk-data/",
           "dockets": 201,
           "snapshot": "2026-09-30"
         },
         "courts_bulk_opinions": {
-          "source": "CourtListener bulk data \u2014 opinion captions",
+          "source": "CourtListener bulk data — opinion captions",
           "url": "https://www.courtlistener.com/help/api/bulk-data/",
           "opinions": 171,
           "snapshot": "2026-09-30"
@@ -1994,7 +2001,7 @@
       "status": "collected",
       "collected": {
         "corporate": {
-          "source": "PA Department of State \u2014 Registered Businesses (data.pa.gov)",
+          "source": "PA Department of State — Registered Businesses (data.pa.gov)",
           "records": 10674,
           "url": "https://data.pa.gov/d/xvd7-5r2c",
           "coverage": "active_only"
@@ -2014,13 +2021,13 @@
           "note": "501(c) HOAs/condos only (NTEE L50 or association name); 1120-H filers absent"
         },
         "courts_bulk_dockets": {
-          "source": "CourtListener bulk data \u2014 docket captions",
+          "source": "CourtListener bulk data — docket captions",
           "url": "https://www.courtlistener.com/help/api/bulk-data/",
           "dockets": 810,
           "snapshot": "2026-09-30"
         },
         "courts_bulk_opinions": {
-          "source": "CourtListener bulk data \u2014 opinion captions",
+          "source": "CourtListener bulk data — opinion captions",
           "url": "https://www.courtlistener.com/help/api/bulk-data/",
           "opinions": 664,
           "snapshot": "2026-09-30"
@@ -2052,13 +2059,13 @@
           "note": "501(c) HOAs/condos only (NTEE L50 or association name); 1120-H filers absent"
         },
         "courts_bulk_dockets": {
-          "source": "CourtListener bulk data \u2014 docket captions",
+          "source": "CourtListener bulk data — docket captions",
           "url": "https://www.courtlistener.com/help/api/bulk-data/",
           "dockets": 102,
           "snapshot": "2026-09-30"
         },
         "courts_bulk_opinions": {
-          "source": "CourtListener bulk data \u2014 opinion captions",
+          "source": "CourtListener bulk data — opinion captions",
           "url": "https://www.courtlistener.com/help/api/bulk-data/",
           "opinions": 89,
           "snapshot": "2026-09-30"
@@ -2073,7 +2080,7 @@
       ],
       "counties": {},
       "notes": [
-        "2026-09-02 survey: no association/condo layer anywhere, data.ri.gov gone; Providence tax roll has ~50 association owners \u2014 not collected"
+        "2026-09-02 survey: no association/condo layer anywhere, data.ri.gov gone; Providence tax roll has ~50 association owners — not collected"
       ]
     },
     "SC": {
@@ -2100,13 +2107,13 @@
           "note": "501(c) HOAs/condos only (NTEE L50 or association name); 1120-H filers absent"
         },
         "courts_bulk_dockets": {
-          "source": "CourtListener bulk data \u2014 docket captions",
+          "source": "CourtListener bulk data — docket captions",
           "url": "https://www.courtlistener.com/help/api/bulk-data/",
           "dockets": 348,
           "snapshot": "2026-09-30"
         },
         "courts_bulk_opinions": {
-          "source": "CourtListener bulk data \u2014 opinion captions",
+          "source": "CourtListener bulk data — opinion captions",
           "url": "https://www.courtlistener.com/help/api/bulk-data/",
           "opinions": 163,
           "snapshot": "2026-09-30"
@@ -2143,13 +2150,13 @@
           "note": "501(c) HOAs/condos only (NTEE L50 or association name); 1120-H filers absent"
         },
         "courts_bulk_dockets": {
-          "source": "CourtListener bulk data \u2014 docket captions",
+          "source": "CourtListener bulk data — docket captions",
           "url": "https://www.courtlistener.com/help/api/bulk-data/",
           "dockets": 8,
           "snapshot": "2026-09-30"
         },
         "courts_bulk_opinions": {
-          "source": "CourtListener bulk data \u2014 opinion captions",
+          "source": "CourtListener bulk data — opinion captions",
           "url": "https://www.courtlistener.com/help/api/bulk-data/",
           "opinions": 14,
           "snapshot": "2026-09-30"
@@ -2184,20 +2191,20 @@
           "note": "501(c) HOAs/condos only (NTEE L50 or association name); 1120-H filers absent"
         },
         "local_inventory": {
-          "source": "Chattanooga TN \u2014 neighborhood association boundaries (association-named only) (35)",
+          "source": "Chattanooga TN — neighborhood association boundaries (association-named only) (35)",
           "records": 35,
           "url": "https://www.chattadata.org/Public-Safety/Neighborhood-Association-Boundaries/dxzz-idjy",
           "coverage": "partial",
-          "note": "county/city inventories, not a statewide registry \u2014 absence means nothing"
+          "note": "county/city inventories, not a statewide registry — absence means nothing"
         },
         "courts_bulk_dockets": {
-          "source": "CourtListener bulk data \u2014 docket captions",
+          "source": "CourtListener bulk data — docket captions",
           "url": "https://www.courtlistener.com/help/api/bulk-data/",
           "dockets": 182,
           "snapshot": "2026-09-30"
         },
         "courts_bulk_opinions": {
-          "source": "CourtListener bulk data \u2014 opinion captions",
+          "source": "CourtListener bulk data — opinion captions",
           "url": "https://www.courtlistener.com/help/api/bulk-data/",
           "opinions": 118,
           "snapshot": "2026-09-30"
@@ -2244,13 +2251,13 @@
           "note": "501(c) HOAs/condos only (NTEE L50 or association name); 1120-H filers absent"
         },
         "courts_bulk_dockets": {
-          "source": "CourtListener bulk data \u2014 docket captions",
+          "source": "CourtListener bulk data — docket captions",
           "url": "https://www.courtlistener.com/help/api/bulk-data/",
           "dockets": 3320,
           "snapshot": "2026-09-30"
         },
         "courts_bulk_opinions": {
-          "source": "CourtListener bulk data \u2014 opinion captions",
+          "source": "CourtListener bulk data — opinion captions",
           "url": "https://www.courtlistener.com/help/api/bulk-data/",
           "opinions": 2024,
           "snapshot": "2026-09-30"
@@ -2289,19 +2296,19 @@
           "note": "501(c) HOAs/condos only (NTEE L50 or association name); 1120-H filers absent"
         },
         "hoa_registry": {
-          "source": "Utah Department of Commerce \u2014 HOA Registry",
+          "source": "Utah Department of Commerce — HOA Registry",
           "records": 4126,
           "url": "https://services.commerce.utah.gov/hoa/",
           "note": "mandatory statewide registry; current registrations only"
         },
         "courts_bulk_dockets": {
-          "source": "CourtListener bulk data \u2014 docket captions",
+          "source": "CourtListener bulk data — docket captions",
           "url": "https://www.courtlistener.com/help/api/bulk-data/",
           "dockets": 124,
           "snapshot": "2026-09-30"
         },
         "courts_bulk_opinions": {
-          "source": "CourtListener bulk data \u2014 opinion captions",
+          "source": "CourtListener bulk data — opinion captions",
           "url": "https://www.courtlistener.com/help/api/bulk-data/",
           "opinions": 105,
           "snapshot": "2026-09-30"
@@ -2338,20 +2345,20 @@
           "note": "501(c) HOAs/condos only (NTEE L50 or association name); 1120-H filers absent"
         },
         "local_inventory": {
-          "source": "VCGI statewide standardized parcels (Grand List) \u2014 association-owned parcels, owner name + mailing address (132)",
+          "source": "VCGI statewide standardized parcels (Grand List) — association-owned parcels, owner name + mailing address (132)",
           "records": 132,
           "url": "https://geodata.vermont.gov/pages/parcels",
           "coverage": "partial",
-          "note": "county/city inventories, not a statewide registry \u2014 absence means nothing"
+          "note": "county/city inventories, not a statewide registry — absence means nothing"
         },
         "courts_bulk_dockets": {
-          "source": "CourtListener bulk data \u2014 docket captions",
+          "source": "CourtListener bulk data — docket captions",
           "url": "https://www.courtlistener.com/help/api/bulk-data/",
           "dockets": 115,
           "snapshot": "2026-09-30"
         },
         "courts_bulk_opinions": {
-          "source": "CourtListener bulk data \u2014 opinion captions",
+          "source": "CourtListener bulk data — opinion captions",
           "url": "https://www.courtlistener.com/help/api/bulk-data/",
           "opinions": 111,
           "snapshot": "2026-09-30"
@@ -2372,7 +2379,7 @@
       "status": "collected",
       "collected": {
         "hoa_registry": {
-          "source": "Virginia DPOR \u2014 registered condominiums",
+          "source": "Virginia DPOR — registered condominiums",
           "records": 192,
           "url": "https://www.dpor.virginia.gov/RegulantLists"
         },
@@ -2391,13 +2398,13 @@
           "note": "501(c) HOAs/condos only (NTEE L50 or association name); 1120-H filers absent"
         },
         "courts_bulk_dockets": {
-          "source": "CourtListener bulk data \u2014 docket captions",
+          "source": "CourtListener bulk data — docket captions",
           "url": "https://www.courtlistener.com/help/api/bulk-data/",
           "dockets": 220,
           "snapshot": "2026-09-30"
         },
         "courts_bulk_opinions": {
-          "source": "CourtListener bulk data \u2014 opinion captions",
+          "source": "CourtListener bulk data — opinion captions",
           "url": "https://www.courtlistener.com/help/api/bulk-data/",
           "opinions": 94,
           "snapshot": "2026-09-30"
@@ -2438,11 +2445,11 @@
           "note": "501(c) HOAs/condos only (NTEE L50 or association name); 1120-H filers absent"
         },
         "corporate": {
-          "source": "Washington Secretary of State \u2014 Corporations & Charities Filing System (CCFS)",
+          "source": "Washington Secretary of State — Corporations & Charities Filing System (CCFS)",
           "records": 20148,
           "url": "https://ccfs.sos.wa.gov/",
           "coverage": "all",
-          "note": "advanced-search list rows (name contains HOMEOWNERS/CONDO/\u2026); every status incl. Administratively Dissolved/Inactive; principal-office address + registered-agent name; governors need per-entity detail calls (not collected). Turnstile-gated: swept through BrowserOS (get_wa_ccfs.py), not get_states.py",
+          "note": "advanced-search list rows (name contains HOMEOWNERS/CONDO/…); every status incl. Administratively Dissolved/Inactive; principal-office address + registered-agent name; governors need per-entity detail calls (not collected). Turnstile-gated: swept through BrowserOS (get_wa_ccfs.py), not get_states.py",
           "statuses": {
             "Active": 15625,
             "Administratively Dissolved": 3244,
@@ -2457,13 +2464,13 @@
           "collected_at": "2026-09-03"
         },
         "courts_bulk_dockets": {
-          "source": "CourtListener bulk data \u2014 docket captions",
+          "source": "CourtListener bulk data — docket captions",
           "url": "https://www.courtlistener.com/help/api/bulk-data/",
           "dockets": 862,
           "snapshot": "2026-09-30"
         },
         "courts_bulk_opinions": {
-          "source": "CourtListener bulk data \u2014 opinion captions",
+          "source": "CourtListener bulk data — opinion captions",
           "url": "https://www.courtlistener.com/help/api/bulk-data/",
           "opinions": 569,
           "snapshot": "2026-09-30"
@@ -2473,7 +2480,7 @@
       "unavailable": [
         {
           "source": "SOS CCFS bulk extract",
-          "why": "discontinued (was free); the search UI is Turnstile-gated and its export buttons are disabled \u2014 swept page by page instead (get_wa_ccfs.py)"
+          "why": "discontinued (was free); the search UI is Turnstile-gated and its export buttons are disabled — swept page by page instead (get_wa_ccfs.py)"
         },
         {
           "source": "King County recorder bulk",
@@ -2505,20 +2512,20 @@
           "note": "501(c) HOAs/condos only (NTEE L50 or association name); 1120-H filers absent"
         },
         "local_inventory": {
-          "source": "WV GIS Technical Center statewide parcels (WV_Parcels) \u2014 association-owned parcels, owner name + mailing address (512)",
+          "source": "WV GIS Technical Center statewide parcels (WV_Parcels) — association-owned parcels, owner name + mailing address (512)",
           "records": 512,
           "url": "https://wvgis.wvu.edu/data/dataset.php?ID=371",
           "coverage": "partial",
-          "note": "county/city inventories, not a statewide registry \u2014 absence means nothing"
+          "note": "county/city inventories, not a statewide registry — absence means nothing"
         },
         "courts_bulk_dockets": {
-          "source": "CourtListener bulk data \u2014 docket captions",
+          "source": "CourtListener bulk data — docket captions",
           "url": "https://www.courtlistener.com/help/api/bulk-data/",
           "dockets": 57,
           "snapshot": "2026-09-30"
         },
         "courts_bulk_opinions": {
-          "source": "CourtListener bulk data \u2014 opinion captions",
+          "source": "CourtListener bulk data — opinion captions",
           "url": "https://www.courtlistener.com/help/api/bulk-data/",
           "opinions": 47,
           "snapshot": "2026-09-30"
@@ -2553,26 +2560,26 @@
           "note": "501(c) HOAs/condos only (NTEE L50 or association name); 1120-H filers absent"
         },
         "local_inventory": {
-          "source": "WI DOA Statewide Parcel Map V12 (2026) \u2014 association-owned parcels, owner name + mailing address (2669); Dane County \u2014 recorded condominium plats (PlatBoundaries) (1040); Milwaukee County LIO \u2014 condominium plat index (Cadastral/Condo) (1345); City of Madison \u2014 Neighborhood Associations typed HOA / condominium / property-owners (19)",
+          "source": "WI DOA Statewide Parcel Map V12 (2026) — association-owned parcels, owner name + mailing address (2669); Dane County — recorded condominium plats (PlatBoundaries) (1040); Milwaukee County LIO — condominium plat index (Cadastral/Condo) (1345); City of Madison — Neighborhood Associations typed HOA / condominium / property-owners (19)",
           "records": 5004,
           "url": "https://www.sco.wisc.edu/parcels/data/",
           "coverage": "partial",
-          "note": "county/city inventories, not a statewide registry \u2014 absence means nothing"
+          "note": "county/city inventories, not a statewide registry — absence means nothing"
         },
         "hoa_registry": {
-          "source": "Wisconsin DFI \u2014 Homeowners' Association registry (Wis. Stat. 710.085)",
+          "source": "Wisconsin DFI — Homeowners' Association registry (Wis. Stat. 710.085)",
           "records": 638,
           "url": "https://apps.dfi.wi.gov/apps/HomeOwnersAssociation/Search",
           "note": "HOAs only (no condos), filings since 2022"
         },
         "courts_bulk_dockets": {
-          "source": "CourtListener bulk data \u2014 docket captions",
+          "source": "CourtListener bulk data — docket captions",
           "url": "https://www.courtlistener.com/help/api/bulk-data/",
           "dockets": 123,
           "snapshot": "2026-09-30"
         },
         "courts_bulk_opinions": {
-          "source": "CourtListener bulk data \u2014 opinion captions",
+          "source": "CourtListener bulk data — opinion captions",
           "url": "https://www.courtlistener.com/help/api/bulk-data/",
           "opinions": 114,
           "snapshot": "2026-09-30"
@@ -2618,20 +2625,20 @@
           "note": "501(c) HOAs/condos only (NTEE L50 or association name); 1120-H filers absent"
         },
         "local_inventory": {
-          "source": "Teton County WY \u2014 assessor ownership (association-owned parcels) (96); Natrona County WY \u2014 assessor ownership via City of Casper GIS (association-owned parcels) (37)",
+          "source": "Teton County WY — assessor ownership (association-owned parcels) (96); Natrona County WY — assessor ownership via City of Casper GIS (association-owned parcels) (37)",
           "records": 133,
           "url": "https://maps.terragis.net/tetonwy/mapserver/download/download.html",
           "coverage": "partial",
-          "note": "county/city inventories, not a statewide registry \u2014 absence means nothing"
+          "note": "county/city inventories, not a statewide registry — absence means nothing"
         },
         "courts_bulk_dockets": {
-          "source": "CourtListener bulk data \u2014 docket captions",
+          "source": "CourtListener bulk data — docket captions",
           "url": "https://www.courtlistener.com/help/api/bulk-data/",
           "dockets": 35,
           "snapshot": "2026-09-30"
         },
         "courts_bulk_opinions": {
-          "source": "CourtListener bulk data \u2014 opinion captions",
+          "source": "CourtListener bulk data — opinion captions",
           "url": "https://www.courtlistener.com/help/api/bulk-data/",
           "opinions": 31,
           "snapshot": "2026-09-30"
@@ -2652,7 +2659,7 @@
       "status": "collected",
       "collected": {
         "corporate": {
-          "source": "DC DLCP \u2014 Corporate Registrations (Open Data DC)",
+          "source": "DC DLCP — Corporate Registrations (Open Data DC)",
           "records": 1882,
           "url": "https://opendata.dc.gov/datasets/DCGIS::corporate-registration",
           "coverage": "all"
@@ -2672,13 +2679,13 @@
           "note": "501(c) HOAs/condos only (NTEE L50 or association name); 1120-H filers absent"
         },
         "courts_bulk_dockets": {
-          "source": "CourtListener bulk data \u2014 docket captions",
+          "source": "CourtListener bulk data — docket captions",
           "url": "https://www.courtlistener.com/help/api/bulk-data/",
           "dockets": 148,
           "snapshot": "2026-09-30"
         },
         "courts_bulk_opinions": {
-          "source": "CourtListener bulk data \u2014 opinion captions",
+          "source": "CourtListener bulk data — opinion captions",
           "url": "https://www.courtlistener.com/help/api/bulk-data/",
           "opinions": 97,
           "snapshot": "2026-09-30"

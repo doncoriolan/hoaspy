@@ -17,6 +17,7 @@ re-hosted: every record links back to the index it came from.
 | `get_nyc_liens` + `records_acris` | New York City (5 boroughs) | ACRIS master/parties/legals on NYC Open Data (Socrata) | anonymous | `liens/liens_nyc.jsonl`, `sources_nyc.json` |
 | `get_cook_liens` + `records_cook` | Cook County, IL | County Clerk's Recordings System (CRS), Advanced Search by party name: lien types on either side, lis pendens types on the grantor side | anonymous (session token from the search page) | `liens/liens_cook.jsonl`, `sources_cook.json` |
 | `get_ca_ucc` | California, statewide | SOS bizfile UCC search, record type 2154 (Judgment Lien) | browser cookie + hourly token (same as `get_ca_sos`) | `liens/liens_ca_ucc.jsonl`, `sources_ca_ucc.json`, `ca_ucc_raw.jsonl` |
+| `get_daily_liens` (+ `records_broward.fetch_day`, `records_miamidade.BrowserSession`) | Broward and Miami-Dade, by recording day | Broward's `Official_Records_Download` daily folder (SFTP); Miami-Dade's search by day, inside the Clerk's page in a local browser | public SFTP; a desktop browser on its DevTools port | `liens/daily/<county>/<YYYY-MM-DD>.jsonl`, `status.json` — the alerts' input, not the site's (ALERTS.md) |
 
 Record counts and years per source live in `coverage.json`
 (`states.FL.counties`, `states.NY.counties`, `states.IL.counties`, `states.CA.collected.judgment_liens`)
@@ -110,6 +111,18 @@ deeds but 0.5% of liens, so Broward records identify parties and dates, not
 property addresses. The daily `Official_Records_Download` folder is named in
 the adapter but not used.
 
+## The daily folder — `get_daily_liens`
+
+`python -m hoaspy daily-liens` fetches each recording day not yet on disk:
+Broward's `Official_Records_Download` folder holds the last ten or so
+days as `MM-DD-YYYY{doc,nme,lgl}-ver.txt` in the yearly layout (`lnk-ver`,
+the links from releases to the documents they release, and `img.zip` are
+not read), posted one to four days after the recording day; `parse_year`
+reads them unchanged, `source` is `broward-or-daily-download`. Miami-Dade
+is `enumerate_window` one day at a time through `BrowserSession` (below).
+Output is one file per recording day under `liens/daily/<county>/`, the
+input of the lien alerts — ALERTS.md has the whole pipeline.
+
 ## Miami-Dade County — `get_miamidade_liens` + `records_miamidade`
 
 Miami-Dade sells no bulk index (the `$110/mo` Records FTP folder is the
@@ -120,9 +133,16 @@ JSON API behind the public Official Records search: `POST
 the adapter, all documented in `records_miamidade.py`:
 
 1. **Auth is one anonymous cookie**, `.PremierIDDade`, copied from a browser
-   (DevTools → Application → Cookies). No login; the reCAPTCHA header the site
-   sends is not validated. A stale cookie shows up as rows with null search
-   criteria and is raised as `MiamiDadeError`, never mistaken for "no data".
+   (DevTools → Application → Cookies). No login. A stale cookie shows up as
+   rows with null search criteria and is raised as `MiamiDadeError`, never
+   mistaken for "no data". **Since October 2026** the page is a React app
+   behind Cloudflare Turnstile and `standardsearch` answers
+   `isValidSearch: false` to any call without a fresh `x-recaptcha-token`
+   from the page's own widget, so the cookie path no longer works as it
+   did. `BrowserSession` runs the same two calls inside the Clerk's page in
+   a local browser (hoaspy/lib/browser.py): the page's own widget mints
+   the token (headless browsers fail the challenge; it takes the desktop
+   browser on its DevTools port). `query()` takes either session.
 2. **Results are hard-capped at 500 rows** with no enumeration paging.
 3. **Every document comes back once per party**, so `_collapse` folds rows
    into one record per clerk file number and gathers all parties.
